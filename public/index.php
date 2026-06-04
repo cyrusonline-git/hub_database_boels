@@ -5,12 +5,12 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Op Antagonist (productie): Laravel staat in /domains/sorai.nl/databasehub_laravel/
-// De webroot /domains/sorai.nl/public_html/databasehub/ moet daar bootstrappen.
+// Op Antagonist (productie): Laravel staat in /domains/databasehub.sorai.nl/laravel_app/
+// De webroot /domains/databasehub.sorai.nl/public_html/ moet daar bootstrappen.
 // Lokaal: Laravel staat één map hoger (../) — beide paden worden geprobeerd.
 $candidates = [
-    __DIR__.'/../databasehub_laravel',  // Antagonist productie
-    __DIR__.'/..',                       // Lokaal development
+    __DIR__.'/../laravel_app',  // Antagonist productie
+    __DIR__.'/..',               // Lokaal development
 ];
 
 $laravelRoot = null;

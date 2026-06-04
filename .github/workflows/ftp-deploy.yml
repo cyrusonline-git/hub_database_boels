@@ -49,7 +49,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           protocol: ftp
-          server-dir: /domains/sorai.nl/databasehub_laravel/
+          server-dir: /domains/databasehub.sorai.nl/laravel_app/
           local-dir: ./
           exclude: |
             **/.git*
@@ -74,7 +74,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           protocol: ftp
-          server-dir: /domains/sorai.nl/public_html/databasehub/
+          server-dir: /domains/databasehub.sorai.nl/public_html/
           local-dir: ./public/
           exclude: |
             **/.DS_Store
