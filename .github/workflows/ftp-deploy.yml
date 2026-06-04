@@ -1,19 +1,44 @@
-name: Deploy to FTP
+name: Deploy Boels CORE to Antagonist
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  ftp-deploy:
-    name: Deploy via FTP
+  build-and-deploy:
+    name: Build & FTP deploy
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Sync files to FTP server
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_mysql, gd, zip, bcmath, fileinfo
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock', 'composer.json') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+
+      - name: Prepare artisan permissions
+        run: chmod +x artisan
+
+      # ============ DEPLOY ============
+      # Step 1: upload Laravel application (alles behalve public/) naar
+      # /domains/sorai.nl/databasehub_laravel/  (BUITEN de webroot)
+      - name: Deploy Laravel app (outside webroot)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -21,13 +46,31 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           protocol: ftp
-          server-dir: ${{ secrets.FTP_SERVER_DIR || '/' }}
+          server-dir: /domains/sorai.nl/databasehub_laravel/
           local-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
             **/.github/**
+            **/node_modules/**
+            **/tests/**
             **/.DS_Store
-            **/README.md
-            **/.gitignore
+            **/docs/**
+            public/**
+            .env
+            .env.*
+            README.md
+
+      # Step 2: upload public/ inhoud naar de webroot
+      - name: Deploy public/ to webroot
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftp
+          server-dir: /domains/sorai.nl/public_html/databasehub/
+          local-dir: ./public/
+          exclude: |
+            **/.DS_Store
