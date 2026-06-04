@@ -42,7 +42,7 @@ jobs:
       # Upload de Laravel applicatie (vendor/, app/, config/, ...) naar
       # /domains/sorai.nl/databasehub_laravel/  (BUITEN de webroot)
       - name: Deploy Laravel app to /databasehub_laravel/
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -67,7 +67,7 @@ jobs:
       # ============ DEPLOY STEP 2 ============
       # Upload public/ naar de webroot
       - name: Deploy public/ to webroot
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
