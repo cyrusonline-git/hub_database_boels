@@ -22,23 +22,26 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Cache composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock', 'composer.json') }}
-          restore-keys: ${{ runner.os }}-composer-
+      # Dummy .env zodat artisan-commands in post-install-scripts niet falen
+      - name: Create dummy .env for build
+        run: cp .env.example .env
 
-      - name: Install PHP dependencies
-        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+      - name: Install PHP dependencies (no scripts during install)
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-scripts
+
+      - name: Discover packages
+        run: php artisan package:discover --ansi
+
+      - name: Remove build-only .env (server has its own)
+        run: rm -f .env
 
       - name: Prepare artisan permissions
         run: chmod +x artisan
 
-      # ============ DEPLOY ============
-      # Step 1: upload Laravel application (alles behalve public/) naar
+      # ============ DEPLOY STEP 1 ============
+      # Upload de Laravel applicatie (vendor/, app/, config/, ...) naar
       # /domains/sorai.nl/databasehub_laravel/  (BUITEN de webroot)
-      - name: Deploy Laravel app (outside webroot)
+      - name: Deploy Laravel app to /databasehub_laravel/
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -61,7 +64,8 @@ jobs:
             .env.*
             README.md
 
-      # Step 2: upload public/ inhoud naar de webroot
+      # ============ DEPLOY STEP 2 ============
+      # Upload public/ naar de webroot
       - name: Deploy public/ to webroot
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
