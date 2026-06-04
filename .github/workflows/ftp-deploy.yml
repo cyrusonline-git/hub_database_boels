@@ -118,6 +118,10 @@ jobs:
 
       # ============ DEPLOY: alleen zips + script naar public_html ============
       # Dit zijn slechts 3 bestanden, geen 5000 — FTP houdt het wel uit.
+      # We gebruiken een random state-name zodat de FTP-action de upload niet
+      # overslaat als hij denkt dat de zips al up-to-date zijn. De zips zijn
+      # bij elke run anders (vanwege timestamps in vendor/), maar veiligheidshalve
+      # geen state-tracking gebruiken zodat upload ALTIJD plaatsvindt.
       - name: FTP upload zips + unpacker
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -129,7 +133,7 @@ jobs:
           server-dir: /domains/databasehub.sorai.nl/public_html/
           local-dir: ./deploy/
           dangerous-clean-slate: false
-          state-name: .ftp-deploy-bundle.json
+          state-name: .ftp-deploy-bundle-${{ github.run_id }}.json
 
       - name: Done — open this URL to unpack
         run: |
