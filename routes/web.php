@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\FieldAliasController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\TableOwnershipController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\LauncherController;
@@ -43,5 +44,6 @@ Route::middleware('auth')->group(function () {
         Route::get('imports/{importJob}', [ImportController::class, 'show'])->name('imports.show');
 
         Route::get('audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
+        Route::get('table-ownership', [TableOwnershipController::class, 'index'])->name('table-ownership.index');
     });
 });
