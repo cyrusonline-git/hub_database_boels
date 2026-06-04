@@ -125,7 +125,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
-          protocol: ftp
+          protocol: ftps
           server-dir: /domains/databasehub.sorai.nl/public_html/
           local-dir: ./deploy/
           dangerous-clean-slate: false
