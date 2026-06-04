@@ -116,13 +116,12 @@ jobs:
           echo "\nKlaar.";
           PHP
 
-      # ============ DEPLOY: alleen zips + script naar public_html ============
-      # Dit zijn slechts 3 bestanden, geen 5000 — FTP houdt het wel uit.
-      # We gebruiken een random state-name zodat de FTP-action de upload niet
-      # overslaat als hij denkt dat de zips al up-to-date zijn. De zips zijn
-      # bij elke run anders (vanwege timestamps in vendor/), maar veiligheidshalve
-      # geen state-tracking gebruiken zodat upload ALTIJD plaatsvindt.
-      - name: FTP upload zips + unpacker
+      # ============ DEPLOY met retry-logica ============
+      # Antagonist FTPS sluit soms onverwacht de control socket
+      # ('AggregateError'). Daarom 3 pogingen met fallback en wait.
+      - name: FTP upload (attempt 1 — FTPS)
+        id: ftp1
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -133,7 +132,48 @@ jobs:
           server-dir: /domains/databasehub.sorai.nl/public_html/
           local-dir: ./deploy/
           dangerous-clean-slate: false
-          state-name: .ftp-deploy-bundle-${{ github.run_id }}.json
+          state-name: .ftp-deploy-${{ github.run_id }}-1.json
+          timeout: 60000
+
+      - name: Wait 15s before retry
+        if: steps.ftp1.outcome == 'failure'
+        run: sleep 15
+
+      - name: FTP upload (attempt 2 — plain FTP)
+        id: ftp2
+        if: steps.ftp1.outcome == 'failure'
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftp
+          server-dir: /domains/databasehub.sorai.nl/public_html/
+          local-dir: ./deploy/
+          dangerous-clean-slate: false
+          state-name: .ftp-deploy-${{ github.run_id }}-2.json
+          timeout: 60000
+
+      - name: Wait 30s before final retry
+        if: steps.ftp1.outcome == 'failure' && steps.ftp2.outcome == 'failure'
+        run: sleep 30
+
+      - name: FTP upload (attempt 3 — FTPS with longer timeout)
+        if: steps.ftp1.outcome == 'failure' && steps.ftp2.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
+          server-dir: /domains/databasehub.sorai.nl/public_html/
+          local-dir: ./deploy/
+          dangerous-clean-slate: false
+          state-name: .ftp-deploy-${{ github.run_id }}-3.json
+          timeout: 120000
 
       - name: Done — open this URL to unpack
         run: |
