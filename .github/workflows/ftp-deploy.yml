@@ -22,51 +22,103 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # Dummy .env zodat artisan-commands in post-install-scripts niet falen
       - name: Create dummy .env for build
         run: cp .env.example .env
 
-      - name: Install PHP dependencies (no scripts during install)
+      - name: Install PHP dependencies
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-scripts
 
       - name: Discover packages
         run: php artisan package:discover --ansi
 
-      - name: Remove build-only .env (server has its own)
+      - name: Remove build-only .env
         run: rm -f .env
 
       - name: Prepare artisan permissions
         run: chmod +x artisan
 
-      # ============ DEPLOY STEP 1 ============
-      # Upload de Laravel applicatie (vendor/, app/, config/, ...) naar
-      # /domains/sorai.nl/databasehub_laravel/  (BUITEN de webroot)
-      - name: Deploy Laravel app to /databasehub_laravel/
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          protocol: ftp
-          server-dir: /domains/databasehub.sorai.nl/laravel_app/
-          local-dir: ./
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/node_modules/**
-            **/tests/**
-            **/.DS_Store
-            **/docs/**
-            public/**
-            .env
-            .env.*
-            README.md
+      # ============ BUILD ZIPS ============
+      # Antagonist FTP breekt verbinding bij duizenden kleine bestanden.
+      # Daarom verpakken we alles in 2 zips en laten een PHP-script op de
+      # server uitpakken.
+      - name: Package Laravel app into zip
+        run: |
+          mkdir -p deploy
+          zip -rq deploy/laravel_app.zip . \
+            -x ".git/*" ".github/*" "node_modules/*" "tests/*" \
+               ".DS_Store" "docs/*" "public/*" ".env" ".env.*" \
+               "README.md" "deploy/*"
+          ls -lh deploy/
 
-      # ============ DEPLOY STEP 2 ============
-      # Upload public/ naar de webroot
-      - name: Deploy public/ to webroot
+      - name: Package public into zip
+        run: |
+          cd public && zip -rq ../deploy/public_html.zip . -x ".DS_Store" && cd ..
+          ls -lh deploy/
+
+      # ============ UNZIP SCRIPT ============
+      # Combi-script dat beide zips uitpakt en zichzelf opruimt.
+      # Laravel-zip wordt uitgepakt naar ../laravel_app/ (buiten webroot).
+      # Public-zip wordt uitgepakt in de huidige map (public_html/).
+      - name: Generate combined unzip helper
+        run: |
+          cat > deploy/__deploy_unpack.php <<'PHP'
+          <?php
+          // Beveiligde unpacker — alleen aan te roepen met de juiste key.
+          // Verwijdert zichzelf + beide zips na succes.
+          $secret = 'BOELS_DEPLOY_2026';
+          if (($_GET['k'] ?? '') !== $secret) { http_response_code(403); exit('forbidden'); }
+
+          @set_time_limit(300);
+          $here = __DIR__;
+          $log = [];
+
+          // 1) Public zip -> huidige map (public_html)
+          $pubZip = $here . '/public_html.zip';
+          if (file_exists($pubZip)) {
+              $z = new ZipArchive;
+              if ($z->open($pubZip) === true) {
+                  $z->extractTo($here);
+                  $z->close();
+                  unlink($pubZip);
+                  $log[] = 'OK: public/ uitgepakt in ' . $here;
+              } else {
+                  $log[] = 'FAIL: kon public_html.zip niet openen';
+              }
+          } else {
+              $log[] = 'SKIP: public_html.zip ontbreekt';
+          }
+
+          // 2) Laravel zip -> ../laravel_app/
+          $larZip = $here . '/laravel_app.zip';
+          $larDir = dirname($here) . '/laravel_app';
+          if (file_exists($larZip)) {
+              if (! is_dir($larDir)) { @mkdir($larDir, 0755, true); }
+              $z = new ZipArchive;
+              if ($z->open($larZip) === true) {
+                  $z->extractTo($larDir);
+                  $z->close();
+                  unlink($larZip);
+                  $log[] = 'OK: Laravel app uitgepakt in ' . $larDir;
+              } else {
+                  $log[] = 'FAIL: kon laravel_app.zip niet openen';
+              }
+          } else {
+              $log[] = 'SKIP: laravel_app.zip ontbreekt';
+          }
+
+          // 3) Verwijder dit script zelf
+          @unlink(__FILE__);
+
+          header('Content-Type: text/plain; charset=utf-8');
+          echo "Boels CORE Deploy Unpack\n";
+          echo str_repeat('=', 40) . "\n";
+          foreach ($log as $line) echo $line . "\n";
+          echo "\nKlaar.";
+          PHP
+
+      # ============ DEPLOY: alleen zips + script naar public_html ============
+      # Dit zijn slechts 3 bestanden, geen 5000 — FTP houdt het wel uit.
+      - name: FTP upload zips + unpacker
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -75,6 +127,20 @@ jobs:
           port: 21
           protocol: ftp
           server-dir: /domains/databasehub.sorai.nl/public_html/
-          local-dir: ./public/
-          exclude: |
-            **/.DS_Store
+          local-dir: ./deploy/
+          dangerous-clean-slate: false
+          state-name: .ftp-deploy-bundle.json
+
+      - name: Done — open this URL to unpack
+        run: |
+          echo ""
+          echo "=========================================================="
+          echo "UPLOAD KLAAR — open NU deze URL in je browser om uit te pakken:"
+          echo ""
+          echo "  https://databasehub.sorai.nl/__deploy_unpack.php?k=BOELS_DEPLOY_2026"
+          echo ""
+          echo "Het script:"
+          echo "  - pakt public_html.zip uit in /public_html/"
+          echo "  - pakt laravel_app.zip uit in /laravel_app/"
+          echo "  - verwijdert zichzelf + beide zips daarna"
+          echo "=========================================================="
