@@ -35,7 +35,24 @@
         </tbody>
     </table>
 
-    <div>
+    <div class="border rounded p-3 mt-4 bg-light">
+        <div class="form-check">
+            <input type="hidden" name="sync_mode" value="0">
+            <input type="checkbox" name="sync_mode" value="1" id="sync_mode" class="form-check-input">
+            <label for="sync_mode" class="form-check-label">
+                <strong>Sync-modus aan</strong> &mdash;
+                {{ $config['label'] }} die NIET in dit bestand staan worden op
+                <em>inactief</em> gezet (active = 0 + soft-delete).
+            </label>
+            <div class="form-text">
+                Bij volgende import waar ze wel weer in staan, worden ze automatisch
+                opnieuw actief. Veilig: data verdwijnt niet uit de database, alleen
+                gemarkeerd als inactief.
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
         <button class="btn btn-boels">Mapping opslaan</button>
         <a href="{{ route('admin.imports.index') }}" class="btn btn-outline-secondary">Annuleren</a>
     </div>

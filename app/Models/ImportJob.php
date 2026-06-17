@@ -13,12 +13,14 @@ class ImportJob extends Model
 
     protected $fillable = [
         'profile_id', 'user_id', 'original_filename', 'file_path',
-        'status', 'mapping', 'total_rows', 'imported_rows',
-        'failed_rows', 'error_log', 'started_at', 'finished_at',
+        'status', 'mapping', 'sync_mode', 'total_rows', 'imported_rows',
+        'failed_rows', 'deactivated_rows', 'reactivated_rows',
+        'error_log', 'started_at', 'finished_at',
     ];
 
     protected $casts = [
         'mapping' => 'array',
+        'sync_mode' => 'boolean',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
     ];

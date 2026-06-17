@@ -78,6 +78,7 @@ class ImportController extends Controller
                 '__entity' => $entity,
                 'fields' => $fields,
             ],
+            'sync_mode' => $request->boolean('sync_mode'),
             'status' => 'ready',
         ]);
 

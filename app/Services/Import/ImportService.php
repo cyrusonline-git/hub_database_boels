@@ -68,13 +68,15 @@ class ImportService
     }
 
     /**
-     * Voer de import daadwerkelijk uit.
+     * Voer de import uit. Ondersteunt sync-mode: niet-voorkomende
+     * records worden op active=0 gezet (soft-delete).
      */
     public function run(ImportJob $job): void
     {
         $job->update(['status' => 'processing', 'started_at' => now()]);
 
-        $config = EntityRegistry::get($job->profile?->entity ?? $job->mapping['__entity'] ?? '');
+        $entity = $job->profile?->entity ?? $job->mapping['__entity'] ?? '';
+        $config = EntityRegistry::get($entity);
         if (! $config) {
             $job->update(['status' => 'failed', 'error_log' => 'Onbekende entiteit', 'finished_at' => now()]);
             return;
@@ -87,8 +89,10 @@ class ImportService
         $mapping = $job->mapping['fields'] ?? [];
         $uniqueKeys = $config['unique_keys'];
         $model = $config['model'];
+        $autoGenerateFrom = $config['auto_generate_employee_number_from'] ?? null;
 
         $imported = 0; $failed = 0;
+        $processedIds = [];   // bijgehouden voor sync-mode
 
         foreach ($dataRows as $i => $row) {
             $rowNumber = $i + 2; // header is row 1
@@ -96,7 +100,23 @@ class ImportService
             foreach ($headers as $colIdx => $header) {
                 $field = $mapping[$header] ?? null;
                 if (! $field) continue;
-                $assoc[$field] = $row[$colIdx] ?? null;
+                $value = $row[$colIdx] ?? null;
+                // Lege strings → null (anders schrijft hij "" weg)
+                if (is_string($value) && trim($value) === '') $value = null;
+                $assoc[$field] = $value;
+            }
+
+            // Auto-generate employee_number uit email als die leeg is
+            if ($entity === 'employee'
+                && empty($assoc['employee_number'])
+                && ! empty($assoc[$autoGenerateFrom ?? ''])
+            ) {
+                $assoc['employee_number'] = 'AUTO-' . substr(md5($assoc[$autoGenerateFrom]), 0, 12);
+            }
+
+            // Skip helemaal lege rijen
+            if (empty(array_filter($assoc, fn($v) => $v !== null && $v !== ''))) {
+                continue;
             }
 
             $rowRecord = new ImportJobRow([
@@ -107,18 +127,39 @@ class ImportService
             ]);
 
             try {
-                DB::transaction(function () use ($model, $assoc, $uniqueKeys, $rowRecord) {
+                $entityRow = DB::transaction(function () use ($model, $assoc, $uniqueKeys, $rowRecord) {
+                    // Vind het eerste unique_key veld dat in assoc een waarde heeft
                     $where = [];
                     foreach ($uniqueKeys as $k) {
-                        $where[$k] = $assoc[$k] ?? null;
+                        if (! empty($assoc[$k])) {
+                            $where[$k] = $assoc[$k];
+                            break;
+                        }
                     }
-                    $entity = $model::updateOrCreate($where, $assoc);
+                    if (empty($where)) {
+                        throw new \RuntimeException('Geen unique key gevuld (employee_number/email leeg)');
+                    }
+
+                    // Zorg dat actief=1 bij re-import (auto-reactivate)
+                    if (array_key_exists('active', (new $model)->getAttributes()) || in_array('active', (new $model)->getFillable())) {
+                        $assoc['active'] = $assoc['active'] ?? 1;
+                    }
+
+                    // Trashed record terughalen + reactivate
+                    $existing = $model::withTrashed()->where($where)->first();
+                    if ($existing && $existing->trashed()) {
+                        $existing->restore();
+                    }
+
+                    $row = $model::updateOrCreate($where, $assoc);
                     $rowRecord->status = 'imported';
-                    $rowRecord->created_entity_id = $entity->getKey();
+                    $rowRecord->created_entity_id = $row->getKey();
                     $rowRecord->created_entity_type = $model;
                     $rowRecord->save();
+                    return $row;
                 });
                 $imported++;
+                $processedIds[] = $entityRow->getKey();
             } catch (\Throwable $e) {
                 $rowRecord->status = 'error';
                 $rowRecord->error_message = mb_substr($e->getMessage(), 0, 1000);
@@ -127,11 +168,34 @@ class ImportService
             }
         }
 
+        // ============ SYNC MODE: deactiveer wat niet in deze import zat ============
+        $deactivated = 0;
+        if ($job->sync_mode && ! empty($processedIds)) {
+            $query = $model::query()->whereNotIn('id', $processedIds);
+
+            // Alleen records die nog actief zijn worden gedeactiveerd
+            if (in_array('active', (new $model)->getFillable())) {
+                $query->where('active', true);
+                $deactivated = $query->count();
+                $query->update(['active' => false]);
+            }
+
+            // Optioneel: ook soft-delete
+            $toDelete = $model::query()
+                ->whereNotIn('id', $processedIds)
+                ->whereNull('deleted_at')
+                ->get();
+            foreach ($toDelete as $rec) {
+                $rec->delete();
+            }
+        }
+
         $job->update([
             'status' => 'completed',
             'total_rows' => count($dataRows),
             'imported_rows' => $imported,
             'failed_rows' => $failed,
+            'deactivated_rows' => $deactivated,
             'finished_at' => now(),
         ]);
     }

@@ -72,9 +72,13 @@ class EntityRegistry
             'employee' => [
                 'label' => 'Medewerkers',
                 'model' => Employee::class,
-                'unique_keys' => ['employee_number'],
+                // Eerste unique_key match telt. Wat als employee_number leeg
+                // is in Excel? Dan probeer email. Werkt voor Boels-domeinen
+                // waar email-adressen uniek per persoon zijn.
+                'unique_keys' => ['employee_number', 'email'],
+                'auto_generate_employee_number_from' => 'email',
                 'fields' => [
-                    'employee_number' => ['label' => 'Personeelsnummer', 'required' => true],
+                    'employee_number' => ['label' => 'Personeelsnummer'],
                     'name'            => ['label' => 'Naam',             'required' => true],
                     'email'           => ['label' => 'E-mail'],
                     'phone'           => ['label' => 'Telefoon'],

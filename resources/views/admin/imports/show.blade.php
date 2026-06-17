@@ -16,6 +16,12 @@
                 <p class="mb-1"><strong>Totaal:</strong> {{ $job->total_rows }}</p>
                 <p class="mb-1 text-success"><strong>Geïmporteerd:</strong> {{ $job->imported_rows }}</p>
                 <p class="mb-1 text-danger"><strong>Fouten:</strong> {{ $job->failed_rows }}</p>
+                @if($job->sync_mode ?? false)
+                    <p class="mb-1 text-warning">
+                        <strong>Sync-modus:</strong> aan &mdash;
+                        {{ $job->deactivated_rows ?? 0 }} record(s) op inactief gezet
+                    </p>
+                @endif
             </div>
         </div>
 
