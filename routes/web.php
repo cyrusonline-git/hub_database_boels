@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CustomFieldController;
+use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\FieldAliasController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\PermissionController;
@@ -28,12 +29,25 @@ Route::middleware('auth')->group(function () {
 
     // Super Admin / system management
     Route::middleware('role:super-admin,administrator')->prefix('admin')->name('admin.')->group(function () {
-        Route::resource('users', UserController::class);
-        Route::resource('roles', RoleController::class);
-        Route::resource('permissions', PermissionController::class);
-        Route::resource('applications', ApplicationController::class);
-        Route::resource('custom-fields', CustomFieldController::class);
-        Route::resource('field-aliases', FieldAliasController::class);
+        // Redirect /admin/{resource}/{id}  -> /admin/{resource}/{id}/edit
+        // (sommige links sturen naar /show terwijl we alleen edit hebben)
+        foreach (['users','roles','permissions','applications','custom-fields','field-aliases'] as $r) {
+            Route::get("$r/{id}", fn ($id) => redirect("/admin/$r/$id/edit"))->whereNumber('id');
+        }
+
+        Route::resource('users', UserController::class)->except(['show']);
+        Route::resource('roles', RoleController::class)->except(['show']);
+        Route::resource('permissions', PermissionController::class)->except(['show']);
+        Route::resource('applications', ApplicationController::class)->except(['show']);
+        Route::resource('custom-fields', CustomFieldController::class)->except(['show']);
+        Route::resource('field-aliases', FieldAliasController::class)->except(['show']);
+
+        // Employees beheer
+        Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+        Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
 
         Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
         Route::get('imports/create', [ImportController::class, 'create'])->name('imports.create');

@@ -64,7 +64,8 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"><i class="bi bi-gear"></i> Beheer</a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url('/admin/users') }}">Gebruikers</a></li>
+                            <li><a class="dropdown-item" href="{{ url('/admin/users') }}">Gebruikers (login)</a></li>
+                            <li><a class="dropdown-item" href="{{ url('/admin/employees') }}">Medewerkers</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/roles') }}">Rollen</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/permissions') }}">Permissies</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/applications') }}">Applicaties</a></li>
