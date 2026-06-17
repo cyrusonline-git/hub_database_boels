@@ -95,6 +95,13 @@ class EmployeeFieldAliasSeeder extends Seeder
             ['employee', 'Cost Center',      'cost_center'],
             ['employee', 'Cost Centre',      'cost_center'],
 
+            // Depot / Vestiging
+            ['employee', 'Depot',            'depot'],
+            ['employee', 'Vestiging',        'depot'],
+            ['employee', 'Branch',           'depot'],
+            ['employee', 'Locatie',          'depot'],
+            ['employee', 'Location',         'depot'],
+
             // Actief
             ['employee', 'Actief',           'active'],
             ['employee', 'Active',           'active'],

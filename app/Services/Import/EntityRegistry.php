@@ -88,6 +88,7 @@ class EntityRegistry
                     'end_date'        => ['label' => 'Einddatum'],
                     'manager'         => ['label' => 'Manager'],
                     'cost_center'     => ['label' => 'Kostenplaats'],
+                    'depot'           => ['label' => 'Depot / Vestiging'],
                     'active'          => ['label' => 'Actief (1/0)'],
                     'external_id'     => ['label' => 'Externe ID'],
                     'source_system'   => ['label' => 'Bronsysteem'],
