@@ -76,19 +76,72 @@ tegen de gebruiker:
 > CORE-repo (`hub_database_boels`) gedaan worden, niet hier. Wil je dat ik
 > dat daar voorbereid in plaats van hier?"
 
-## Identity Provider
+## Identity Provider — SSO via Session Cookie Sharing
 
-Deze app authenticeert tegen Boels CORE. Twee mogelijke setups:
+Deze app authenticeert NIET zelf. Boels CORE is de identity provider.
 
-### Aanpak A (huidige standaard) — gedeelde sessies via DB
-- App heeft eigen `LoginController` die `users` tabel checkt
-- Sessies in `sessions` tabel (gedeeld met CORE)
-- Permissies uit `permissions` + `role_permissions`
+**Hoe het werkt:**
+- Session cookie heeft domein `.sorai.nl` → wordt gedeeld over ALLE `*.sorai.nl` subdomeinen
+- Zodra een user is ingelogd op `databasehub.sorai.nl`, herkent jouw app diezelfde user via Laravel's standaard `Auth::check()`
+- Geen tokens in URLs, geen extra login-scherm
 
-### Aanpak B (toekomst) — Single Sign-On via API token
-- Gebruiker logt in op CORE → krijgt token → wordt doorgestuurd naar app
-- App valideert token via `GET https://databasehub.sorai.nl/api/me`
-  met `Authorization: Bearer {token}`
+**`.env` van deze app moet bevatten:**
+```env
+SESSION_DOMAIN=.sorai.nl
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE=lax
+SANCTUM_STATEFUL_DOMAINS=databasehub.sorai.nl,{APP_SLUG}.sorai.nl
+APP_KEY={SAME_AS_BOELS_CORE}   # cruciaal: zelfde APP_KEY = sessies decrypten lukt
+```
+
+**Geen LoginController nodig.** Wel een redirect-naar-CORE-login als de user niet ingelogd is:
+```php
+if (! Auth::check()) {
+    return redirect('https://databasehub.sorai.nl/login');
+}
+```
+
+## Data Scoping — gebruik `ScopesByUserAccess` trait
+
+Voor elk model dat area/depot/country-specifieke data bevat:
+
+```php
+use App\Models\Concerns\ScopesByUserAccess;
+
+class Machine extends Model {
+    use ScopesByUserAccess;
+
+    protected array $userScopeColumns = [
+        'area' => 'allowed_areas',
+        'depot' => 'allowed_depots',
+        'country' => 'allowed_countries',
+    ];
+
+    protected ?string $userScopeBypassPermission = '{APP_SLUG}.global';
+}
+```
+
+Effect: `Machine::all()` retourneert automatisch alleen records die overlappen
+met de allowed_* arrays van de ingelogde user. Super admins en users met de
+`{APP_SLUG}.global` permissie zien alles.
+
+Tijdelijk zonder scope querien (bv. voor admin-rapporten):
+```php
+Machine::withoutGlobalScope(ScopesByUserAccess::class)->get();
+```
+
+## Permissies — vraag CORE om data
+
+CORE exposeert deze API-endpoints (auth via gedeelde session cookie OF Sanctum token):
+
+| Endpoint | Wat |
+|---|---|
+| `GET /api/me` | User-info + roles + permissions + allowed_areas/depots/countries |
+| `GET /api/applications` | Welke apps deze user mag zien |
+| `GET /api/can/{permission}` | Snelle ja/nee check |
+
+In je app kun je gewoon `auth()->user()->hasPermission('{APP_SLUG}.manage')`
+gebruiken (gedeelde users tabel).
 
 ## Deploy-pijplijn
 

@@ -8,7 +8,8 @@ class LauncherController extends Controller
 {
     public function index(Request $request)
     {
-        $apps = $request->user()->applications()->get();
+        // applications() retourneert al een gefilterde Collection
+        $apps = $request->user()->applications();
 
         return view('launcher.index', compact('apps'));
     }

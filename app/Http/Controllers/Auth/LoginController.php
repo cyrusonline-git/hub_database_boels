@@ -22,15 +22,29 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials + ['active' => true], $request->boolean('remember'))) {
+        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'email' => __('Onjuist e-mailadres of wachtwoord.'),
             ]);
         }
 
-        $request->session()->regenerate();
-
         $user = Auth::user();
+
+        if ($user->status === \App\Models\User::STATUS_PENDING) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => __('Je account is nog niet geactiveerd. Check je mail voor de activatie-link.'),
+            ]);
+        }
+
+        if ($user->status === \App\Models\User::STATUS_DISABLED || ! $user->active) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => __('Dit account is uitgeschakeld. Neem contact op met de beheerder.'),
+            ]);
+        }
+
+        $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
 
         return redirect()->intended('/launcher');

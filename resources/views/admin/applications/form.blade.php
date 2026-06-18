@@ -45,6 +45,31 @@
         </div>
     </div>
 
+    <hr class="my-4">
+    <h6 class="text-boels"><i class="bi bi-shield-lock"></i> Toegangsrestricties</h6>
+    <p class="text-muted small">
+        Leeg = alle areas/depots/countries mogen.
+        Niet-leeg = alleen users met overlap zien deze app in de Launcher.
+        Bypass via <code>{{ $application->slug ?: '{slug}' }}.global</code> permissie.
+    </p>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Restricted to areas</label>
+            <input type="text" name="restricted_to_areas" class="form-control" placeholder="bv. Zuid, Noord"
+                value="{{ old('restricted_to_areas', is_array($application->restricted_to_areas) ? implode(', ', $application->restricted_to_areas) : '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Restricted to depots</label>
+            <input type="text" name="restricted_to_depots" class="form-control" placeholder="bv. Geleen; Industrial"
+                value="{{ old('restricted_to_depots', is_array($application->restricted_to_depots) ? implode(', ', $application->restricted_to_depots) : '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Restricted to countries</label>
+            <input type="text" name="restricted_to_countries" class="form-control" placeholder="bv. Nederland"
+                value="{{ old('restricted_to_countries', is_array($application->restricted_to_countries) ? implode(', ', $application->restricted_to_countries) : '') }}">
+        </div>
+    </div>
+
     <div class="mt-3">
         <button class="btn btn-boels">Opslaan</button>
         <a href="{{ route('admin.applications.index') }}" class="btn btn-outline-secondary">Annuleren</a>

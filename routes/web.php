@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TableOwnershipController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\LauncherController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,9 @@ Route::redirect('/', '/launcher');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
+
+    Route::get('/activate/{token}', [ActivationController::class, 'show'])->name('activate.show');
+    Route::post('/activate/{token}', [ActivationController::class, 'activate'])->name('activate.do');
 });
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
@@ -44,6 +48,7 @@ Route::middleware('auth')->group(function () {
 
         // Employees beheer
         Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::post('employees/bulk-grant-login', [EmployeeController::class, 'bulkGrantLogin'])->name('employees.bulk-grant-login');
         Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');

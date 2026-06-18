@@ -54,6 +54,56 @@
     </div>
 </form>
 
+@if($hasFilter && $candidates > 0)
+<div class="alert alert-success d-flex justify-content-between align-items-center">
+    <div>
+        <i class="bi bi-shield-check"></i>
+        <strong>{{ $candidates }}</strong> medewerker(s) in deze selectie hebben nog géén login-account
+        en kunnen er één krijgen. <code>allowed_areas</code>, <code>depot</code> en <code>country</code>
+        worden automatisch overgenomen uit hun employee-record.
+    </div>
+    <button type="button" class="btn btn-boels btn-sm" data-bs-toggle="modal" data-bs-target="#bulkGrantModal">
+        <i class="bi bi-person-plus"></i> Geef login-toegang
+    </button>
+</div>
+
+<div class="modal fade" id="bulkGrantModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('admin.employees.bulk-grant-login') }}?{{ http_build_query(request()->query()) }}" class="modal-content">
+            @csrf
+            @foreach(['q','depot','area','country','function','status'] as $f)
+                @if(request($f))<input type="hidden" name="{{ $f }}" value="{{ request($f) }}">@endif
+            @endforeach
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk login-toegang verlenen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Er worden <strong>{{ $candidates }}</strong> login-accounts aangemaakt.
+                   Elk krijgt een activatie-mail om zelf een wachtwoord te kiezen.</p>
+                <div class="mb-3">
+                    <label class="form-label">Welke startrol krijgen ze? *</label>
+                    <select name="default_role" class="form-select" required>
+                        @foreach(\App\Models\Role::orderBy('name')->get() as $r)
+                            <option value="{{ $r->id }}" @selected($r->slug === 'user')>{{ $r->name }}</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Later per gebruiker bij te werken in Beheer → Gebruikers (login).</small>
+                </div>
+                <p class="text-muted small mb-0">
+                    Medewerkers zonder email worden overgeslagen.
+                    Medewerkers met al een bestaand login-account worden ook overgeslagen.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuleer</button>
+                <button type="submit" class="btn btn-boels"><i class="bi bi-envelope"></i> Bevestig en verstuur mails</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
 <div class="card">
     <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">

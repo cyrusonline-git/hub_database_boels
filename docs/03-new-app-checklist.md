@@ -3,6 +3,14 @@
 > Volg deze stappen om veilig een nieuwe app (bv. Fleet, Sales, Schade)
 > te koppelen aan Boels CORE.
 
+## TL;DR voor SSO werkend te krijgen
+
+- Zelfde `APP_KEY` als Boels CORE in de child-app `.env` (anders kan child-app de session-cookie niet decrypteren)
+- `SESSION_DOMAIN=.sorai.nl` in beide `.env` bestanden
+- Zelfde `SESSION_COOKIE` naam — Laravel default is `Str::slug(APP_NAME).'_session'`, dus óf identieke `APP_NAME` óf expliciet `SESSION_COOKIE=boels_core_platform_session` in beide
+- Subdomein onder `*.sorai.nl` met HTTPS
+- In de child-app: als `! Auth::check()` → redirect naar `https://databasehub.sorai.nl/login`
+
 ---
 
 ## 1. Antagonist hosting setup (eenmalig per app)

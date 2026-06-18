@@ -29,6 +29,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateUser($request);
+        $data = $this->normalizeAccessLists($data);
         $data['password'] = Hash::make($data['password']);
         $user = User::create($data);
         $user->syncRoles($request->input('roles', []));
@@ -48,6 +49,7 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $data = $this->validateUser($request, $user);
+        $data = $this->normalizeAccessLists($data);
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
@@ -77,8 +79,29 @@ class UserController extends Controller
             'employee_id' => ['nullable','exists:employees,id'],
             'is_super_admin' => ['sometimes','boolean'],
             'active' => ['sometimes','boolean'],
+            'status' => ['sometimes', 'in:active,pending_activation,disabled'],
+            'allowed_areas' => ['nullable','string'],
+            'allowed_depots' => ['nullable','string'],
+            'allowed_countries' => ['nullable','string'],
             'roles' => ['array'],
             'roles.*' => ['integer','exists:roles,id'],
         ]);
+    }
+
+    /**
+     * Komma-gescheiden invoer -> array. Lege string -> null (= geen scope-restrictie).
+     */
+    private function normalizeAccessLists(array $data): array
+    {
+        foreach (['allowed_areas', 'allowed_depots', 'allowed_countries'] as $key) {
+            if (! array_key_exists($key, $data)) continue;
+            $raw = trim((string) $data[$key]);
+            if ($raw === '') {
+                $data[$key] = null;
+                continue;
+            }
+            $data[$key] = array_values(array_filter(array_map('trim', explode(',', $raw))));
+        }
+        return $data;
     }
 }

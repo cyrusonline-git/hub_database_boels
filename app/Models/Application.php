@@ -15,11 +15,15 @@ class Application extends Model
     protected $fillable = [
         'name', 'slug', 'description', 'url',
         'icon', 'color', 'sort_order', 'active',
+        'restricted_to_areas', 'restricted_to_depots', 'restricted_to_countries',
     ];
 
     protected $casts = [
         'active' => 'boolean',
         'sort_order' => 'integer',
+        'restricted_to_areas' => 'array',
+        'restricted_to_depots' => 'array',
+        'restricted_to_countries' => 'array',
     ];
 
     protected static function booted(): void

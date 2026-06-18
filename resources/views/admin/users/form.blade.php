@@ -32,16 +32,44 @@
         </div>
 
         <div class="col-md-6">
-            <div class="form-check">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                @foreach(['active' => 'Actief', 'pending_activation' => 'Wacht op activatie', 'disabled' => 'Uitgeschakeld'] as $val => $label)
+                    <option value="{{ $val }}" @selected(old('status', $user->status ?? 'active') === $val)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <div class="form-check mt-2">
                 <input type="hidden" name="active" value="0">
                 <input type="checkbox" name="active" value="1" class="form-check-input" id="active" @checked(old('active', $user->active ?? true))>
-                <label for="active" class="form-check-label">Actief</label>
+                <label for="active" class="form-check-label">Actief (boolean flag)</label>
             </div>
             <div class="form-check">
                 <input type="hidden" name="is_super_admin" value="0">
                 <input type="checkbox" name="is_super_admin" value="1" class="form-check-input" id="super" @checked(old('is_super_admin', $user->is_super_admin ?? false))>
-                <label for="super" class="form-check-label">Super Admin</label>
+                <label for="super" class="form-check-label">Super Admin (ziet altijd alles)</label>
             </div>
+        </div>
+
+        <div class="col-12">
+            <hr>
+            <h6 class="text-boels"><i class="bi bi-geo-alt"></i> Toegangsgebieden (laat leeg om area-scoping uit te schakelen)</h6>
+            <p class="text-muted small">Komma-gescheiden lijst. Apps met area-restricties worden alleen getoond als deze user overlap heeft. Apps zonder restrictie zijn altijd zichtbaar.</p>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Allowed areas</label>
+            <input type="text" name="allowed_areas" class="form-control" placeholder="bv. Noord, Zuid"
+                value="{{ old('allowed_areas', is_array($user->allowed_areas) ? implode(', ', $user->allowed_areas) : '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Allowed depots</label>
+            <input type="text" name="allowed_depots" class="form-control" placeholder="bv. Geleen; Industrial"
+                value="{{ old('allowed_depots', is_array($user->allowed_depots) ? implode(', ', $user->allowed_depots) : '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Allowed countries</label>
+            <input type="text" name="allowed_countries" class="form-control" placeholder="bv. Nederland"
+                value="{{ old('allowed_countries', is_array($user->allowed_countries) ? implode(', ', $user->allowed_countries) : '') }}">
         </div>
 
         <div class="col-12">

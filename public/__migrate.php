@@ -1,8 +1,9 @@
 <?php
 /**
- * Boels CORE — Migrate + Employee aliases seeder.
+ * Boels CORE — Migrate-only script.
  *
  * Open: https://databasehub.sorai.nl/__migrate.php?k=BOELS_MIGRATE_2026
+ * Verwijdert zichzelf na succes.
  */
 
 $secret = 'BOELS_MIGRATE_2026';
@@ -14,7 +15,7 @@ if (($_GET['k'] ?? '') !== $secret) {
 @set_time_limit(300);
 header('Content-Type: text/plain; charset=utf-8');
 
-echo "Boels CORE — Migrate + Employee aliases\n";
+echo "Boels CORE — Migrate\n";
 echo str_repeat('=', 50) . "\n\n";
 
 $candidates = [__DIR__ . '/../laravel_app', __DIR__ . '/..'];
@@ -35,27 +36,21 @@ $kernel->bootstrap();
 $buf = new \Symfony\Component\Console\Output\BufferedOutput;
 
 try {
-    echo "[1/3] migrate --force\n";
+    echo "[1/2] migrate --force\n";
     $exit = $kernel->call('migrate', ['--force' => true], $buf);
     echo $buf->fetch();
     echo "exit code: $exit\n\n";
 
-    echo "[2/3] EmployeeFieldAliasSeeder\n";
-    $kernel->call('db:seed', ['--class' => 'Database\\Seeders\\EmployeeFieldAliasSeeder', '--force' => true], $buf);
-    echo $buf->fetch();
-    echo "\n";
-
-    echo "[3/3] cache clearen\n";
-    $kernel->call('config:clear', [], $buf);  echo $buf->fetch();
-    $kernel->call('view:clear', [], $buf);    echo $buf->fetch();
-    $kernel->call('route:clear', [], $buf);   echo $buf->fetch();
-    $kernel->call('cache:clear', [], $buf);   echo $buf->fetch();
+    echo "[2/2] cache clearen\n";
+    $kernel->call('config:clear', [], $buf);   echo $buf->fetch();
+    $kernel->call('view:clear', [], $buf);     echo $buf->fetch();
+    $kernel->call('route:clear', [], $buf);    echo $buf->fetch();
+    $kernel->call('cache:clear', [], $buf);    echo $buf->fetch();
 
     if ($exit === 0) {
-        echo "\n✓ Klaar. Employees tabel uitgebreid met area/country/city/region/manager/etc.\n";
-        echo "  Field aliases voor NL+EN kolomkoppen toegevoegd.\n";
+        echo "\n✓ Migrate geslaagd.\n";
         @unlink(__FILE__);
-        echo "Script verwijderd.\n";
+        echo "Dit script heeft zichzelf verwijderd.\n";
     } else {
         echo "\n⚠ Migrate gefaald — script blijft staan.\n";
     }

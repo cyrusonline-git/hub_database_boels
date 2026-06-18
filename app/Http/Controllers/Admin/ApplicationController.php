@@ -21,7 +21,7 @@ class ApplicationController extends Controller
 
     public function store(Request $request)
     {
-        Application::create($this->validateApp($request));
+        Application::create($this->normalize($this->validateApp($request)));
         return redirect()->route('admin.applications.index')->with('status', 'Applicatie toegevoegd.');
     }
 
@@ -32,7 +32,7 @@ class ApplicationController extends Controller
 
     public function update(Request $request, Application $application)
     {
-        $application->update($this->validateApp($request, $application));
+        $application->update($this->normalize($this->validateApp($request, $application)));
         return redirect()->route('admin.applications.index')->with('status', 'Applicatie bijgewerkt.');
     }
 
@@ -53,6 +53,21 @@ class ApplicationController extends Controller
             'color' => ['nullable','string','max:20'],
             'sort_order' => ['nullable','integer'],
             'active' => ['sometimes','boolean'],
+            'restricted_to_areas' => ['nullable','string'],
+            'restricted_to_depots' => ['nullable','string'],
+            'restricted_to_countries' => ['nullable','string'],
         ]);
+    }
+
+    private function normalize(array $data): array
+    {
+        foreach (['restricted_to_areas', 'restricted_to_depots', 'restricted_to_countries'] as $k) {
+            if (! array_key_exists($k, $data)) continue;
+            $raw = trim((string) $data[$k]);
+            $data[$k] = $raw === ''
+                ? null
+                : array_values(array_filter(array_map('trim', explode(',', $raw))));
+        }
+        return $data;
     }
 }
