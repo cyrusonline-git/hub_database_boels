@@ -13,7 +13,23 @@ class MachineSubgroup extends Model
 {
     use HasFactory, SoftDeletes, HasAuditLog;
 
-    protected $fillable = ['group_id', 'subgroup_number', 'subgroup_name', 'description'];
+    protected $fillable = [
+        'group_id', 'subgroup_number', 'subgroup_name', 'description',
+        'tabblad', 'categorie', 'toepassing', 'merk', 'type',
+        'highlights', 'specifications', 'accessoires',
+        'verkoopartikelen', 'alternatieven', 'service_codes',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'highlights' => 'array',
+            'specifications' => 'array',
+            'accessoires' => 'array',
+            'verkoopartikelen' => 'array',
+            'alternatieven' => 'array',
+        ];
+    }
 
     public function group(): BelongsTo
     {
