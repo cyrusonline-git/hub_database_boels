@@ -30,6 +30,10 @@
                     </div>
                     <button type="submit" class="btn btn-boels w-100">Inloggen</button>
                 </form>
+
+                <div class="text-center mt-3">
+                    <a href="{{ route('password.request') }}" class="small">Wachtwoord vergeten?</a>
+                </div>
             </div>
         </div>
     </div>

@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\TableOwnershipController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\LauncherController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,12 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/activate/{token}', [ActivationController::class, 'show'])->name('activate.show');
     Route::post('/activate/{token}', [ActivationController::class, 'activate'])->name('activate.do');
+
+    // Wachtwoord vergeten / reset
+    Route::get('/wachtwoord-vergeten', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
+    Route::post('/wachtwoord-vergeten', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/wachtwoord-reset/{token}', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/wachtwoord-reset', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
 });
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
