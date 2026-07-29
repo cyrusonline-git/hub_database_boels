@@ -18,9 +18,9 @@
         @if (!empty($r['unknown_subgroups']))
             <hr class="my-2">
             <i class="bi bi-exclamation-triangle"></i>
-            {{ count($r['unknown_subgroups']) }} subgroep(en) stonden nog niet in de subgroeplijst en zijn als
-            placeholder aangemaakt: {{ implode(', ', array_slice($r['unknown_subgroups'], 0, 20)) }}@if(count($r['unknown_subgroups']) > 20)…@endif
-            <br>Upload (opnieuw) de subgroeplijst om ze aan te vullen.
+            {{ count($r['unknown_subgroups']) }} subgroep(en) stonden nog niet in de subgroeplijst en zijn
+            zonder specificaties aangemaakt: {{ implode(', ', array_slice($r['unknown_subgroups'], 0, 20)) }}@if(count($r['unknown_subgroups']) > 20)…@endif
+            <br>Upload (opnieuw) de subgroeplijst om specificaties aan te vullen.
         @endif
         @if (!empty($r['errors']))
             <hr class="my-2">
@@ -87,11 +87,11 @@
             <div class="card-body p-4">
                 <h5 class="card-title"><i class="bi bi-2-circle text-boels"></i> Unieke materieellijst</h5>
                 <p class="text-muted small">
-                    Eén rij per <strong>uniek materieelnummer</strong> met de bijbehorende subgroep.
-                    Kolommen worden herkend op naam (Materieelnummer, Subgroep en optioneel
-                    Omschrijving, Merk, Type, Serienummer, Bouwjaar, Locatie).
-                    Nummers worden gekoppeld aan de subgroepen uit lijst 1; bestaande
-                    materieelnummers worden bijgewerkt.
+                    Eén rij per <strong>uniek materieelnummer</strong>. Verwachte kolommen:
+                    <em>Analysis group, Product group, Subgroep, Unique number, Omschrijving</em>
+                    (herkend op naam, volgorde maakt niet uit). Bouwt de volledige hiërarchie
+                    <em>Analysegroep &rsaquo; Productgroep &rsaquo; Subgroep &rsaquo; Uniek nummer</em> op.
+                    Bestaande nummers worden bijgewerkt; geschikt voor grote lijsten (65k+ rijen).
                 </p>
                 <form method="POST" action="{{ route('admin.material-imports.machines') }}" enctype="multipart/form-data">
                     @csrf

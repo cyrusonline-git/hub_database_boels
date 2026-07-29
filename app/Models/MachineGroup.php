@@ -12,7 +12,7 @@ class MachineGroup extends Model
 {
     use HasFactory, SoftDeletes, HasAuditLog;
 
-    protected $fillable = ['group_number', 'group_name', 'description'];
+    protected $fillable = ['group_number', 'group_name', 'analysis_group', 'description'];
 
     public function subgroups(): HasMany
     {

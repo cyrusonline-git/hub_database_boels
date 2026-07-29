@@ -149,8 +149,15 @@ class MaterialListImportService
         return compact('created', 'updated', 'skipped', 'errors');
     }
 
+    /**
+     * Unieke materieellijst: Analysis group | Product group | Subgroep |
+     * Unique number | Omschrijving. Kan 65k+ rijen bevatten, dus batch-upserts.
+     */
     public function importMachineList(string $storedPath): array
     {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '512M');
+
         $rows = Excel::toArray([], Storage::path($storedPath))[0] ?? [];
         if (count($rows) < 2) {
             return ['error' => 'Het bestand bevat geen datarijen.'];
@@ -160,108 +167,151 @@ class MaterialListImportService
 
         // Flexibele kolomherkenning
         $find = function (array $needles) use ($headers) {
-            foreach ($headers as $idx => $h) {
-                foreach ($needles as $n) {
+            foreach ($needles as $n) {
+                foreach ($headers as $idx => $h) {
                     if ($h !== '' && str_contains($h, $n)) return $idx;
                 }
             }
             return false;
         };
 
-        $nrCol = $find(['materieelnummer', 'materieelnr', 'machinenummer', 'uniek nummer', 'fleetnummer']);
-        $sgCol = $find(['subgroep', 'subgroup']);
+        $nrCol = $find(['unique number', 'uniek nummer', 'materieelnummer', 'materieelnr', 'machinenummer', 'fleetnummer', 'uniek']);
+        $sgCol = $find(['subgroep', 'subgroup', 'sub group']);
         if ($nrCol === false || $sgCol === false || $nrCol === $sgCol) {
-            return ['error' => 'Kon de kolommen niet herkennen. Verwacht: een kolom met "Materieelnummer" en een kolom met "Subgroep". Gevonden: '.implode(', ', array_filter($headers))];
+            return ['error' => 'Kon de kolommen niet herkennen. Verwacht: een kolom "Unique number"/"Materieelnummer" en een kolom "Subgroep". Gevonden: '.implode(', ', array_filter($headers))];
         }
 
-        $descCol = $find(['omschrijving', 'productomschrijving', 'beschrijving']);
-        $brandCol = $find(['merk']);
-        $modelCol = $find(['type', 'model']);
-        $serialCol = $find(['serienummer', 'serial']);
-        $yearCol = $find(['bouwjaar', 'jaar']);
-        $locCol = $find(['locatie', 'depot', 'vestiging']);
+        $agCol = $find(['analysis group', 'analysegroep', 'analyse groep']);
+        $pgCol = $find(['product group', 'productgroep']);
+        $descCol = $find(['omschrijving', 'productomschrijving', 'beschrijving', 'description']);
 
-        $created = 0;
-        $updated = 0;
+        $get = fn ($row, $idx) => $idx === false ? null : $this->cleanValue($row[$idx] ?? null);
+
+        // ---- Pass 1: hiërarchie opbouwen (analysegroep > productgroep > subgroep)
         $skipped = 0;
-        $errors = [];
-        $unknownSubgroups = [];
-        $subgroupCache = [];
-        $fallbackGroup = null;
+        $hierarchy = []; // subgroup_number => ['pg' =>, 'ag' =>, 'name' =>]
+        $machineRows = []; // machine_number => [subgroup_number, description]
 
-        foreach (array_slice($rows, 1) as $i => $row) {
-            $rowNr = $i + 2;
+        foreach (array_slice($rows, 1) as $row) {
             $machineNumber = $this->cleanNumber($row[$nrCol] ?? null);
             $subgroupNumber = $this->cleanNumber($row[$sgCol] ?? null);
             if ($machineNumber === '') {
                 $skipped++;
                 continue;
             }
+            if ($subgroupNumber !== '' && ! isset($hierarchy[$subgroupNumber])) {
+                $hierarchy[$subgroupNumber] = [
+                    'pg' => $get($row, $pgCol) ?: 'Overig',
+                    'ag' => $get($row, $agCol),
+                    'name' => $get($row, $descCol) ?: "Subgroep $subgroupNumber",
+                ];
+            }
+            $machineRows[$machineNumber] = [
+                'sg' => $subgroupNumber,
+                'desc' => $get($row, $descCol),
+            ];
+        }
 
-            $get = fn ($idx) => $idx === false ? null : $this->cleanValue($row[$idx] ?? null);
+        // Productgroepen aanmaken/bijwerken (incl. analysegroep erboven)
+        $groupIds = []; // lowercase pg-naam => id
+        foreach ($hierarchy as $info) {
+            $key = mb_strtolower($info['pg']);
+            if (isset($groupIds[$key])) continue;
+            $group = MachineGroup::withTrashed()->firstOrCreate(
+                ['group_number' => Str::limit(Str::slug($info['pg']), 50, '')],
+                ['group_name' => Str::limit($info['pg'], 150)],
+            );
+            if ($group->trashed()) $group->restore();
+            if ($info['ag'] && $group->analysis_group !== $info['ag']) {
+                $group->update(['analysis_group' => Str::limit($info['ag'], 150)]);
+            }
+            $groupIds[$key] = $group->id;
+        }
 
-            try {
-                if (! isset($subgroupCache[$subgroupNumber])) {
-                    $sg = $subgroupNumber === '' ? null
-                        : MachineSubgroup::withTrashed()->where('subgroup_number', $subgroupNumber)->first();
+        // Subgroepen resolven: bestaande behouden (subgroeplijst is leidend voor
+        // specs), placeholders/nieuwe krijgen de groep uit deze lijst.
+        $subgroupIds = []; // subgroup_number => id
+        $existing = MachineSubgroup::withTrashed()
+            ->whereIn('subgroup_number', array_keys($hierarchy))
+            ->get()->keyBy('subgroup_number');
+        $newSubgroups = [];
 
-                    if ($sg && $sg->trashed()) $sg->restore();
-
-                    if (! $sg) {
-                        // Subgroep nog niet bekend: maak placeholder aan zodat de
-                        // upload nooit blokkeert; subgroeplijst vult hem later aan.
-                        $fallbackGroup ??= MachineGroup::withTrashed()->firstOrCreate(
-                            ['group_number' => 'onbekend'],
-                            ['group_name' => 'Onbekend (nog geen subgroeplijst)'],
-                        );
-                        if ($fallbackGroup->trashed()) $fallbackGroup->restore();
-
-                        $sg = MachineSubgroup::create([
-                            'group_id' => $fallbackGroup->id,
-                            'subgroup_number' => $subgroupNumber !== '' ? $subgroupNumber : '0',
-                            'subgroup_name' => $subgroupNumber !== ''
-                                ? "Subgroep $subgroupNumber (nog niet in subgroeplijst)"
-                                : 'Zonder subgroep',
-                        ]);
-                        if ($subgroupNumber !== '') {
-                            $unknownSubgroups[$subgroupNumber] = true;
-                        }
-                    }
-                    $subgroupCache[$subgroupNumber] = $sg;
+        foreach ($hierarchy as $number => $info) {
+            $sg = $existing[$number] ?? null;
+            if ($sg) {
+                if ($sg->trashed()) $sg->restore();
+                $subgroupIds[$number] = $sg->id;
+                if (str_contains($sg->subgroup_name, 'nog niet in subgroeplijst')) {
+                    $sg->update([
+                        'group_id' => $groupIds[mb_strtolower($info['pg'])],
+                        'subgroup_name' => Str::limit($info['name'], 150),
+                    ]);
                 }
-                $subgroup = $subgroupCache[$subgroupNumber];
-
-                $description = $get($descCol) ?: $subgroup->subgroup_name;
-                $year = $get($yearCol);
-                $year = ($year && preg_match('/^(19|20)\d{2}$/', $year)) ? (int) $year : null;
-
-                $machine = Machine::withTrashed()->where('machine_number', $machineNumber)->first();
-                $data = array_filter([
-                    'subgroup_id' => $subgroup->id,
-                    'description' => Str::limit($description, 255),
-                    'brand' => $get($brandCol),
-                    'model' => $get($modelCol),
-                    'serial_number' => $get($serialCol),
-                    'year' => $year,
-                    'location' => $get($locCol),
-                ], fn ($v) => $v !== null);
-                $data['source_system'] = 'materieellijst-upload';
-
-                if ($machine) {
-                    if ($machine->trashed()) $machine->restore();
-                    $machine->update($data);
-                    $updated++;
-                } else {
-                    Machine::create(['machine_number' => $machineNumber] + $data);
-                    $created++;
-                }
-            } catch (\Throwable $e) {
-                $errors[] = "Rij $rowNr (materieelnummer $machineNumber): ".$e->getMessage();
+            } else {
+                $newSubgroups[] = $number;
+                $subgroupIds[$number] = MachineSubgroup::create([
+                    'group_id' => $groupIds[mb_strtolower($info['pg'])],
+                    'subgroup_number' => $number,
+                    'subgroup_name' => Str::limit($info['name'], 150),
+                ])->id;
             }
         }
 
-        return compact('created', 'updated', 'skipped', 'errors') + [
-            'unknown_subgroups' => array_keys($unknownSubgroups),
+        // Vangnet voor rijen zonder subgroep
+        $noSubgroupId = null;
+        if (collect($machineRows)->contains(fn ($r) => $r['sg'] === '')) {
+            $fallbackGroup = MachineGroup::withTrashed()->firstOrCreate(
+                ['group_number' => 'onbekend'],
+                ['group_name' => 'Onbekend'],
+            );
+            if ($fallbackGroup->trashed()) $fallbackGroup->restore();
+            $noSubgroupId = MachineSubgroup::withTrashed()->firstOrCreate(
+                ['group_id' => $fallbackGroup->id, 'subgroup_number' => '0'],
+                ['subgroup_name' => 'Zonder subgroep'],
+            )->id;
+        }
+
+        // ---- Pass 2: machines in batches upserten
+        $existingNumbers = [];
+        Machine::withTrashed()->select('id', 'machine_number')
+            ->chunkById(5000, function ($chunk) use (&$existingNumbers) {
+                foreach ($chunk as $m) $existingNumbers[$m->machine_number] = true;
+            });
+
+        $created = 0;
+        $updated = 0;
+        $batch = [];
+        $now = now();
+
+        foreach ($machineRows as $number => $info) {
+            $sgId = $info['sg'] !== '' ? ($subgroupIds[$info['sg']] ?? $noSubgroupId) : $noSubgroupId;
+            if (! $sgId) { $skipped++; continue; }
+
+            isset($existingNumbers[$number]) ? $updated++ : $created++;
+            $batch[] = [
+                'machine_number' => (string) $number,
+                'description' => Str::limit($info['desc'] ?: 'Onbekend', 255),
+                'subgroup_id' => $sgId,
+                'source_system' => 'materieellijst-upload',
+                'deleted_at' => null, // her-upload herstelt verwijderde nummers
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+            if (count($batch) >= 500) {
+                Machine::upsert($batch, ['machine_number'], ['description', 'subgroup_id', 'source_system', 'deleted_at', 'updated_at']);
+                $batch = [];
+            }
+        }
+        if ($batch) {
+            Machine::upsert($batch, ['machine_number'], ['description', 'subgroup_id', 'source_system', 'deleted_at', 'updated_at']);
+        }
+
+        return [
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'errors' => [],
+            'unknown_subgroups' => $newSubgroups,
         ];
     }
 
