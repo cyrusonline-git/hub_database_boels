@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -22,7 +23,7 @@ class PasswordResetMail extends Mailable
     {
         return new Envelope(
             subject: 'Wachtwoord opnieuw instellen — Boels CORE',
-            to: [['address' => $this->user->email, 'name' => $this->user->name]],
+            to: [new Address($this->user->email, $this->user->name)],
         );
     }
 
