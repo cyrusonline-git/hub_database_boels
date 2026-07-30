@@ -205,3 +205,55 @@ GET /api/employees?q=&depot=&active=1   (beperkte velden)
 
 Schrijven in CORE-data gebeurt NIET via deze API — alleen via CORE zelf
 of (voor rijen, niet structuur) via de gedeelde DB volgens de regels boven.
+
+## Niet-Laravel child-apps (kale PHP, andere frameworks)
+
+Een child-app hoeft GEEN Laravel te zijn. Zonder Laravel kun je de
+CORE-cookie niet zelf ontcijferen (geen APP_KEY nodig!) — gebruik dan het
+**cookie-relay patroon**: stuur de cookies van de bezoeker server-side door
+naar de CORE-API en krijg de ingelogde gebruiker terug als JSON.
+
+```php
+function coreUser(): ?array {
+    // Cache per PHP-sessie (5 min) om niet elke request CORE te bellen
+    session_start();
+    if (isset($_SESSION['core_user'], $_SESSION['core_user_at'])
+        && time() - $_SESSION['core_user_at'] < 300) {
+        return $_SESSION['core_user'];
+    }
+    $ch = curl_init('https://databasehub.sorai.nl/api/me');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_HTTPHEADER => [
+            'Accept: application/json',
+            'Referer: https://{APP_SLUG}.sorai.nl',
+            'Cookie: ' . ($_SERVER['HTTP_COOKIE'] ?? ''),
+        ],
+    ]);
+    $res = curl_exec($ch);
+    $ok = curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200;
+    curl_close($ch);
+    $user = $ok ? json_decode($res, true) : null;
+    $_SESSION['core_user'] = $user;
+    $_SESSION['core_user_at'] = time();
+    return $user;
+}
+
+$user = coreUser();
+if (! $user) {
+    header('Location: https://databasehub.sorai.nl/login');
+    exit;
+}
+// $user = ['id'=>..,'name'=>..,'email'=>..,'is_super_admin'=>..,...]
+```
+
+Voorwaarden:
+- App draait op https://{APP_SLUG}.sorai.nl (cookie-domein .sorai.nl)
+- `{APP_SLUG}.sorai.nl` staat in `SANCTUM_STATEFUL_DOMAINS` in de CORE
+  server-.env (vraag de CORE-beheerder / doe dit in de CORE-repo)
+- Bij uitloggen: eigen PHP-sessie wissen + linken naar CORE-logout
+- Rollen/toegang: lokaal opslaan (eigen tabellen, bv. in SQLite) met
+  de CORE `users.id` of e-mail als sleutel — zie autorisatie-sectie
+- Data (klanten/materieel/personeel) ophalen via de data-API met
+  hetzelfde cookie-relay (zelfde headers, andere endpoints)
