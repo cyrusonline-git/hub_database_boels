@@ -21,7 +21,7 @@ class UserController extends Controller
     {
         return view('admin.users.form', [
             'user' => new User(),
-            'roles' => Role::orderBy('name')->get(),
+            'roles' => Role::with('application')->orderByRaw('application_id is not null')->orderBy('application_id')->orderBy('name')->get(),
             'employees' => Employee::orderBy('name')->get(),
         ]);
     }
@@ -41,7 +41,7 @@ class UserController extends Controller
     {
         return view('admin.users.form', [
             'user' => $user,
-            'roles' => Role::orderBy('name')->get(),
+            'roles' => Role::with('application')->orderByRaw('application_id is not null')->orderBy('application_id')->orderBy('name')->get(),
             'employees' => Employee::orderBy('name')->get(),
         ]);
     }

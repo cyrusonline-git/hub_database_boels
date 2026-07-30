@@ -9,12 +9,22 @@
     @if($role->exists) @method('PUT') @endif
 
     <div class="row g-3 mb-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">Naam *</label>
             <input type="text" name="name" value="{{ old('name', $role->name) }}" class="form-control" required>
             <small class="text-muted">Bijv. "Fleet Manager", "Project Manager", "Monteur Zuid".</small>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
+            <label class="form-label">Applicatie</label>
+            <select name="application_id" class="form-select @error('application_id') is-invalid @enderror">
+                <option value="">— Platform-breed (alle apps) —</option>
+                @foreach($apps as $a)
+                    <option value="{{ $a->id }}" @selected(old('application_id', $role->application_id)==$a->id)>{{ $a->name }}</option>
+                @endforeach
+            </select>
+            <small class="text-muted">Rol geldt alleen binnen deze app. Elke app kan dus eigen rollen hebben.</small>
+        </div>
+        <div class="col-md-4">
             <label class="form-label">Beschrijving</label>
             <input type="text" name="description" value="{{ old('description', $role->description) }}" class="form-control">
         </div>

@@ -158,3 +158,38 @@ Werkt identiek aan Boels CORE:
 | Tabel-prefix conventie | Maakt code-review eenvoudig |
 | Dit CLAUDE.md bestand | Claude wijkt niet af van deze regels |
 | Dagelijkse DB-backup | 7 dagen rolling, in Boels CORE storage/backups/ |
+
+## Rollen & permissies per app (sinds 30-07-2026)
+
+Rollen worden per app ingeregeld in CORE Admin → Rollen (kies daar deze
+app als "Applicatie"). CORE-rollen zoals super-admin staan hier los van.
+
+De app haalt de rollen/rechten van de ingelogde gebruiker op via:
+
+```
+GET https://databasehub.sorai.nl/api/access/{APP_SLUG}
+→ { app, is_super_admin, roles: [{slug, name, scope}], permissions: [keys] }
+```
+
+- `scope: "app"` = rol specifiek voor deze app; `"platform"` = platform-breed.
+- Cache dit per sessie/request; check autorisatie ALTIJD tegen dit antwoord,
+  nooit tegen lokaal verzonnen rollen.
+- Permissies voor deze app maak je in CORE Admin → Permissies aan met
+  key-prefix `{APP_SLUG}.` (bv. `{APP_SLUG}.orders.edit`).
+
+## Data-API (read-only) — klanten, materieel, personeel
+
+Naast direct lezen uit de gedeelde DB kan de app ook via de API
+(zelfde SSO-cookie of Sanctum-token, alles onder /api):
+
+```
+GET /api/customers?q=shell&concern=4198&per_page=50   (paginated)
+GET /api/customers/{debiteurnummer}
+GET /api/machines?q=&subgroup=84305&per_page=50
+GET /api/machines/{materieelnummer}     → incl. subgroep + specificaties
+GET /api/subgroups/{subgroepnummer}     → specs, highlights, accessoires
+GET /api/employees?q=&depot=&active=1   (beperkte velden)
+```
+
+Schrijven in CORE-data gebeurt NIET via deze API — alleen via CORE zelf
+of (voor rijen, niet structuur) via de gedeelde DB volgens de regels boven.

@@ -36,4 +36,42 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/can/{permission}', function (Request $request, string $permission) {
         return ['allowed' => $request->user()->hasPermission($permission)];
     });
+
+    // Rollen + permissies van de ingelogde user BINNEN één app.
+    // Child-apps regelen hun eigen rollen: maak in CORE Admin rollen aan
+    // met die app als applicatie, en vraag ze hier op.
+    Route::get('/access/{appSlug}', function (Request $request, string $appSlug) {
+        $app = \App\Models\Application::where('slug', $appSlug)->first();
+        abort_unless($app, 404, 'Onbekende applicatie.');
+        $u = $request->user();
+
+        $roles = $u->roles()
+            ->where(fn ($q) => $q->whereNull('application_id')->orWhere('application_id', $app->id))
+            ->get(['roles.id', 'roles.name', 'roles.slug', 'roles.application_id']);
+
+        $permissions = $u->is_super_admin
+            ? \App\Models\Permission::where(fn ($q) => $q->whereNull('application_id')->orWhere('application_id', $app->id))->pluck('key')
+            : $u->permissions()
+                ->where(fn ($q) => $q->whereNull('application_id')->orWhere('application_id', $app->id))
+                ->pluck('key');
+
+        return [
+            'app' => $app->slug,
+            'is_super_admin' => $u->is_super_admin,
+            'roles' => $roles->map(fn ($r) => [
+                'slug' => $r->slug,
+                'name' => $r->name,
+                'scope' => $r->application_id ? 'app' : 'platform',
+            ]),
+            'permissions' => $permissions,
+        ];
+    });
+
+    // ---- Read-only data-API: klanten, materieel, personeel ----
+    Route::get('/customers', [\App\Http\Controllers\Api\DataController::class, 'customers']);
+    Route::get('/customers/{number}', [\App\Http\Controllers\Api\DataController::class, 'customer']);
+    Route::get('/machines', [\App\Http\Controllers\Api\DataController::class, 'machines']);
+    Route::get('/machines/{number}', [\App\Http\Controllers\Api\DataController::class, 'machine']);
+    Route::get('/subgroups/{number}', [\App\Http\Controllers\Api\DataController::class, 'subgroup']);
+    Route::get('/employees', [\App\Http\Controllers\Api\DataController::class, 'employees']);
 });

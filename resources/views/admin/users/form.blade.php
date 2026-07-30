@@ -74,17 +74,23 @@
 
         <div class="col-12">
             <label class="form-label">Rollen</label>
-            <div class="row">
-                @foreach($roles as $r)
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input type="checkbox" name="roles[]" value="{{ $r->id }}" id="r{{ $r->id }}" class="form-check-input"
-                                @checked(in_array($r->id, old('roles', $user->roles->pluck('id')->all())))>
-                            <label for="r{{ $r->id }}" class="form-check-label">{{ $r->name }}</label>
-                        </div>
+            @php $rolesGrouped = $roles->groupBy(fn($r) => $r->application?->name ?? 'Platform-breed'); @endphp
+            @foreach($rolesGrouped as $appName => $appRoles)
+                <div class="border rounded p-2 mb-2">
+                    <div class="small fw-bold text-muted mb-1">{{ $appName }}</div>
+                    <div class="row">
+                        @foreach($appRoles as $r)
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input type="checkbox" name="roles[]" value="{{ $r->id }}" id="r{{ $r->id }}" class="form-check-input"
+                                        @checked(in_array($r->id, old('roles', $user->roles->pluck('id')->all())))>
+                                    <label for="r{{ $r->id }}" class="form-check-label">{{ $r->name }}</label>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                @endforeach
-            </div>
+                </div>
+            @endforeach
         </div>
     </div>
 

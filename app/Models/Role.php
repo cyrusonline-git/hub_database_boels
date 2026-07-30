@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -12,7 +13,7 @@ class Role extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'is_system'];
+    protected $fillable = ['name', 'slug', 'description', 'is_system', 'application_id'];
 
     protected $casts = ['is_system' => 'boolean'];
 
@@ -23,6 +24,12 @@ class Role extends Model
                 $role->slug = Str::slug($role->name);
             }
         });
+    }
+
+    /** null = platform-brede rol; gezet = rol geldt alleen binnen die app */
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(Application::class);
     }
 
     public function permissions(): BelongsToMany

@@ -4,18 +4,36 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3><i class="bi bi-shield-lock text-boels"></i> Rollen</h3>
-    <a href="{{ route('admin.roles.create') }}" class="btn btn-boels"><i class="bi bi-plus-lg"></i> Nieuwe rol</a>
+    <div class="d-flex gap-2">
+        <form method="GET">
+            <select name="app" class="form-select" onchange="this.form.submit()">
+                <option value="">— Alle apps —</option>
+                <option value="platform" @selected(request('app')==='platform')>Platform-breed</option>
+                @foreach($apps as $a)
+                    <option value="{{ $a->id }}" @selected(request('app')==(string)$a->id)>{{ $a->name }}</option>
+                @endforeach
+            </select>
+        </form>
+        <a href="{{ route('admin.roles.create') }}" class="btn btn-boels"><i class="bi bi-plus-lg"></i> Nieuwe rol</a>
+    </div>
 </div>
 
 <div class="card">
     <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
-            <tr><th>Naam</th><th>Slug</th><th>Permissies</th><th>Gebruikers</th><th>Systeem</th><th></th></tr>
+            <tr><th>Naam</th><th>Applicatie</th><th>Slug</th><th>Permissies</th><th>Gebruikers</th><th>Systeem</th><th></th></tr>
         </thead>
         <tbody>
         @foreach($roles as $r)
             <tr>
                 <td><strong>{{ $r->name }}</strong><br><small class="text-muted">{{ $r->description }}</small></td>
+                <td>
+                    @if($r->application)
+                        <span class="badge" style="background:#FF6600;">{{ $r->application->name }}</span>
+                    @else
+                        <span class="badge bg-secondary">platform</span>
+                    @endif
+                </td>
                 <td><code>{{ $r->slug }}</code></td>
                 <td>{{ $r->permissions_count }}</td>
                 <td>{{ $r->users_count }}</td>
