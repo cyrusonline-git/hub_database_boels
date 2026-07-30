@@ -27,7 +27,13 @@ class MaterialImportController extends Controller
     public function uploadSubgroups(Request $request)
     {
         $path = $this->storeUpload($request);
-        $result = $this->service->importSubgroupList($path);
+
+        try {
+            $result = $this->service->importSubgroupList($path);
+        } catch (\Throwable $e) {
+            report($e);
+            $result = ['error' => 'Verwerking mislukt: '.$e->getMessage()];
+        }
 
         return $this->redirectWithResult($result, 'Subgroeplijst');
     }
@@ -35,7 +41,13 @@ class MaterialImportController extends Controller
     public function uploadMachines(Request $request)
     {
         $path = $this->storeUpload($request);
-        $result = $this->service->importMachineList($path);
+
+        try {
+            $result = $this->service->importMachineList($path);
+        } catch (\Throwable $e) {
+            report($e);
+            $result = ['error' => 'Verwerking mislukt: '.$e->getMessage()];
+        }
 
         return $this->redirectWithResult($result, 'Unieke materieellijst');
     }

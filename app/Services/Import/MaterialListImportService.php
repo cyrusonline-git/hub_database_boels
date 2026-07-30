@@ -29,6 +29,9 @@ class MaterialListImportService
 
     public function importSubgroupList(string $storedPath): array
     {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
+
         $rows = Excel::toArray([], Storage::path($storedPath))[0] ?? [];
         if (count($rows) < 2) {
             return ['error' => 'Het bestand bevat geen datarijen.'];
@@ -156,7 +159,7 @@ class MaterialListImportService
     public function importMachineList(string $storedPath): array
     {
         @set_time_limit(600);
-        @ini_set('memory_limit', '512M');
+        @ini_set('memory_limit', '1024M');
 
         $rows = Excel::toArray([], Storage::path($storedPath))[0] ?? [];
         if (count($rows) < 2) {
