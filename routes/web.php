@@ -24,10 +24,10 @@ Route::redirect('/', '/launcher');
 // Auth
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
-    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1');
 
     Route::get('/activate/{token}', [ActivationController::class, 'show'])->name('activate.show');
-    Route::post('/activate/{token}', [ActivationController::class, 'activate'])->name('activate.do');
+    Route::post('/activate/{token}', [ActivationController::class, 'activate'])->middleware('throttle:10,1')->name('activate.do');
 
     // Wachtwoord vergeten / reset
     Route::get('/wachtwoord-vergeten', [PasswordResetController::class, 'showForgotForm'])->name('password.request');

@@ -15,8 +15,16 @@
  * hem bij elke deploy opnieuw.
  */
 
+// Sleutel komt uit de server-.env (DEPLOY_SECRET). Zolang die nog niet
+// bestaat (vóór het draaien van __harden.php) geldt de oude vaste sleutel.
 $secret = 'BOELS_PULL_2026';
-if (($_GET['k'] ?? '') !== $secret) {
+foreach ([__DIR__ . '/../laravel_app/.env', __DIR__ . '/../.env'] as $envFile) {
+    if (file_exists($envFile) && preg_match('/^DEPLOY_SECRET=(.+)$/m', file_get_contents($envFile), $m)) {
+        $secret = trim($m[1]);
+        break;
+    }
+}
+if (! hash_equals($secret, (string) ($_GET['k'] ?? ''))) {
     http_response_code(403);
     exit('forbidden');
 }

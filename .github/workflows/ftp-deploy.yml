@@ -73,9 +73,9 @@ jobs:
           body: |
             Auto-generated deploy bundle.
 
-            Pull via: https://databasehub.sorai.nl/__pull_deploy.php?k=BOELS_PULL_2026
+            Pull via je eigen deploy-URL (__pull_deploy.php met DEPLOY_SECRET).
 
-            Specifieke versie: ?tag=${{ steps.tag.outputs.tag }}
+            Specifieke versie: &tag=${{ steps.tag.outputs.tag }}
           files: |
             deploy/laravel_app.zip
             deploy/public_html.zip
@@ -89,7 +89,7 @@ jobs:
           echo ""
           echo "OPEN NU IN BROWSER:"
           echo ""
-          echo "  https://databasehub.sorai.nl/__pull_deploy.php?k=BOELS_PULL_2026"
+          echo "  je eigen deploy-URL (__pull_deploy.php?k=<DEPLOY_SECRET uit .env>)"
           echo ""
           echo "Het script:"
           echo "  - downloadt de zips via HTTPS van GitHub Releases"
