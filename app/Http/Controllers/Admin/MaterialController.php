@@ -19,10 +19,11 @@ class MaterialController extends Controller
             ->leftJoin('machines as m', fn ($j) => $j->on('m.subgroup_id', '=', 'sg.id')->whereNull('m.deleted_at'))
             ->whereNull('g.deleted_at')
             ->selectRaw("coalesce(g.analysis_group, 'Overig / onbekend') as analysis_group,
-                         count(distinct g.id) as groups_count,
+                         count(distinct case when sg.id is not null then g.id end) as groups_count,
                          count(distinct sg.id) as subgroups_count,
                          count(distinct m.id) as machines_count")
             ->groupBy('analysis_group')
+            ->havingRaw('count(distinct sg.id) > 0')
             ->orderBy('analysis_group')
             ->get();
 
@@ -46,6 +47,7 @@ class MaterialController extends Controller
             ->when($analysis === 'Overig / onbekend',
                 fn ($q) => $q->whereNull('analysis_group'),
                 fn ($q) => $q->where('analysis_group', $analysis))
+            ->has('subgroups')
             ->withCount('subgroups')
             ->addSelect(['machines_count' => Machine::selectRaw('count(*)')
                 ->join('machine_subgroups as sg2', 'sg2.id', '=', 'machines.subgroup_id')

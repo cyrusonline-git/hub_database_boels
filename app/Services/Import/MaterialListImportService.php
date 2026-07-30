@@ -105,22 +105,16 @@ class MaterialListImportService
                 if ($v) $lists['highlights'][] = $v;
             }
 
-            try {
-                $groupKey = mb_strtolower($productgroep);
-                if (! isset($groupCache[$groupKey])) {
-                    $groupCache[$groupKey] = MachineGroup::withTrashed()->firstOrCreate(
-                        ['group_number' => Str::limit(Str::slug($productgroep), 50, '')],
-                        ['group_name' => Str::limit($productgroep, 150)],
-                    );
-                    if ($groupCache[$groupKey]->trashed()) {
-                        $groupCache[$groupKey]->restore();
-                    }
-                }
-                $group = $groupCache[$groupKey];
+            // De productgroep-naam uit deze catalogus wijkt af van de
+            // "Product group" in de unieke lijst (die de hiërarchie bepaalt).
+            // Bewaar hem daarom als specificatie i.p.v. de groep te verhangen.
+            if ($productgroep !== 'Overig') {
+                $specs = ['Productgroep (catalogus)' => $productgroep] + $specs;
+            }
 
+            try {
                 $subgroup = MachineSubgroup::withTrashed()->where('subgroup_number', $subgroupNumber)->first();
                 $data = [
-                    'group_id' => $group->id,
                     'subgroup_number' => $subgroupNumber,
                     'subgroup_name' => Str::limit($omschrijving, 150),
                     'tabblad' => $get($fixed['tabblad']),
@@ -137,11 +131,25 @@ class MaterialListImportService
                 ];
 
                 if ($subgroup) {
+                    // Bestaande subgroep: groep NIET verhangen — de hiërarchie
+                    // (analysegroep > productgroep) komt uit de unieke lijst.
                     if ($subgroup->trashed()) $subgroup->restore();
                     $subgroup->update($data);
                     $updated++;
                 } else {
-                    MachineSubgroup::create($data);
+                    // Nieuwe subgroep: hang hem onder de catalogus-productgroep
+                    // tot de unieke lijst hem een definitieve plek geeft.
+                    $groupKey = mb_strtolower($productgroep);
+                    if (! isset($groupCache[$groupKey])) {
+                        $groupCache[$groupKey] = MachineGroup::withTrashed()->firstOrCreate(
+                            ['group_number' => Str::limit(Str::slug($productgroep), 50, '')],
+                            ['group_name' => Str::limit($productgroep, 150)],
+                        );
+                        if ($groupCache[$groupKey]->trashed()) {
+                            $groupCache[$groupKey]->restore();
+                        }
+                    }
+                    MachineSubgroup::create($data + ['group_id' => $groupCache[$groupKey]->id]);
                     $created++;
                 }
             } catch (\Throwable $e) {
@@ -231,8 +239,9 @@ class MaterialListImportService
             $groupIds[$key] = $group->id;
         }
 
-        // Subgroepen resolven: bestaande behouden (subgroeplijst is leidend voor
-        // specs), placeholders/nieuwe krijgen de groep uit deze lijst.
+        // Subgroepen resolven. Deze lijst is LEIDEND voor de hiërarchie:
+        // bestaande subgroepen worden altijd onder de juiste productgroep
+        // (en dus analysegroep) gehangen; specs blijven onaangetast.
         $subgroupIds = []; // subgroup_number => id
         $existing = MachineSubgroup::withTrashed()
             ->whereIn('subgroup_number', array_keys($hierarchy))
@@ -244,12 +253,11 @@ class MaterialListImportService
             if ($sg) {
                 if ($sg->trashed()) $sg->restore();
                 $subgroupIds[$number] = $sg->id;
+                $updates = ['group_id' => $groupIds[mb_strtolower($info['pg'])]];
                 if (str_contains($sg->subgroup_name, 'nog niet in subgroeplijst')) {
-                    $sg->update([
-                        'group_id' => $groupIds[mb_strtolower($info['pg'])],
-                        'subgroup_name' => Str::limit($info['name'], 150),
-                    ]);
+                    $updates['subgroup_name'] = Str::limit($info['name'], 150);
                 }
+                $sg->update($updates);
             } else {
                 $newSubgroups[] = $number;
                 $subgroupIds[$number] = MachineSubgroup::create([
