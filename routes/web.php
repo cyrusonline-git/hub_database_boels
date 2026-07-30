@@ -63,10 +63,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
         Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
 
-        // Materieel bekijken (hiërarchie + specs + zoeken)
+        // Materieel bekijken — doorklikbaar: analysegroep > productgroep > subgroep > machine
         Route::get('materieel', [MaterialController::class, 'index'])->name('material.index');
+        Route::get('materieel/productgroepen', [MaterialController::class, 'groups'])->name('material.groups');
+        Route::get('materieel/subgroepen', [MaterialController::class, 'subgroups'])->name('material.subgroups');
         Route::get('materieel/machines', [MaterialController::class, 'machines'])->name('material.machines');
         Route::get('materieel/subgroep/{subgroup}', [MaterialController::class, 'show'])->name('material.show');
+        Route::get('materieel/machine/{machine}', [MaterialController::class, 'machine'])->name('material.machine');
 
         // Materieellijst uploads (subgroepen + unieke nummers)
         Route::get('material-imports', [MaterialImportController::class, 'index'])->name('material-imports.index');

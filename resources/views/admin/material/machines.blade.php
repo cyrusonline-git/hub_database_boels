@@ -44,11 +44,9 @@
                         <td>{{ $m->subgroup?->group?->group_name }}</td>
                         <td class="text-muted">{{ $m->subgroup?->group?->analysis_group ?? '—' }}</td>
                         <td class="text-end">
-                            @if($m->subgroup)
-                                <a href="{{ route('admin.material.show', $m->subgroup) }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-box-seam"></i> Specs
-                                </a>
-                            @endif
+                            <a href="{{ route('admin.material.machine', $m) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-box-seam"></i> Specs
+                            </a>
                         </td>
                     </tr>
                 @empty
