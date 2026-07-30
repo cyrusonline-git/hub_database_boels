@@ -55,7 +55,9 @@ class MaterialImportController extends Controller
     private function storeUpload(Request $request): string
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:'.(config('boels.import.max_file_size_mb', 20) * 1024)],
+            // 'extensions' i.p.v. 'mimes': Excel-CSV's hebben vaak mime text/plain
+            // waardoor de mimes-regel ze onterecht afkeurt.
+            'file' => ['required', 'file', 'extensions:xlsx,xls,csv', 'max:'.(config('boels.import.max_file_size_mb', 20) * 1024)],
         ]);
 
         return $request->file('file')->store(config('boels.import.storage_path', 'imports'));
