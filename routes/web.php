@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\FieldAliasController;
 use App\Http\Controllers\Admin\ImportController;
+use App\Http\Controllers\Admin\MaterialController;
 use App\Http\Controllers\Admin\MaterialImportController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
@@ -61,6 +62,11 @@ Route::middleware('auth')->group(function () {
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
         Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+
+        // Materieel bekijken (hiërarchie + specs + zoeken)
+        Route::get('materieel', [MaterialController::class, 'index'])->name('material.index');
+        Route::get('materieel/machines', [MaterialController::class, 'machines'])->name('material.machines');
+        Route::get('materieel/subgroep/{subgroup}', [MaterialController::class, 'show'])->name('material.show');
 
         // Materieellijst uploads (subgroepen + unieke nummers)
         Route::get('material-imports', [MaterialImportController::class, 'index'])->name('material-imports.index');
