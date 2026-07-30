@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\FieldAliasController;
@@ -62,6 +63,11 @@ Route::middleware('auth')->group(function () {
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
         Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+
+        // Klanten (Industrial) — lijst + upload + detail
+        Route::get('klanten', [CustomerController::class, 'index'])->name('customers.index');
+        Route::post('klanten/upload', [CustomerController::class, 'upload'])->name('customers.upload');
+        Route::get('klanten/{customer}', [CustomerController::class, 'show'])->name('customers.show');
 
         // Materieel bekijken — doorklikbaar: analysegroep > productgroep > subgroep > machine
         Route::get('materieel', [MaterialController::class, 'index'])->name('material.index');

@@ -72,6 +72,7 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/custom-fields') }}">Custom Fields</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/field-aliases') }}">Field Aliases</a></li>
+                            <li><a class="dropdown-item" href="{{ url('/admin/klanten') }}">Klanten</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/materieel') }}">Materieel</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/material-imports') }}">Materieel import</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/imports') }}">Import Engine</a></li>

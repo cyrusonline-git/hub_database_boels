@@ -16,6 +16,11 @@ class Customer extends Model
 
     protected $fillable = [
         'customer_number', 'customer_name', 'status',
+        'second_name', 'responsible', 'responsible_role',
+        'concern_number', 'concern_name', 'concern_responsible', 'concern_responsible_role',
+        'purchasing_org_number', 'purchasing_org_name',
+        'purchasing_org_responsible', 'purchasing_org_responsible_role',
+        'nace_code', 'nace_description',
         'kvk_number', 'vat_number',
         'address_street', 'address_number', 'address_postal',
         'address_city', 'address_country',
