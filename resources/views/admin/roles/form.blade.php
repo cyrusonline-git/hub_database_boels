@@ -30,6 +30,24 @@
         </div>
     </div>
 
+    <h5 class="mt-3 mb-2">Dashboard / Launcher</h5>
+    <p class="text-muted small">Welke apps ziet iemand met deze rol op zijn dashboard na het inloggen?</p>
+    <div class="border rounded p-3 mb-3">
+        <div class="row">
+            @foreach($apps as $a)
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input type="checkbox" name="launcher_apps[]" value="{{ $a->id }}" id="la{{ $a->id }}"
+                            class="form-check-input"
+                            @checked(in_array($a->id, old('launcher_apps', $role->exists ? $role->launcherApplications->pluck('id')->all() : [])))>
+                        <label for="la{{ $a->id }}" class="form-check-label">{{ $a->name }}</label>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        <small class="text-muted">Let op: area/depot/land-beperkingen van een app blijven ook gelden.</small>
+    </div>
+
     <h5 class="mt-3 mb-2">Permissies</h5>
     <p class="text-muted small">Permissies per applicatie — selecteer welke deze rol mag.</p>
 

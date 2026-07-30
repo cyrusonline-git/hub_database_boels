@@ -57,16 +57,26 @@ class User extends Authenticatable
         $query = Application::query()->where('active', true);
 
         if (! $this->is_super_admin) {
-            // Filter op apps waarvoor user permissies heeft
-            $query->whereIn('id', function ($q) {
-                $q->select('application_id')
-                    ->from('permissions')
-                    ->whereIn('id', function ($q2) {
-                        $q2->select('permission_id')
-                            ->from('role_permissions')
-                            ->whereIn('role_id', $this->roles()->select('roles.id'));
-                    })
-                    ->whereNotNull('application_id');
+            // App zichtbaar als (a) een van je rollen direct aan de app is
+            // gekoppeld (launcher-vinkjes bij Beheer > Rollen), of
+            // (b) je via je rollen een permissie van die app hebt.
+            $roleIds = $this->roles()->select('roles.id');
+
+            $query->where(function ($q) use ($roleIds) {
+                $q->whereIn('id', function ($sub) use ($roleIds) {
+                    $sub->select('application_id')
+                        ->from('application_role')
+                        ->whereIn('role_id', $roleIds);
+                })->orWhereIn('id', function ($sub) use ($roleIds) {
+                    $sub->select('application_id')
+                        ->from('permissions')
+                        ->whereIn('id', function ($q2) use ($roleIds) {
+                            $q2->select('permission_id')
+                                ->from('role_permissions')
+                                ->whereIn('role_id', $roleIds);
+                        })
+                        ->whereNotNull('application_id');
+                });
             });
         }
 

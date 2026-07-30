@@ -37,6 +37,12 @@ class Role extends Model
         return $this->belongsToMany(Permission::class, 'role_permissions')->withTimestamps();
     }
 
+    /** Apps die deze rol in de launcher ziet */
+    public function launcherApplications(): BelongsToMany
+    {
+        return $this->belongsToMany(Application::class, 'application_role')->withTimestamps();
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_roles')->withTimestamps();

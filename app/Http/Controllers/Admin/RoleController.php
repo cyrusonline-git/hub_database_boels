@@ -38,6 +38,7 @@ class RoleController extends Controller
         $data = $this->validateRole($request);
         $role = Role::create($data);
         $role->permissions()->sync($request->input('permissions', []));
+        $role->launcherApplications()->sync($request->input('launcher_apps', []));
         return redirect()->route('admin.roles.index')->with('status', 'Rol aangemaakt.');
     }
 
@@ -55,6 +56,7 @@ class RoleController extends Controller
         $data = $this->validateRole($request, $role);
         $role->update($data);
         $role->permissions()->sync($request->input('permissions', []));
+        $role->launcherApplications()->sync($request->input('launcher_apps', []));
         return redirect()->route('admin.roles.index')->with('status', 'Rol bijgewerkt.');
     }
 
@@ -81,6 +83,8 @@ class RoleController extends Controller
             'description' => ['nullable','string'],
             'permissions' => ['array'],
             'permissions.*' => ['integer','exists:permissions,id'],
+            'launcher_apps' => ['array'],
+            'launcher_apps.*' => ['integer','exists:applications,id'],
         ]);
     }
 }
