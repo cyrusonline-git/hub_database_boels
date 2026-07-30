@@ -101,6 +101,12 @@ if (! Auth::check()) {
 }
 ```
 
+**Ook GEEN eigen wachtwoord-schermen.** Er bestaat maar één wachtwoord,
+in de CORE `users` tabel — voor alle apps hetzelfde. Bouw dus nooit een
+eigen "wachtwoord vergeten" of "wachtwoord wijzigen"; link altijd naar:
+`https://databasehub.sorai.nl/wachtwoord-vergeten`.
+Na reset daar werkt de login direct weer in alle apps (SSO).
+
 ## Data Scoping — gebruik `ScopesByUserAccess` trait
 
 Voor elk model dat area/depot/country-specifieke data bevat:
