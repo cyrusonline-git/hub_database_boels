@@ -159,23 +159,29 @@ Werkt identiek aan Boels CORE:
 | Dit CLAUDE.md bestand | Claude wijkt niet af van deze regels |
 | Dagelijkse DB-backup | 7 dagen rolling, in Boels CORE storage/backups/ |
 
-## Rollen & permissies per app (sinds 30-07-2026)
+## Autorisatie: rollen beheert deze app ZELF (CORE = alleen login)
 
-Rollen worden per app ingeregeld in CORE Admin → Rollen (kies daar deze
-app als "Applicatie"). CORE-rollen zoals super-admin staan hier los van.
+Boels CORE levert uitsluitend de **identiteit**: wie is ingelogd
+(via de SSO-sessiecookie of `GET /api/me` → `{ id, name, email,
+is_super_admin, employee_id, ... }`).
 
-De app haalt de rollen/rechten van de ingelogde gebruiker op via:
+**Wie toegang heeft tot deze app en met welke rol, bepaalt deze app
+volledig zelf.** Regels:
 
-```
-GET https://databasehub.sorai.nl/api/access/{APP_SLUG}
-→ { app, is_super_admin, roles: [{slug, name, scope}], permissions: [keys] }
-```
+1. Maak eigen tabellen met app-prefix, bv.:
+   - `{APP_SLUG}_roles` (id, name, slug, description)
+   - `{APP_SLUG}_user_roles` (user_id → core `users.id`, role_id)
+2. Bouw in deze app een eigen beheerscherm (alleen voor app-beheerders)
+   om gebruikers toegang te geven en rollen toe te kennen.
+3. Ingelogd via CORE maar (nog) geen rol in deze app? → GEEN toegang tot
+   data; toon een nette "je hebt nog geen toegang, vraag het aan bij de
+   beheerder"-pagina.
+4. `is_super_admin` uit CORE mag standaard overal bij (handig als
+   eerste beheerder om de rest in te richten).
+5. Autorisatiechecks ALTIJD server-side tegen de eigen roltabellen.
 
-- `scope: "app"` = rol specifiek voor deze app; `"platform"` = platform-breed.
-- Cache dit per sessie/request; check autorisatie ALTIJD tegen dit antwoord,
-  nooit tegen lokaal verzonnen rollen.
-- Permissies voor deze app maak je in CORE Admin → Permissies aan met
-  key-prefix `{APP_SLUG}.` (bv. `{APP_SLUG}.orders.edit`).
+(CORE kent óók app-specifieke rollen + `GET /api/access/{slug}` — dat is
+optioneel en wordt door deze app NIET gebruikt; rollen zijn hier lokaal.)
 
 ## Data-API (read-only) — klanten, materieel, personeel
 
