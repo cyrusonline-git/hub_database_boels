@@ -33,8 +33,9 @@ class EmployeeController extends Controller
 
         $employees = $query->orderBy('name')->paginate(50)->withQueryString();
 
-        // Per medewerker: id van zijn login-account (voor de "Maak login"-knop)
-        $loginByEmployee = User::withTrashed()->whereNotNull('employee_id')
+        // Per medewerker: id van zijn login-account (voor de "Maak login"-knop).
+        // Zacht-verwijderde accounts tellen niet mee — anders linkt de knop naar een 404.
+        $loginByEmployee = User::whereNotNull('employee_id')
             ->pluck('id', 'employee_id');
 
         $hasFilter = $request->hasAny(['q', 'depot', 'area', 'country', 'function', 'status']);
