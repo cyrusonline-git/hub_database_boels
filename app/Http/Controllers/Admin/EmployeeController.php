@@ -33,9 +33,13 @@ class EmployeeController extends Controller
 
         $employees = $query->orderBy('name')->paginate(50)->withQueryString();
 
+        // Per medewerker: id van zijn login-account (voor de "Maak login"-knop)
+        $loginByEmployee = User::withTrashed()->whereNotNull('employee_id')
+            ->pluck('id', 'employee_id');
+
         $hasFilter = $request->hasAny(['q', 'depot', 'area', 'country', 'function', 'status']);
 
-        return view('admin.employees.index', compact('employees', 'filters', 'candidates', 'hasFilter'));
+        return view('admin.employees.index', compact('employees', 'filters', 'candidates', 'hasFilter', 'loginByEmployee'));
     }
 
     public function edit(Employee $employee)

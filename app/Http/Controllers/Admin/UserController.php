@@ -17,10 +17,22 @@ class UserController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $user = new User();
+
+        // Vooringevuld vanaf de Medewerkers-pagina ("Maak login"-knop)
+        if ($request->filled('employee_id') && ($e = Employee::find($request->integer('employee_id')))) {
+            $user->employee_id = $e->id;
+            $user->name = $e->name;
+            $user->email = $e->email;
+            $user->allowed_areas = $e->area ? [$e->area] : null;
+            $user->allowed_depots = $e->depot ? [$e->depot] : null;
+            $user->allowed_countries = $e->country ? [$e->country] : null;
+        }
+
         return view('admin.users.form', [
-            'user' => new User(),
+            'user' => $user,
             'roles' => Role::with('application')->orderByRaw('application_id is not null')->orderBy('application_id')->orderBy('name')->get(),
             'employees' => Employee::orderBy('name')->get(),
         ]);

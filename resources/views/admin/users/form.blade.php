@@ -23,12 +23,16 @@
         </div>
         <div class="col-md-6">
             <label class="form-label">Gekoppelde medewerker</label>
-            <select name="employee_id" class="form-select">
+            <select name="employee_id" class="form-select" id="employeeSelect">
                 <option value="">— geen —</option>
                 @foreach($employees as $e)
-                    <option value="{{ $e->id }}" @selected(old('employee_id', $user->employee_id) == $e->id)>{{ $e->name }}</option>
+                    <option value="{{ $e->id }}"
+                        data-name="{{ $e->name }}" data-email="{{ $e->email }}"
+                        data-area="{{ $e->area }}" data-depot="{{ $e->depot }}" data-country="{{ $e->country }}"
+                        @selected(old('employee_id', $user->employee_id) == $e->id)>{{ $e->name }}@if($e->depot) — {{ $e->depot }}@endif</option>
                 @endforeach
             </select>
+            <small class="text-muted">Kies een medewerker en naam, e-mail en toegangsgebieden worden automatisch ingevuld.</small>
         </div>
 
         <div class="col-md-6">
@@ -99,4 +103,21 @@
         <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Annuleren</a>
     </div>
 </form>
+
+<script>
+    // Medewerker gekozen? Vul naam, e-mail en toegangsgebieden automatisch in.
+    document.getElementById('employeeSelect')?.addEventListener('change', function () {
+        var opt = this.selectedOptions[0];
+        if (!opt || !opt.value) return;
+        var set = function (selector, value) {
+            var el = document.querySelector(selector);
+            if (el && value) el.value = value;
+        };
+        set('input[name="name"]', opt.dataset.name);
+        set('input[name="email"]', opt.dataset.email);
+        set('input[name="allowed_areas"]', opt.dataset.area);
+        set('input[name="allowed_depots"]', opt.dataset.depot);
+        set('input[name="allowed_countries"]', opt.dataset.country);
+    });
+</script>
 @endsection

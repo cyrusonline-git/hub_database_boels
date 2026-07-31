@@ -140,6 +140,15 @@
                             <button class="btn btn-sm btn-outline-success" title="Herstellen"><i class="bi bi-arrow-counterclockwise"></i></button>
                         </form>
                     @else
+                        @if(isset($loginByEmployee[$e->id]))
+                            <a href="{{ route('admin.users.edit', $loginByEmployee[$e->id]) }}" class="btn btn-sm btn-outline-success" title="Heeft al een login — open het account">
+                                <i class="bi bi-person-check"></i> Login
+                            </a>
+                        @elseif($e->email)
+                            <a href="{{ route('admin.users.create', ['employee_id' => $e->id]) }}" class="btn btn-sm btn-boels" title="Login-account aanmaken met vooringevulde gegevens">
+                                <i class="bi bi-person-plus"></i> Maak login
+                            </a>
+                        @endif
                         <a href="{{ route('admin.employees.edit', $e) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
                         <form action="{{ route('admin.employees.destroy', $e) }}" method="POST" class="d-inline" onsubmit="return confirm('Op inactief zetten?');">
                             @csrf @method('DELETE')
