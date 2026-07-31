@@ -51,8 +51,9 @@
 <nav class="navbar navbar-expand-lg navbar-boels shadow-sm">
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="{{ url('/launcher') }}">
-            <span class="boels-logo">B</span>
-            <span>{{ config('boels.brand.name') }} <small class="opacity-75">{{ config('boels.brand.product') }}</small></span>
+            <img src="{{ asset('images/boels-industrial-logo.jpg') }}" alt="Boels Industrial"
+                 style="height:38px; border-radius:7px; margin-right:10px;">
+            <span><small class="opacity-90">{{ config('boels.brand.product') }}</small></span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
             <span class="navbar-toggler-icon"></span>

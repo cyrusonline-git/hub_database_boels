@@ -5,9 +5,9 @@
 <div class="row justify-content-center">
     <div class="col-md-5 col-lg-4">
         <div class="text-center mb-4 mt-5">
-            <div class="boels-logo mx-auto" style="width:64px;height:64px;font-size:38px;">B</div>
-            <h3 class="mt-3 mb-0">{{ config('boels.brand.name') }}</h3>
-            <p class="text-muted">{{ config('boels.brand.product') }}</p>
+            <img src="{{ asset('images/boels-industrial-logo.jpg') }}" alt="Boels Industrial"
+                 style="width:230px; max-width:75%; border-radius:14px;">
+            <p class="text-muted mt-3 mb-0">{{ config('boels.brand.product') }}</p>
         </div>
 
         <div class="card shadow-sm">
