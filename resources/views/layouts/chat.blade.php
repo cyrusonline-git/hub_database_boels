@@ -116,9 +116,40 @@
     }
     function get(url) { return fetch(url, {headers: {'Accept': 'application/json'}}).then(r => r.json()); }
 
+    // --- Notificatiegeluid (zacht "pling" via Web Audio, geen bestand nodig)
+    var audioCtx = null, lastCount = null;
+    function ensureAudio() {
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        } catch (e) {}
+    }
+    // Browsers staan geluid pas toe na een eerste klik/toets — dan alvast activeren
+    ['pointerdown', 'keydown'].forEach(ev =>
+        document.addEventListener(ev, ensureAudio, { once: true, passive: true }));
+    function playDing() {
+        if (!audioCtx || audioCtx.state !== 'running') return;
+        try {
+            [880, 1174.7].forEach(function (freq, i) {
+                var o = audioCtx.createOscillator();
+                var g = audioCtx.createGain();
+                var t = audioCtx.currentTime + i * 0.09;
+                o.type = 'sine'; o.frequency.value = freq;
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(t); o.stop(t + 0.4);
+            });
+        } catch (e) {}
+    }
+
     function setBadge(n) {
         badge.textContent = n > 99 ? '99+' : n;
         badge.style.display = n > 0 ? 'inline-flex' : 'none';
+        // Pling alleen als er écht iets nieuws bijkomt (niet bij laden van de pagina)
+        if (lastCount !== null && n > lastCount) playDing();
+        lastCount = n;
     }
     function pollUnread() {
         get('{{ route('chat.unread') }}').then(d => {
