@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\FieldAliasController;
 use App\Http\Controllers\Admin\ImportController;
+use App\Http\Controllers\Admin\InfrastructureController;
 use App\Http\Controllers\Admin\MaterialController;
 use App\Http\Controllers\Admin\MaterialImportController;
 use App\Http\Controllers\Admin\PermissionController;
@@ -65,6 +66,17 @@ Route::middleware('auth')->group(function () {
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
         Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+
+        // Infrastructuur: business unit > area > depot
+        Route::get('infrastructuur', [InfrastructureController::class, 'index'])->name('infrastructure.index');
+        Route::post('infrastructuur/sync', [InfrastructureController::class, 'syncFromEmployees'])->name('infrastructure.sync');
+        Route::post('infrastructuur/units', [InfrastructureController::class, 'storeUnit'])->name('infrastructure.units.store');
+        Route::delete('infrastructuur/units/{unit}', [InfrastructureController::class, 'destroyUnit'])->name('infrastructure.units.destroy');
+        Route::post('infrastructuur/areas', [InfrastructureController::class, 'storeArea'])->name('infrastructure.areas.store');
+        Route::delete('infrastructuur/areas/{area}', [InfrastructureController::class, 'destroyArea'])->name('infrastructure.areas.destroy');
+        Route::post('infrastructuur/depots', [InfrastructureController::class, 'storeDepot'])->name('infrastructure.depots.store');
+        Route::put('infrastructuur/depots/{depot}', [InfrastructureController::class, 'updateDepot'])->name('infrastructure.depots.update');
+        Route::delete('infrastructuur/depots/{depot}', [InfrastructureController::class, 'destroyDepot'])->name('infrastructure.depots.destroy');
 
         // Klanten (Industrial) — lijst + upload + detail
         Route::get('klanten', [CustomerController::class, 'index'])->name('customers.index');

@@ -67,6 +67,24 @@ Route::middleware('auth:sanctum')->group(function () {
         ];
     });
 
+    // Organisatiestructuur: business unit > area > depot — voor alle apps
+    Route::get('/infrastructure', function () {
+        return \App\Models\BusinessUnit::with('areas.depots')
+            ->orderBy('sort_order')->orderBy('name')->get()
+            ->map(fn ($u) => [
+                'name' => $u->name,
+                'areas' => $u->areas->map(fn ($a) => [
+                    'name' => $a->name,
+                    'country' => $a->country,
+                    'depots' => $a->depots->map(fn ($d) => [
+                        'name' => $d->name,
+                        'email' => $d->email,
+                        'city' => $d->city,
+                    ])->values(),
+                ])->values(),
+            ]);
+    });
+
     // ---- Read-only data-API: klanten, materieel, personeel ----
     Route::get('/customers', [\App\Http\Controllers\Api\DataController::class, 'customers']);
     Route::get('/customers/{number}', [\App\Http\Controllers\Api\DataController::class, 'customer']);
