@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('permissions', PermissionController::class)->except(['show']);
         Route::resource('applications', ApplicationController::class)->except(['show']);
         Route::post('applications/{application}/import-roles', [ApplicationController::class, 'importRoles'])->name('applications.import-roles');
+        Route::post('applications/register-from-url', [ApplicationController::class, 'registerFromUrl'])->name('applications.register-from-url');
         Route::resource('custom-fields', CustomFieldController::class)->except(['show']);
         Route::resource('field-aliases', FieldAliasController::class)->except(['show']);
 

@@ -4,7 +4,31 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3><i class="bi bi-grid text-boels"></i> Applicaties</h3>
-    <a href="{{ route('admin.applications.create') }}" class="btn btn-boels"><i class="bi bi-plus-lg"></i> Nieuwe applicatie</a>
+    <a href="{{ route('admin.applications.create') }}" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Handmatig toevoegen</a>
+</div>
+
+@if (session('status'))
+    <div class="alert alert-success">{{ session('status') }}</div>
+@endif
+@if ($errors->any())
+    <div class="alert alert-danger">{{ $errors->first() }}</div>
+@endif
+
+<div class="card p-3 mb-3">
+    <form method="POST" action="{{ route('admin.applications.register-from-url') }}" class="row g-2 align-items-center">
+        @csrf
+        <div class="col-md-1 fw-bold">Nieuwe app:</div>
+        <div class="col-md-6">
+            <input type="url" name="url" class="form-control" placeholder="https://offerte.sorai.nl" required>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-boels"><i class="bi bi-plug"></i> Koppel via URL</button>
+        </div>
+    </form>
+    <small class="text-muted mt-1">
+        Maakt de launcher-tegel aan en importeert de rollen automatisch — de app moet
+        <code>core-roles.php</code> publiceren (zit standaard in de migratie-prompt).
+    </small>
 </div>
 
 <div class="card">

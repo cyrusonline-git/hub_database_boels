@@ -56,7 +56,52 @@ class ApplicationController extends Controller
             return back()->withErrors('Deze app heeft geen URL ingesteld — vul die eerst in.');
         }
 
-        $endpoint = rtrim($application->url, '/').'/core-roles.php';
+        $result = $this->fetchAndImportRoles($application, $application->url);
+        if (is_string($result)) {
+            return back()->withErrors($result);
+        }
+
+        return back()->with('status', "Rollen geïmporteerd uit de app: {$result['created']} nieuw, {$result['existing']} bestonden al.");
+    }
+
+    /**
+     * Nieuwe app koppelen met alleen een URL: leest {url}/core-roles.php,
+     * maakt de applicatie (launcher-tegel) aan én importeert de rollen.
+     */
+    public function registerFromUrl(Request $request)
+    {
+        $request->validate(['url' => ['required', 'url', 'max:255']]);
+        $url = rtrim($request->input('url'), '/');
+
+        $data = $this->fetchEndpoint($url);
+        if (is_string($data)) {
+            return back()->withErrors($data.' Controleer of de app core-roles.php publiceert (zie migratie-prompt).');
+        }
+
+        $slug = \Illuminate\Support\Str::slug($data['app'] ?? explode('.', parse_url($url, PHP_URL_HOST))[0]);
+        $name = $data['name'] ?? ucfirst($slug);
+
+        $application = Application::withTrashed()->firstOrCreate(
+            ['slug' => $slug],
+            ['name' => \Illuminate\Support\Str::limit($name, 150), 'url' => $url, 'active' => true],
+        );
+        if ($application->trashed()) $application->restore();
+        if (! $application->url) $application->update(['url' => $url]);
+
+        $result = $this->fetchAndImportRoles($application, $url);
+        $rolesMsg = is_string($result)
+            ? 'Rollen konden niet gelezen worden.'
+            : "{$result['created']} rol(len) geïmporteerd, {$result['existing']} bestonden al.";
+
+        return redirect()->route('admin.applications.edit', $application)->with('status',
+            ($application->wasRecentlyCreated ? "App \"$name\" aangemaakt met launcher-tegel. " : "App \"$name\" bestond al — bijgewerkt. ").$rolesMsg
+            .' Let op: voor SSO moet het subdomein nog aangemeld worden in CORE (SANCTUM_STATEFUL_DOMAINS).');
+    }
+
+    /** Haalt {url}/core-roles.php op; geeft array terug of een foutmelding (string). */
+    private function fetchEndpoint(string $url): array|string
+    {
+        $endpoint = rtrim($url, '/').'/core-roles.php';
         $ch = curl_init($endpoint);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -69,18 +114,26 @@ class ApplicationController extends Controller
         curl_close($ch);
 
         if ($code !== 200 || ! $body) {
-            return back()->withErrors("Kon $endpoint niet ophalen (HTTP $code). De app moet dit endpoint publiceren — zie de migratie-prompt in de CORE-docs.");
+            return "Kon $endpoint niet ophalen (HTTP $code).";
         }
-
         $data = json_decode($body, true);
-        $roles = $data['roles'] ?? (is_array($data) ? $data : null);
-        if (! is_array($roles)) {
-            return back()->withErrors('Onverwacht antwoord van de app — verwacht JSON met een "roles"-lijst.');
+        if (! is_array($data) || ! isset($data['roles']) || ! is_array($data['roles'])) {
+            return 'Onverwacht antwoord van de app — verwacht JSON met een "roles"-lijst.';
+        }
+        return $data;
+    }
+
+    /** Importeert de rollen van het endpoint in CORE; array met tellingen of foutmelding (string). */
+    private function fetchAndImportRoles(Application $application, string $url): array|string
+    {
+        $data = $this->fetchEndpoint($url);
+        if (is_string($data)) {
+            return $data;
         }
 
         $created = 0;
         $existing = 0;
-        foreach ($roles as $r) {
+        foreach ($data['roles'] as $r) {
             $name = trim((string) ($r['name'] ?? $r['slug'] ?? ''));
             if ($name === '') continue;
             $slug = \Illuminate\Support\Str::slug($r['slug'] ?? $name);
@@ -95,7 +148,7 @@ class ApplicationController extends Controller
             $role->wasRecentlyCreated ? $created++ : $existing++;
         }
 
-        return back()->with('status', "Rollen geïmporteerd uit de app: $created nieuw, $existing bestonden al.");
+        return compact('created', 'existing');
     }
 
     private function validateApp(Request $request, ?Application $app = null): array

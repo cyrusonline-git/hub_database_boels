@@ -61,7 +61,7 @@ app"); de app vraagt ze op via GET /api/access/{APP_SLUG} (zelfde
 cookie-relay; antwoord: roles[{slug,name,scope}], is_super_admin) en mapt de
 rol-slugs op eigen gedrag. Publiceer daarom een endpoint core-roles.php in
 de webroot van de app dat de rollen als JSON teruggeeft:
-{"app":"{APP_SLUG}","roles":[{"slug":..,"name":..,"description":..}]}
+{"app":"{APP_SLUG}","name":"{APP_NAAM}","roles":[{"slug":..,"name":..,"description":..}]}
 (read-only, alleen rolnamen — geen gebruikers). CORE heeft een knop
 "Importeer rollen uit de app" die dit endpoint uitleest; Wim hoeft dan niets
 over te typen. Referentie: /Users/Wim/Desktop/scanner/v2/core-roles.php.

@@ -177,7 +177,7 @@ rol-slugs op zijn eigen gedrag. `scope: "app"` = rol van deze app.
 app → "nog geen toegang"-pagina.
 
 Publiceer een read-only endpoint `core-roles.php` (webroot) met de rollen
-als JSON (`{"app":"{APP_SLUG}","roles":[{"slug","name","description"}]}`)
+als JSON (`{"app":"{APP_SLUG}","name":"{APP_NAAM}","roles":[{"slug","name","description"}]}`)
 zodat CORE ze met één knop kan importeren — geen handwerk voor de beheerder.
 
 **Klant-medewerkers** (staan niet in CORE): lokale accounts én lokale
