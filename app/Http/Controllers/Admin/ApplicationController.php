@@ -67,10 +67,17 @@ class ApplicationController extends Controller
             return back()->withErrors($result);
         }
 
-        $msg = "Rollen geïmporteerd uit de app: {$result['created']} nieuw, {$result['existing']} bestonden al.";
-        $msg .= ' '.$this->importUsers($application);
+        return back()->with('status', "Rollen geïmporteerd uit de app: {$result['created']} nieuw, {$result['existing']} bestonden al.");
+    }
 
-        return back()->with('status', $msg);
+    /**
+     * EENMALIGE overname van rol-toekenningen bij het aankoppelen van een app.
+     * Daarna is CORE leidend — opnieuw draaien kan in CORE ingetrokken rollen
+     * terugzetten, vandaar een aparte, bewuste actie.
+     */
+    public function importUsersAction(Application $application)
+    {
+        return back()->with('status', $this->importUsers($application));
     }
 
     /**

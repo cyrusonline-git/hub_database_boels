@@ -93,12 +93,21 @@
                     standaard ook in de launcher.
                 </p>
             </div>
-            <form method="POST" action="{{ route('admin.applications.import-roles', $application) }}">
-                @csrf
-                <button class="btn btn-outline-secondary" title="Haalt de rollenlijst op die de app publiceert op {{ rtrim($application->url ?? '', '/') }}/core-roles.php">
-                    <i class="bi bi-cloud-download"></i> Importeer rollen uit de app
-                </button>
-            </form>
+            <div class="text-end">
+                <form method="POST" action="{{ route('admin.applications.import-roles', $application) }}" class="d-inline">
+                    @csrf
+                    <button class="btn btn-outline-secondary" title="Haalt de rollenlijst op die de app publiceert op {{ rtrim($application->url ?? '', '/') }}/core-roles.php">
+                        <i class="bi bi-cloud-download"></i> Importeer rollen
+                    </button>
+                </form>
+                <form method="POST" action="{{ route('admin.applications.import-users', $application) }}" class="d-inline"
+                      onsubmit="return confirm('EENMALIG gebruiken, bij het aankoppelen van de app.\n\nDit haalt de rol-toekenningen uit de app en zet ze in CORE. Daarna beheer je rollen alléén nog in CORE — nogmaals draaien kan rollen terugzetten die je hier al had ingetrokken.\n\nDoorgaan?');">
+                    @csrf
+                    <button class="btn btn-outline-secondary" title="Eenmalige overname van wie welke rol heeft (core-users.php + sync-sleutel)">
+                        <i class="bi bi-people"></i> Neem gebruikers over (eenmalig)
+                    </button>
+                </form>
+            </div>
         </div>
 
         @if ($errors->any())
