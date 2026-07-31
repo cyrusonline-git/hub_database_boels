@@ -38,7 +38,7 @@ class RoleController extends Controller
         $data = $this->validateRole($request);
         $role = Role::create($data);
         $role->permissions()->sync($request->input('permissions', []));
-        $role->launcherApplications()->sync($request->input('launcher_apps', []));
+        $role->launcherApplications()->sync($this->launcherAppsFor($role, $request));
 
         // Snel-toevoegen vanaf de applicatie-pagina keert daarheen terug
         if ($request->filled('return_to')) {
@@ -61,7 +61,7 @@ class RoleController extends Controller
         $data = $this->validateRole($request, $role);
         $role->update($data);
         $role->permissions()->sync($request->input('permissions', []));
-        $role->launcherApplications()->sync($request->input('launcher_apps', []));
+        $role->launcherApplications()->sync($this->launcherAppsFor($role, $request));
         return redirect()->route('admin.roles.index')->with('status', 'Rol bijgewerkt.');
     }
 
@@ -72,6 +72,17 @@ class RoleController extends Controller
         }
         $role->delete();
         return back()->with('status', 'Rol verwijderd.');
+    }
+
+    /**
+     * App-rol → altijd precies de eigen app-tegel (dashboard = optelsom van
+     * iemands rollen). Alleen platform-brede rollen kiezen tegels vrij.
+     */
+    private function launcherAppsFor(Role $role, Request $request): array
+    {
+        return $role->application_id
+            ? [$role->application_id]
+            : $request->input('launcher_apps', []);
     }
 
     private function validateRole(Request $request, ?Role $role = null): array

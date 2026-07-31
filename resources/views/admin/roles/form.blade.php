@@ -31,22 +31,47 @@
     </div>
 
     <h5 class="mt-3 mb-2">Dashboard / Launcher</h5>
-    <p class="text-muted small">Welke apps ziet iemand met deze rol op zijn dashboard na het inloggen?</p>
-    <div class="border rounded p-3 mb-3">
-        <div class="row">
-            @foreach($apps as $a)
-                <div class="col-md-4">
-                    <div class="form-check">
-                        <input type="checkbox" name="launcher_apps[]" value="{{ $a->id }}" id="la{{ $a->id }}"
-                            class="form-check-input"
-                            @checked(in_array($a->id, old('launcher_apps', $role->exists ? $role->launcherApplications->pluck('id')->all() : [])))>
-                        <label for="la{{ $a->id }}" class="form-check-label">{{ $a->name }}</label>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-        <small class="text-muted">Let op: area/depot/land-beperkingen van een app blijven ook gelden.</small>
+
+    <div id="launcherAppRol" class="alert alert-light border small mb-3" style="display:none;">
+        <i class="bi bi-info-circle"></i>
+        Een <strong>app-rol</strong> toont automatisch alléén de tegel van zijn eigen app.
+        Het dashboard van een medewerker is de <strong>optelsom van al zijn rollen</strong>:
+        wil iemand meer tegels zien, geef hem dan (ook) de rol van die andere app —
+        of gebruik een platform-brede rol.
     </div>
+
+    <div id="launcherKeuze">
+        <p class="text-muted small">Welke apps ziet iemand met deze platform-brede rol op zijn dashboard?</p>
+        <div class="border rounded p-3 mb-3">
+            <div class="row">
+                @foreach($apps as $a)
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" name="launcher_apps[]" value="{{ $a->id }}" id="la{{ $a->id }}"
+                                class="form-check-input"
+                                @checked(in_array($a->id, old('launcher_apps', $role->exists ? $role->launcherApplications->pluck('id')->all() : [])))>
+                            <label for="la{{ $a->id }}" class="form-check-label">{{ $a->name }}</label>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            <small class="text-muted">Let op: area/depot/land-beperkingen van een app blijven ook gelden.</small>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var select = document.querySelector('select[name="application_id"]');
+            var infoBox = document.getElementById('launcherAppRol');
+            var keuzeBox = document.getElementById('launcherKeuze');
+            function toggle() {
+                var isAppRol = select && select.value !== '';
+                infoBox.style.display = isAppRol ? '' : 'none';
+                keuzeBox.style.display = isAppRol ? 'none' : '';
+            }
+            if (select) { select.addEventListener('change', toggle); toggle(); }
+        })();
+    </script>
 
     <h5 class="mt-3 mb-2">Permissies <small class="text-muted fw-normal">(optioneel — geavanceerd)</small></h5>
     <p class="text-muted small">
