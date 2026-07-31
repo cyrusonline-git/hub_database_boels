@@ -170,11 +170,9 @@ class ApplicationController extends Controller
             ['name' => \Illuminate\Support\Str::limit($name, 150), 'url' => $url, 'active' => true],
         );
         if ($application->trashed()) $application->restore();
-        // Wat de app zelf publiceert (URL + naam) is altijd leidend
-        $application->update([
-            'url' => $url,
-            'name' => \Illuminate\Support\Str::limit($name, 150),
-        ]);
+        // URL altijd verversen; de naam alleen bij de eerste koppeling —
+        // een handmatig aangepaste naam in CORE blijft daarna staan.
+        $application->update(['url' => $url]);
 
         $result = $this->fetchAndImportRoles($application, $url);
         $rolesMsg = is_string($result)
