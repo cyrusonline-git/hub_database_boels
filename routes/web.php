@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LauncherController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,12 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 // Authenticated zone
 Route::middleware('auth')->group(function () {
     Route::get('/launcher', [LauncherController::class, 'index'])->name('launcher');
+
+    // Interne chat (alle ingelogde Boels-medewerkers)
+    Route::get('/chat/unread', [ChatController::class, 'unread'])->name('chat.unread');
+    Route::get('/chat/contacts', [ChatController::class, 'contacts'])->name('chat.contacts');
+    Route::get('/chat/thread/{user}', [ChatController::class, 'thread'])->name('chat.thread');
+    Route::post('/chat/send', [ChatController::class, 'send'])->middleware('throttle:60,1')->name('chat.send');
 
     // Super Admin / system management
     Route::middleware('role:super-admin,administrator')->prefix('admin')->name('admin.')->group(function () {
