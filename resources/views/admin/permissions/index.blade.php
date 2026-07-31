@@ -7,6 +7,13 @@
     <a href="{{ route('admin.permissions.create') }}" class="btn btn-boels"><i class="bi bi-plus-lg"></i> Nieuwe permissie</a>
 </div>
 
+<div class="alert alert-light border small mb-3">
+    <strong>Wat is een permissie?</strong> Een los, fijnmazig recht binnen een app
+    (bv. <code>scanner.export</code> = "mag exporteren in de Scanner App"). Je hangt permissies aan een
+    <a href="{{ route('admin.roles.index') }}">rol</a>; wie die rol heeft, krijgt die rechten.
+    De meeste apps werken prima met alleen rollen — permissies zijn voor de uitzonderingen.
+</div>
+
 <div class="card">
     <table class="table mb-0 align-middle">
         <thead class="table-light"><tr><th>Applicatie</th><th>Key</th><th>Naam</th><th></th></tr></thead>

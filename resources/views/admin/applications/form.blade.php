@@ -78,13 +78,27 @@
 
 @if($application->exists)
     <div class="card p-4 mt-4">
-        <h5 class="mb-1">Rollen in deze app <small class="text-muted">(voor Boels-medewerkers)</small></h5>
-        <p class="text-muted small">
-            De functionele rollen zoals de app ze gebruikt (bv. monteur, expeditie, binnendienst).
-            Ken ze toe aan gebruikers via Beheer → Gebruikers; de app haalt ze op via
-            <code>/api/access/{{ $application->slug }}</code>. Een nieuwe rol ziet deze app
-            standaard ook in de launcher.
-        </p>
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="mb-1">Rollen in deze app <small class="text-muted">(voor Boels-medewerkers)</small></h5>
+                <p class="text-muted small mb-2">
+                    De functionele rollen zoals de app ze gebruikt (bv. monteur, expeditie, binnendienst).
+                    Ken ze toe aan gebruikers via Beheer → Gebruikers; de app haalt ze op via
+                    <code>/api/access/{{ $application->slug }}</code>. Een nieuwe rol ziet deze app
+                    standaard ook in de launcher.
+                </p>
+            </div>
+            <form method="POST" action="{{ route('admin.applications.import-roles', $application) }}">
+                @csrf
+                <button class="btn btn-outline-secondary" title="Haalt de rollenlijst op die de app publiceert op {{ rtrim($application->url ?? '', '/') }}/core-roles.php">
+                    <i class="bi bi-cloud-download"></i> Importeer rollen uit de app
+                </button>
+            </form>
+        </div>
+
+        @if ($errors->any())
+            <div class="alert alert-danger py-2">{{ $errors->first() }}</div>
+        @endif
 
         @if (session('status'))
             <div class="alert alert-success py-2">{{ session('status') }}</div>

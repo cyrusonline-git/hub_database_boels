@@ -59,9 +59,13 @@ de functionele rollen van Boels-medewerkers voor deze app. Die rollen beheert
 Wim centraal in CORE (Beheer → Applicaties → deze app → "Rollen in deze
 app"); de app vraagt ze op via GET /api/access/{APP_SLUG} (zelfde
 cookie-relay; antwoord: roles[{slug,name,scope}], is_super_admin) en mapt de
-rol-slugs op eigen gedrag. Zorg dat de app zijn bestaande Boels-rollen (bv.
-admin, expeditie, binnendienst) als slugs aan Wim doorgeeft zodat hij ze in
-CORE kan aanmaken. Klant-accounts en klant-rollen blijven volledig lokaal.
+rol-slugs op eigen gedrag. Publiceer daarom een endpoint core-roles.php in
+de webroot van de app dat de rollen als JSON teruggeeft:
+{"app":"{APP_SLUG}","roles":[{"slug":..,"name":..,"description":..}]}
+(read-only, alleen rolnamen — geen gebruikers). CORE heeft een knop
+"Importeer rollen uit de app" die dit endpoint uitleest; Wim hoeft dan niets
+over te typen. Referentie: /Users/Wim/Desktop/scanner/v2/core-roles.php.
+Klant-accounts en klant-rollen blijven volledig lokaal.
 
 1. Boels-medewerkers — inloggen via CORE (launcher) dankzij het cookie-relay
    patroon: stuur de Cookie-header van de bezoeker server-side met curl naar

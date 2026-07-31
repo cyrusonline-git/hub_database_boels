@@ -176,6 +176,10 @@ rol-slugs op zijn eigen gedrag. `scope: "app"` = rol van deze app.
 `is_super_admin` = altijd volledige toegang. Iemand zonder rol voor deze
 app → "nog geen toegang"-pagina.
 
+Publiceer een read-only endpoint `core-roles.php` (webroot) met de rollen
+als JSON (`{"app":"{APP_SLUG}","roles":[{"slug","name","description"}]}`)
+zodat CORE ze met één knop kan importeren — geen handwerk voor de beheerder.
+
 **Klant-medewerkers** (staan niet in CORE): lokale accounts én lokale
 rollen in de eigen tabellen, beheerd via het eigen toegangsbeheer — zie
 hieronder. CORE weet niets van klant-accounts.

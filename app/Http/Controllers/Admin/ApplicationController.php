@@ -46,6 +46,58 @@ class ApplicationController extends Controller
         return back()->with('status', 'Applicatie verwijderd.');
     }
 
+    /**
+     * Haalt de rollen op die de app zelf publiceert op {url}/core-roles.php
+     * en maakt ze aan als app-rollen in CORE. Idempotent.
+     */
+    public function importRoles(Application $application)
+    {
+        if (! $application->url) {
+            return back()->withErrors('Deze app heeft geen URL ingesteld — vul die eerst in.');
+        }
+
+        $endpoint = rtrim($application->url, '/').'/core-roles.php';
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ]);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code !== 200 || ! $body) {
+            return back()->withErrors("Kon $endpoint niet ophalen (HTTP $code). De app moet dit endpoint publiceren — zie de migratie-prompt in de CORE-docs.");
+        }
+
+        $data = json_decode($body, true);
+        $roles = $data['roles'] ?? (is_array($data) ? $data : null);
+        if (! is_array($roles)) {
+            return back()->withErrors('Onverwacht antwoord van de app — verwacht JSON met een "roles"-lijst.');
+        }
+
+        $created = 0;
+        $existing = 0;
+        foreach ($roles as $r) {
+            $name = trim((string) ($r['name'] ?? $r['slug'] ?? ''));
+            if ($name === '') continue;
+            $slug = \Illuminate\Support\Str::slug($r['slug'] ?? $name);
+
+            $role = \App\Models\Role::withTrashed()->firstOrCreate(
+                ['application_id' => $application->id, 'slug' => $slug],
+                ['name' => \Illuminate\Support\Str::limit($name, 100),
+                 'description' => $r['description'] ?? null],
+            );
+            if ($role->trashed()) $role->restore();
+            $role->launcherApplications()->syncWithoutDetaching([$application->id]);
+            $role->wasRecentlyCreated ? $created++ : $existing++;
+        }
+
+        return back()->with('status', "Rollen geïmporteerd uit de app: $created nieuw, $existing bestonden al.");
+    }
+
     private function validateApp(Request $request, ?Application $app = null): array
     {
         return $request->validate([

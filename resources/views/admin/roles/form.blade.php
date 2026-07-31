@@ -48,8 +48,11 @@
         <small class="text-muted">Let op: area/depot/land-beperkingen van een app blijven ook gelden.</small>
     </div>
 
-    <h5 class="mt-3 mb-2">Permissies</h5>
-    <p class="text-muted small">Permissies per applicatie — selecteer welke deze rol mag.</p>
+    <h5 class="mt-3 mb-2">Permissies <small class="text-muted fw-normal">(optioneel — geavanceerd)</small></h5>
+    <p class="text-muted small">
+        Alleen nodig als een app fijnmaziger rechten kent dan de rol zelf (bv. "mag exporteren").
+        Voor de meeste apps kun je dit leeg laten — de rol is dan genoeg.
+    </p>
 
     @php $grouped = $permissions->groupBy(fn($p)=>$p->application?->name ?? 'Platform'); @endphp
     @foreach($grouped as $appName => $perms)
