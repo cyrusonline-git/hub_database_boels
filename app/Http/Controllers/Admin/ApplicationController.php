@@ -42,8 +42,14 @@ class ApplicationController extends Controller
 
     public function destroy(Application $application)
     {
-        $application->delete();
-        return back()->with('status', 'Applicatie verwijderd.');
+        // Écht verwijderen, inclusief app-rollen en app-permissies — anders
+        // blijft de app op de achtergrond bestaan (slug bezet, oude URL
+        // herleeft bij opnieuw koppelen).
+        \App\Models\Role::where('application_id', $application->id)->forceDelete();
+        \App\Models\Permission::where('application_id', $application->id)->delete();
+        $application->forceDelete();
+
+        return back()->with('status', 'Applicatie volledig verwijderd (inclusief app-rollen).');
     }
 
     /**
@@ -158,7 +164,8 @@ class ApplicationController extends Controller
             ['name' => \Illuminate\Support\Str::limit($name, 150), 'url' => $url, 'active' => true],
         );
         if ($application->trashed()) $application->restore();
-        if (! $application->url) $application->update(['url' => $url]);
+        // De zojuist ingevulde URL is altijd leidend (bv. van /v2 naar live)
+        if ($application->url !== $url) $application->update(['url' => $url]);
 
         $result = $this->fetchAndImportRoles($application, $url);
         $rolesMsg = is_string($result)
