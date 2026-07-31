@@ -87,11 +87,8 @@ class ApplicationController extends Controller
      */
     private function importUsers(Application $application): string
     {
-        if (! $application->sync_key) {
-            return 'Gebruikers niet gekoppeld: geen sync-sleutel ingesteld op deze app (veld op deze pagina).';
-        }
-
-        $endpoint = rtrim($application->url, '/').'/core-users.php?k='.urlencode($application->sync_key);
+        $endpoint = rtrim($application->url, '/').'/core-users.php'
+            .($application->sync_key ? '?k='.urlencode($application->sync_key) : '');
         $ch = curl_init($endpoint);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -107,7 +104,9 @@ class ApplicationController extends Controller
             return 'Gebruikers niet gekoppeld: de app publiceert (nog) geen core-users.php.';
         }
         if ($code === 403) {
-            return 'Gebruikers niet gekoppeld: sync-sleutel klopt niet met die van de app.';
+            return $application->sync_key
+                ? 'Gebruikers niet gekoppeld: sync-sleutel klopt niet met die van de app.'
+                : 'Gebruikers niet gekoppeld: de app vereist een sync-sleutel — vul die in op deze pagina.';
         }
         if ($code !== 200 || ! $body) {
             return "Gebruikers niet gekoppeld: core-users.php gaf HTTP $code.";
@@ -171,16 +170,23 @@ class ApplicationController extends Controller
             ['name' => \Illuminate\Support\Str::limit($name, 150), 'url' => $url, 'active' => true],
         );
         if ($application->trashed()) $application->restore();
-        // De zojuist ingevulde URL is altijd leidend (bv. van /v2 naar live)
-        if ($application->url !== $url) $application->update(['url' => $url]);
+        // Wat de app zelf publiceert (URL + naam) is altijd leidend
+        $application->update([
+            'url' => $url,
+            'name' => \Illuminate\Support\Str::limit($name, 150),
+        ]);
 
         $result = $this->fetchAndImportRoles($application, $url);
         $rolesMsg = is_string($result)
             ? 'Rollen konden niet gelezen worden.'
             : "{$result['created']} rol(len) geïmporteerd, {$result['existing']} bestonden al.";
 
+        // Gebruikers meteen meenemen (eenmalige overname bij het koppelen)
+        $usersMsg = $this->importUsers($application);
+
         return redirect()->route('admin.applications.edit', $application)->with('status',
-            ($application->wasRecentlyCreated ? "App \"$name\" aangemaakt met launcher-tegel. " : "App \"$name\" bestond al — bijgewerkt. ").$rolesMsg
+            ($application->wasRecentlyCreated ? "App \"$name\" aangemaakt met launcher-tegel. " : "App \"$name\" opnieuw gekoppeld. ")
+            .$rolesMsg.' '.$usersMsg
             .' Let op: voor SSO moet het subdomein nog aangemeld worden in CORE (SANCTUM_STATEFUL_DOMAINS).');
     }
 

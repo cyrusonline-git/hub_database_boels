@@ -179,9 +179,11 @@ app → "nog geen toegang"-pagina.
 Publiceer een read-only endpoint `core-roles.php` (webroot) met de rollen
 als JSON (`{"app":"{APP_SLUG}","name":"{APP_NAAM}","roles":[{"slug","name","description"}]}`)
 zodat CORE ze met één knop kan importeren — geen handwerk voor de beheerder.
-Optioneel ook `core-users.php` (vereist ?k=<sync-sleutel>, anders 403) met
-`{"users":[{"email","roles":[slugs]}]}` — alleen Boels-medewerkers, nooit
-klant-accounts — zodat CORE ook de rol-toekenningen automatisch overneemt.
+Publiceer ook `core-users.php` met `{"users":[{"email","roles":[slugs]}]}`
+— alleen Boels-medewerkers, nooit klant-accounts — zodat CORE bij het
+koppelen ook de rol-toekenningen automatisch overneemt. Beveilig het met
+een IP-check (alleen eigen server; CORE draait op dezelfde host), zie de
+migratie-prompt voor het snippet.
 
 **Klant-medewerkers** (staan niet in CORE): lokale accounts én lokale
 rollen in de eigen tabellen, beheerd via het eigen toegangsbeheer — zie
