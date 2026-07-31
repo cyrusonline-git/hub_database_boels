@@ -123,9 +123,13 @@ voor het eerst via CORE in (/api/me geeft id + e-mail), kijk dan éérst of er
 al een lokaal account bestaat met datzelfde e-mailadres. Zo ja: upgrade dát
 account (zet type='core', vul core_user_id, wachtwoord-hash mag blijven
 staan als vangnet) — zelfde id, dus alle data blijft van hem. Voor
-'core'-accounts is de rol uit /api/access/{APP_SLUG} leidend (sync de
-CORE-rolslug bij elke rolverversing naar {APP_SLUG}_user_roles); voor
-'lokaal'-accounts blijft de lokale rol leidend. Zo nee: maak een nieuw
+'core'-accounts is CORE ABSOLUUT LEIDEND: bij elke rolverversing wordt
+{APP_SLUG}_user_roles voor dat account volledig VERVANGEN door wat
+/api/access/{APP_SLUG} teruggeeft (spiegelen, niet samenvoegen — ook
+verwijderen wat in CORE is uitgevinkt). Het lokale toegangsbeheer kan
+core-accounts NIET aanpassen (alleen-lezen, met melding "beheerd in CORE").
+Voor 'lokaal'-accounts (klanten, loggen niet via CORE in) blijft de lokale
+rol leidend en werkt het toegangsbeheer zoals altijd. Zo nee: maak een nieuw
 'core'-account aan; heeft hij ook geen CORE-rol voor deze app, dan wacht
 hij op toegang. Tot het
 moment van die eerste CORE-login blijft de Boels-medewerker gewoon inloggen
