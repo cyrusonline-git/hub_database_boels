@@ -62,8 +62,9 @@ trait HasRoles
         if ($role instanceof Role) {
             return $role;
         }
-        if (is_int($role)) {
-            return Role::findOrFail($role);
+        // Formulieren sturen id's als string ("5") — die zijn ook een id
+        if (is_int($role) || ctype_digit((string) $role)) {
+            return Role::findOrFail((int) $role);
         }
         return Role::where('slug', $role)->orWhere('name', $role)->firstOrFail();
     }
