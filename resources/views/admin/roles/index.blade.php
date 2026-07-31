@@ -21,8 +21,9 @@
 <div class="alert alert-light border small mb-3">
     <strong>Hoe zit het in elkaar?</strong>
     Een <strong>rol</strong> is de functie van een medewerker binnen één app (bv. "Monteur" in de Scanner App)
-    of platform-breed (bv. "Administrator"). Een rol bepaalt: <em>welke app-tegels iemand op zijn dashboard ziet</em>
-    en <em>wat hij in die app mag</em> (de app leest de rol uit).
+    of platform-breed (bv. "Administrator"). Hier in CORE regel je alleen <em>wie welke rol heeft</em> en
+    <em>welke app-tegels iemand daardoor op zijn dashboard ziet</em>. De app leest vervolgens uit welke rol
+    de ingelogde medewerker heeft — <em>wat die rol precies mag, is in de app zelf gedefinieerd</em>.
     <strong>Permissies</strong> zijn optioneel fijnmazig — losse rechten zoals "mag exporteren"; de meeste apps
     hebben genoeg aan alleen rollen.
     <br><strong>Tip:</strong> app-rollen beheer je het makkelijkst op de app zelf:
