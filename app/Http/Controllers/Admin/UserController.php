@@ -43,10 +43,32 @@ class UserController extends Controller
         $data = $this->validateUser($request);
         $data = $this->normalizeAccessLists($data);
         $data['password'] = Hash::make($data['password']);
+
+        // Bestond er een (zacht) verwijderd account met dit e-mailadres?
+        // Dan herstellen en bijwerken i.p.v. blokkeren met "al in gebruik".
+        $trashed = User::onlyTrashed()->where('email', $data['email'])->first();
+        if ($trashed) {
+            $trashed->restore();
+            $trashed->update($data);
+            $trashed->syncRoles($request->input('roles', []));
+            return redirect()->route('admin.users.index')
+                ->with('status', 'Er bestond nog een verwijderd account met dit e-mailadres — dat is hersteld en bijgewerkt met de nieuwe gegevens.');
+        }
+
         $user = User::create($data);
         $user->syncRoles($request->input('roles', []));
 
         return redirect()->route('admin.users.index')->with('status', 'Gebruiker aangemaakt.');
+    }
+
+    /** E-mail uniek, maar zacht-verwijderde accounts tellen niet mee (die herstelt store()) */
+    private function emailUniqueRule(?User $user)
+    {
+        $rule = \Illuminate\Validation\Rule::unique('users', 'email')->withoutTrashed();
+        if ($user) {
+            $rule->ignore($user->id);
+        }
+        return $rule;
     }
 
     public function edit(User $user)
@@ -86,7 +108,7 @@ class UserController extends Controller
     {
         return $request->validate([
             'name' => ['required','string','max:150'],
-            'email' => ['required','email','max:190', 'unique:users,email'.($user ? ','.$user->id : '')],
+            'email' => ['required','email','max:190', $this->emailUniqueRule($user)],
             'password' => [$user ? 'nullable' : 'required','string','min:8'],
             'employee_id' => ['nullable','exists:employees,id'],
             'is_super_admin' => ['sometimes','boolean'],
