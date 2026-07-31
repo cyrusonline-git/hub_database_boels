@@ -27,7 +27,11 @@ class ApplicationController extends Controller
 
     public function edit(Application $application)
     {
-        return view('admin.applications.form', compact('application'));
+        return view('admin.applications.form', [
+            'application' => $application,
+            'appRoles' => \App\Models\Role::where('application_id', $application->id)
+                ->withCount('users')->orderBy('name')->get(),
+        ]);
     }
 
     public function update(Request $request, Application $application)

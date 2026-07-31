@@ -75,4 +75,59 @@
         <a href="{{ route('admin.applications.index') }}" class="btn btn-outline-secondary">Annuleren</a>
     </div>
 </form>
+
+@if($application->exists)
+    <div class="card p-4 mt-4">
+        <h5 class="mb-1">Rollen in deze app <small class="text-muted">(voor Boels-medewerkers)</small></h5>
+        <p class="text-muted small">
+            De functionele rollen zoals de app ze gebruikt (bv. monteur, expeditie, binnendienst).
+            Ken ze toe aan gebruikers via Beheer → Gebruikers; de app haalt ze op via
+            <code>/api/access/{{ $application->slug }}</code>. Een nieuwe rol ziet deze app
+            standaard ook in de launcher.
+        </p>
+
+        @if (session('status'))
+            <div class="alert alert-success py-2">{{ session('status') }}</div>
+        @endif
+
+        <table class="table table-sm align-middle mb-3">
+            <thead class="table-light"><tr><th>Rol</th><th>Slug</th><th class="text-end">Gebruikers</th><th></th></tr></thead>
+            <tbody>
+                @forelse($appRoles as $r)
+                    <tr>
+                        <td><strong>{{ $r->name }}</strong></td>
+                        <td><code>{{ $r->slug }}</code></td>
+                        <td class="text-end">{{ $r->users_count }}</td>
+                        <td class="text-end">
+                            <a href="{{ route('admin.roles.edit', $r) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                            <form action="{{ route('admin.roles.destroy', $r) }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Rol {{ $r->name }} verwijderen? Gebruikers verliezen deze rol.');">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="4" class="text-muted">Nog geen rollen voor deze app.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+
+        <form method="POST" action="{{ route('admin.roles.store') }}" class="row g-2">
+            @csrf
+            <input type="hidden" name="application_id" value="{{ $application->id }}">
+            <input type="hidden" name="launcher_apps[]" value="{{ $application->id }}">
+            <input type="hidden" name="return_to" value="{{ route('admin.applications.edit', $application) }}">
+            <div class="col-md-4">
+                <input type="text" name="name" class="form-control" placeholder="Nieuwe rol, bv. Monteur" required>
+            </div>
+            <div class="col-md-5">
+                <input type="text" name="description" class="form-control" placeholder="Omschrijving (optioneel)">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-boels w-100"><i class="bi bi-plus-lg"></i> Rol toevoegen</button>
+            </div>
+        </form>
+    </div>
+@endif
 @endsection

@@ -165,7 +165,22 @@ Werkt identiek aan Boels CORE:
 | Dit CLAUDE.md bestand | Claude wijkt niet af van deze regels |
 | Dagelijkse DB-backup | 7 dagen rolling, in Boels CORE storage/backups/ |
 
-## Autorisatie: rollen beheert deze app ZELF (CORE = alleen login)
+## Autorisatie: Boels-rollen uit CORE, klant-rollen lokaal
+
+**Boels-medewerkers:** hun functionele rol in deze app (bv. monteur,
+expeditie, binnendienst) wordt beheerd in CORE — Beheer → Applicaties →
+deze app → "Rollen in deze app", toegekend via Beheer → Gebruikers.
+De app haalt ze op met `GET /api/access/{APP_SLUG}` →
+`{ roles: [{slug, name, scope}], is_super_admin, permissions }` en mapt de
+rol-slugs op zijn eigen gedrag. `scope: "app"` = rol van deze app.
+`is_super_admin` = altijd volledige toegang. Iemand zonder rol voor deze
+app → "nog geen toegang"-pagina.
+
+**Klant-medewerkers** (staan niet in CORE): lokale accounts én lokale
+rollen in de eigen tabellen, beheerd via het eigen toegangsbeheer — zie
+hieronder. CORE weet niets van klant-accounts.
+
+## (Fallback) Volledig lokale autorisatie
 
 Boels CORE levert uitsluitend de **identiteit**: wie is ingelogd
 (via de SSO-sessiecookie of `GET /api/me` → `{ id, name, email,

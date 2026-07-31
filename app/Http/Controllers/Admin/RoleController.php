@@ -39,6 +39,11 @@ class RoleController extends Controller
         $role = Role::create($data);
         $role->permissions()->sync($request->input('permissions', []));
         $role->launcherApplications()->sync($request->input('launcher_apps', []));
+
+        // Snel-toevoegen vanaf de applicatie-pagina keert daarheen terug
+        if ($request->filled('return_to')) {
+            return redirect($request->input('return_to'))->with('status', 'Rol "'.$role->name.'" aangemaakt.');
+        }
         return redirect()->route('admin.roles.index')->with('status', 'Rol aangemaakt.');
     }
 

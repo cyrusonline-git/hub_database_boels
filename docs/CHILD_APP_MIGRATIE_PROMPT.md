@@ -54,8 +54,14 @@ vul het in en zet het als CLAUDE.md in de projectroot, aangepast aan dit model.
 
 ## Het model
 
-CORE levert uitsluitend identiteit (wie ben je). Toegang en rollen bepaalt
-deze app volledig zelf. CORE ziet de app-rollen nooit.
+CORE levert identiteit (wie ben je) én — sinds de rollen-per-app-functie —
+de functionele rollen van Boels-medewerkers voor deze app. Die rollen beheert
+Wim centraal in CORE (Beheer → Applicaties → deze app → "Rollen in deze
+app"); de app vraagt ze op via GET /api/access/{APP_SLUG} (zelfde
+cookie-relay; antwoord: roles[{slug,name,scope}], is_super_admin) en mapt de
+rol-slugs op eigen gedrag. Zorg dat de app zijn bestaande Boels-rollen (bv.
+admin, expeditie, binnendienst) als slugs aan Wim doorgeeft zodat hij ze in
+CORE kan aanmaken. Klant-accounts en klant-rollen blijven volledig lokaal.
 
 1. Boels-medewerkers — inloggen via CORE (launcher) dankzij het cookie-relay
    patroon: stuur de Cookie-header van de bezoeker server-side met curl naar
@@ -102,8 +108,12 @@ Automatische koppeling van Boels-medewerkers (geen handwerk!): logt iemand
 voor het eerst via CORE in (/api/me geeft id + e-mail), kijk dan éérst of er
 al een lokaal account bestaat met datzelfde e-mailadres. Zo ja: upgrade dát
 account (zet type='core', vul core_user_id, wachtwoord-hash mag blijven
-staan als vangnet) — zelfde id, dus alle data en rollen blijven van hem.
-Zo nee: maak een nieuw 'core'-account aan dat op toegang wacht. Tot het
+staan als vangnet) — zelfde id, dus alle data blijft van hem. Voor
+'core'-accounts is de rol uit /api/access/{APP_SLUG} leidend (sync de
+CORE-rolslug bij elke rolverversing naar {APP_SLUG}_user_roles); voor
+'lokaal'-accounts blijft de lokale rol leidend. Zo nee: maak een nieuw
+'core'-account aan; heeft hij ook geen CORE-rol voor deze app, dan wacht
+hij op toegang. Tot het
 moment van die eerste CORE-login blijft de Boels-medewerker gewoon inloggen
 zoals hij nu doet, met zijn bestaande app-wachtwoord. De overstap naar CORE
 kan dus geleidelijk.
