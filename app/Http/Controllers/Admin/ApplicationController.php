@@ -61,7 +61,79 @@ class ApplicationController extends Controller
             return back()->withErrors($result);
         }
 
-        return back()->with('status', "Rollen geïmporteerd uit de app: {$result['created']} nieuw, {$result['existing']} bestonden al.");
+        $msg = "Rollen geïmporteerd uit de app: {$result['created']} nieuw, {$result['existing']} bestonden al.";
+        $msg .= ' '.$this->importUsers($application);
+
+        return back()->with('status', $msg);
+    }
+
+    /**
+     * Haalt (indien de app dat ondersteunt en er een sync-sleutel is ingesteld)
+     * de gebruikerslijst op van {url}/core-users.php?k={sync_key} en koppelt
+     * de app-rollen aan bestaande CORE-gebruikers op e-mailadres.
+     */
+    private function importUsers(Application $application): string
+    {
+        if (! $application->sync_key) {
+            return 'Gebruikers niet gekoppeld: geen sync-sleutel ingesteld op deze app (veld op deze pagina).';
+        }
+
+        $endpoint = rtrim($application->url, '/').'/core-users.php?k='.urlencode($application->sync_key);
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ]);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code === 404) {
+            return 'Gebruikers niet gekoppeld: de app publiceert (nog) geen core-users.php.';
+        }
+        if ($code === 403) {
+            return 'Gebruikers niet gekoppeld: sync-sleutel klopt niet met die van de app.';
+        }
+        if ($code !== 200 || ! $body) {
+            return "Gebruikers niet gekoppeld: core-users.php gaf HTTP $code.";
+        }
+
+        $data = json_decode($body, true);
+        if (! is_array($data) || ! isset($data['users']) || ! is_array($data['users'])) {
+            return 'Gebruikers niet gekoppeld: onverwacht antwoord van core-users.php.';
+        }
+
+        $appRoles = \App\Models\Role::where('application_id', $application->id)->get()->keyBy('slug');
+        $linked = 0;
+        $unknown = [];
+
+        foreach ($data['users'] as $u) {
+            $email = mb_strtolower(trim((string) ($u['email'] ?? '')));
+            if ($email === '') continue;
+
+            $user = \App\Models\User::where('email', $email)->first();
+            if (! $user) {
+                $unknown[] = $email;
+                continue;
+            }
+
+            $roleIds = collect((array) ($u['roles'] ?? []))
+                ->map(fn ($slug) => $appRoles[\Illuminate\Support\Str::slug((string) $slug)]->id ?? null)
+                ->filter()->all();
+            if ($roleIds) {
+                $user->roles()->syncWithoutDetaching($roleIds);
+                $linked++;
+            }
+        }
+
+        $msg = "Gebruikers gekoppeld op e-mail: $linked.";
+        if ($unknown) {
+            $msg .= ' '.count($unknown).' e-mailadres(sen) hebben nog geen CORE-login (maak die via Beheer → Medewerkers): '
+                .implode(', ', array_slice($unknown, 0, 10)).(count($unknown) > 10 ? '…' : '');
+        }
+        return $msg;
     }
 
     /**
@@ -158,6 +230,7 @@ class ApplicationController extends Controller
             'slug' => ['nullable','string','max:100', 'unique:applications,slug'.($app ? ','.$app->id : '')],
             'description' => ['nullable','string'],
             'url' => ['nullable','url','max:255'],
+            'sync_key' => ['nullable','string','max:64'],
             'icon' => ['nullable','string','max:100'],
             'color' => ['nullable','string','max:20'],
             'sort_order' => ['nullable','integer'],

@@ -24,6 +24,11 @@
             <label class="form-label">URL</label>
             <input type="url" name="url" value="{{ old('url', $application->url) }}" class="form-control" placeholder="https://fleet.sorai.nl">
         </div>
+        <div class="col-md-6">
+            <label class="form-label">Sync-sleutel <small class="text-muted">(voor gebruikers-import)</small></label>
+            <input type="text" name="sync_key" value="{{ old('sync_key', $application->sync_key) }}" class="form-control" placeholder="zelfde sleutel als in core-users.php van de app">
+            <small class="text-muted">Alleen nodig als de app ook zijn gebruikerslijst deelt (core-users.php). De rollenlijst werkt zonder sleutel.</small>
+        </div>
         <div class="col-md-3">
             <label class="form-label">Icoon (Bootstrap Icons)</label>
             <input type="text" name="icon" value="{{ old('icon', $application->icon) }}" class="form-control" placeholder="bi-truck">

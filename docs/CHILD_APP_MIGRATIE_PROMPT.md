@@ -65,6 +65,12 @@ de webroot van de app dat de rollen als JSON teruggeeft:
 (read-only, alleen rolnamen — geen gebruikers). CORE heeft een knop
 "Importeer rollen uit de app" die dit endpoint uitleest; Wim hoeft dan niets
 over te typen. Referentie: /Users/Wim/Desktop/scanner/v2/core-roles.php.
+Publiceer daarnaast core-users.php: zelfde webroot, vereist ?k=<sync-sleutel>
+(een lange random sleutel in de app-config; bij fout of ontbrekend: HTTP 403)
+en geeft {"users":[{"email":..,"roles":["slug",..]}]} terug met ALLEEN de
+Boels-medewerkers (NOOIT klant-accounts). CORE koppelt daarmee de app-rollen
+automatisch aan bestaande CORE-logins op e-mailadres; geef de sync-sleutel
+aan Wim zodat hij hem in CORE bij de applicatie kan invullen.
 Klant-accounts en klant-rollen blijven volledig lokaal.
 
 1. Boels-medewerkers — inloggen via CORE (launcher) dankzij het cookie-relay

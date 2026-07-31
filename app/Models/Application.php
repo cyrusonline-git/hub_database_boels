@@ -13,7 +13,7 @@ class Application extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'description', 'url',
+        'name', 'slug', 'description', 'url', 'sync_key',
         'icon', 'color', 'sort_order', 'active',
         'restricted_to_areas', 'restricted_to_depots', 'restricted_to_countries',
     ];
