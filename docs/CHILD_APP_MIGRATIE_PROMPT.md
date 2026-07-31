@@ -132,6 +132,19 @@ moment van die eerste CORE-login blijft de Boels-medewerker gewoon inloggen
 zoals hij nu doet, met zijn bestaande app-wachtwoord. De overstap naar CORE
 kan dus geleidelijk.
 
+## Rolkeuze bij meerdere rollen (verplicht patroon)
+
+Heeft de ingelogde gebruiker MEERDERE rollen binnen deze app (kan zowel bij
+core- als lokale accounts), toon dan direct na binnenkomst één net
+keuzescherm: "Als welke rol wil je inloggen?" met de rollen als knoppen.
+- De keuze geldt voor de rest van de sessie ($_SESSION['active_role']).
+- Bij precies één rol: GEEN keuzescherm, die rol is meteen actief.
+- Zet in het gebruikersmenu een optie "Wissel rol" die terugkeert naar het
+  keuzescherm (alleen tonen bij meerdere rollen).
+- Alle autorisatiechecks gebruiken de ACTIEVE rol, niet de hele rollenlijst.
+- Bij de 5-minuten-rolverversing: is de actieve rol ingetrokken, wis hem dan
+  en toon opnieuw het keuzescherm (of geen-toegang bij nul rollen).
+
 ## Twee beheerniveaus
 
 - superadmin (Boels) — volledig beheer: app-instellingen (e-mail, imports,

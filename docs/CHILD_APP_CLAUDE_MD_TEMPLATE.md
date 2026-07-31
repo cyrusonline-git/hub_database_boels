@@ -185,6 +185,10 @@ koppelen ook de rol-toekenningen automatisch overneemt. Beveilig het met
 een IP-check (alleen eigen server; CORE draait op dezelfde host), zie de
 migratie-prompt voor het snippet.
 
+**Meerdere rollen in deze app?** Toon na binnenkomst een keuzescherm
+"Als welke rol wil je inloggen?" (sessie-breed, met "Wissel rol" in het
+menu; bij één rol geen keuzescherm). Checks draaien op de actieve rol.
+
 **Klant-medewerkers** (staan niet in CORE): lokale accounts én lokale
 rollen in de eigen tabellen, beheerd via het eigen toegangsbeheer — zie
 hieronder. CORE weet niets van klant-accounts.
