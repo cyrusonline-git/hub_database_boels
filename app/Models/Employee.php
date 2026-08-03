@@ -11,6 +11,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
 {
+    /**
+     * Depotnamen uit de bron komen soms als "Geleen; Industrial…" (en door
+     * het bronsysteem afgekapt op ±32 tekens). Alleen het deel vóór de ";"
+     * is de echte depotnaam — normaliseer bij elke save/import.
+     */
+    public function setDepotAttribute($value): void
+    {
+        $clean = is_string($value) ? trim(explode(';', $value)[0]) : $value;
+        $this->attributes['depot'] = $clean === '' ? null : $clean;
+    }
+
     use HasFactory, SoftDeletes, HasAuditLog;
 
     protected $fillable = [
