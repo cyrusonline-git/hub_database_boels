@@ -51,7 +51,7 @@
                                 <input type="text" name="name" value="{{ $area->name }}" class="form-control form-control-sm fw-bold" style="max-width:200px;"
                                        title="Naam aanpassen werkt automatisch door bij medewerkers, gebruikers en apps">
                                 <input type="text" name="country" value="{{ $area->country }}" class="form-control form-control-sm" style="max-width:70px;" placeholder="Land">
-                                <button class="btn btn-sm btn-outline-secondary py-0" title="Opslaan (naamswijziging werkt overal door)"><i class="bi bi-check-lg"></i></button>
+                                <button class="btn btn-sm btn-boels text-nowrap" title="Naamswijziging werkt automatisch overal door">Opslaan</button>
                                 <small class="text-muted text-nowrap ms-1">{{ $employeesPerArea[$area->name] ?? 0 }} mdw.</small>
                                 <span class="ms-auto"></span>
                             </form>
@@ -71,7 +71,7 @@
                                                     <input type="text" name="name" value="{{ $depot->name }}" class="form-control form-control-sm"
                                                            title="Naam aanpassen werkt automatisch door bij medewerkers, gebruikers en apps">
                                                     <input type="email" name="email" value="{{ $depot->email }}" class="form-control form-control-sm" placeholder="E-mail (optioneel)">
-                                                    <button class="btn btn-sm btn-outline-secondary py-0" title="Opslaan (naamswijziging werkt overal door)"><i class="bi bi-check-lg"></i></button>
+                                                    <button class="btn btn-sm btn-boels text-nowrap" title="Naamswijziging werkt automatisch overal door">Opslaan</button>
                                                 </form>
                                             </td>
                                             <td class="text-end text-muted small text-nowrap">{{ $employeesPerDepot[$depot->name] ?? 0 }} mdw.</td>
