@@ -92,6 +92,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><span class="dropdown-item-text small text-muted">{{ auth()->user()->email }}</span></li>
                         <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ route('password.change') }}"><i class="bi bi-key"></i> Wachtwoord wijzigen</a></li>
                         <li>
                             <form method="POST" action="{{ url('/logout') }}">@csrf
                                 <button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right"></i> Uitloggen</button>

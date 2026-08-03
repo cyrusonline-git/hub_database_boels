@@ -2,6 +2,10 @@
 @section('title','Application Launcher')
 
 @section('content')
+@if (session('status'))
+    <div class="alert alert-success text-center">{{ session('status') }}</div>
+@endif
+
 <div class="text-center mb-5 mt-4">
     <div class="mb-3">
         @include('partials.core-logo', ['size' => 40])

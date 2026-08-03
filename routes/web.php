@@ -43,6 +43,10 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 Route::middleware('auth')->group(function () {
     Route::get('/launcher', [LauncherController::class, 'index'])->name('launcher');
 
+    // Eigen wachtwoord wijzigen (alle ingelogde medewerkers)
+    Route::get('/wachtwoord-wijzigen', [\App\Http\Controllers\Auth\ChangePasswordController::class, 'show'])->name('password.change');
+    Route::post('/wachtwoord-wijzigen', [\App\Http\Controllers\Auth\ChangePasswordController::class, 'update'])->middleware('throttle:10,1')->name('password.change.update');
+
     // Interne chat (alle ingelogde Boels-medewerkers)
     Route::get('/chat/unread', [ChatController::class, 'unread'])->name('chat.unread');
     Route::get('/chat/contacts', [ChatController::class, 'contacts'])->name('chat.contacts');
