@@ -101,7 +101,7 @@
                     </button>
                 </form>
                 <form method="POST" action="{{ route('admin.applications.import-users', $application) }}" class="d-inline"
-                      onsubmit="return confirm('EENMALIG gebruiken, bij het aankoppelen van de app.\n\nDit haalt de rol-toekenningen uit de app en zet ze in CORE. Daarna beheer je rollen alléén nog in CORE — nogmaals draaien kan rollen terugzetten die je hier al had ingetrokken.\n\nDoorgaan?');">
+                      onsubmit="return confirm('Dit haalt de gebruikers van de app op en:\n• koppelt bestaande CORE-logins aan hun app-rol\n• maakt logins aan voor app-gebruikers die in de medewerkerslijst staan — die krijgen DIRECT een activatiemail!\n\nBedoeld voor het aankoppelen/uitrollen. Nogmaals draaien kan rollen terugzetten die je in CORE al had ingetrokken.\n\nDoorgaan?');">
                     @csrf
                     <button class="btn btn-outline-secondary" title="Eenmalige overname van wie welke rol heeft (core-users.php + sync-sleutel)">
                         <i class="bi bi-people"></i> Neem gebruikers over (eenmalig)

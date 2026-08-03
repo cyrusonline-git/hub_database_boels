@@ -119,6 +119,8 @@ class ApplicationController extends Controller
 
         $appRoles = \App\Models\Role::where('application_id', $application->id)->get()->keyBy('slug');
         $linked = 0;
+        $aangemaakt = 0;
+        $mailFouten = 0;
         $unknown = [];
 
         foreach ($data['users'] as $u) {
@@ -126,9 +128,47 @@ class ApplicationController extends Controller
             if ($email === '') continue;
 
             $user = \App\Models\User::where('email', $email)->first();
+
             if (! $user) {
-                $unknown[] = $email;
-                continue;
+                // Nog geen CORE-login: automatisch aanmaken als deze persoon
+                // in de medewerkerslijst staat (met activatiemail, zoals bulk).
+                $employee = \App\Models\Employee::whereRaw('lower(email) = ?', [$email])->first();
+                if (! $employee) {
+                    $unknown[] = $email;
+                    continue;
+                }
+
+                $herstel = \App\Models\User::onlyTrashed()->where('email', $email)->first();
+                $token = \Illuminate\Support\Str::random(40);
+                $velden = [
+                    'name' => $employee->name,
+                    'email' => $employee->email,
+                    'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(40)),
+                    'employee_id' => $employee->id,
+                    'is_super_admin' => false,
+                    'active' => false,
+                    'status' => \App\Models\User::STATUS_PENDING,
+                    'allowed_areas' => $employee->area ? [$employee->area] : null,
+                    'allowed_depots' => $employee->depot ? [$employee->depot] : null,
+                    'allowed_countries' => $employee->country ? [$employee->country] : null,
+                    'activation_token' => $token,
+                    'activation_token_expires_at' => now()->addDays(7),
+                ];
+                if ($herstel) {
+                    $herstel->restore();
+                    $herstel->update($velden);
+                    $user = $herstel;
+                } else {
+                    $user = \App\Models\User::create($velden);
+                }
+                try {
+                    \Illuminate\Support\Facades\Mail::to($user->email)
+                        ->send(new \App\Mail\AccountActivationMail($user, url('/activate/'.$token)));
+                } catch (\Throwable $e) {
+                    report($e);
+                    $mailFouten++;
+                }
+                $aangemaakt++;
             }
 
             $roleIds = collect((array) ($u['roles'] ?? []))
@@ -141,8 +181,14 @@ class ApplicationController extends Controller
         }
 
         $msg = "Gebruikers gekoppeld op e-mail: $linked.";
+        if ($aangemaakt) {
+            $msg .= " $aangemaakt nieuwe login(s) aangemaakt vanuit de medewerkerslijst — activatiemails verstuurd.";
+        }
+        if ($mailFouten) {
+            $msg .= " LET OP: $mailFouten activatiemail(s) mislukt (die kunnen 'Wachtwoord vergeten?' gebruiken).";
+        }
         if ($unknown) {
-            $msg .= ' '.count($unknown).' e-mailadres(sen) hebben nog geen CORE-login (maak die via Beheer → Medewerkers): '
+            $msg .= ' '.count($unknown).' e-mailadres(sen) staan niet in de medewerkerslijst: '
                 .implode(', ', array_slice($unknown, 0, 10)).(count($unknown) > 10 ? '…' : '');
         }
         return $msg;
