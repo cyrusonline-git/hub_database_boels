@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
+use App\Mail\AccountActivationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -42,7 +45,20 @@ class UserController extends Controller
     {
         $data = $this->validateUser($request);
         $data = $this->normalizeAccessLists($data);
-        $data['password'] = Hash::make($data['password']);
+
+        // Wachtwoord leeg gelaten? Dan krijgt de medewerker een activatiemail
+        // en kiest hij zelf zijn wachtwoord (zoals bij de bulk-actie).
+        $activationToken = null;
+        if (empty($data['password'])) {
+            $activationToken = Str::random(40);
+            $data['password'] = Hash::make(Str::random(40)); // placeholder
+            $data['status'] = User::STATUS_PENDING;
+            $data['active'] = false;
+            $data['activation_token'] = $activationToken;
+            $data['activation_token_expires_at'] = now()->addDays(7);
+        } else {
+            $data['password'] = Hash::make($data['password']);
+        }
 
         // Bestond er een (zacht) verwijderd account met dit e-mailadres?
         // Dan herstellen en bijwerken i.p.v. blokkeren met "al in gebruik".
@@ -51,14 +67,30 @@ class UserController extends Controller
             $trashed->restore();
             $trashed->update($data);
             $trashed->syncRoles($request->input('roles', []));
+            $mailMsg = $this->sendActivationIfNeeded($trashed, $activationToken);
             return redirect()->route('admin.users.index')
-                ->with('status', 'Er bestond nog een verwijderd account met dit e-mailadres — dat is hersteld en bijgewerkt met de nieuwe gegevens.');
+                ->with('status', 'Er bestond nog een verwijderd account met dit e-mailadres — dat is hersteld en bijgewerkt.'.$mailMsg);
         }
 
         $user = User::create($data);
         $user->syncRoles($request->input('roles', []));
+        $mailMsg = $this->sendActivationIfNeeded($user, $activationToken);
 
-        return redirect()->route('admin.users.index')->with('status', 'Gebruiker aangemaakt.');
+        return redirect()->route('admin.users.index')->with('status', 'Gebruiker aangemaakt.'.$mailMsg);
+    }
+
+    private function sendActivationIfNeeded(User $user, ?string $token): string
+    {
+        if (! $token) {
+            return '';
+        }
+        try {
+            Mail::to($user->email)->send(new AccountActivationMail($user, url('/activate/'.$token)));
+            return ' Activatiemail verstuurd naar '.$user->email.' — daarmee kiest de medewerker zelf een wachtwoord.';
+        } catch (\Throwable $e) {
+            report($e);
+            return ' LET OP: activatiemail kon niet verstuurd worden — gebruik "Wachtwoord vergeten?" op de loginpagina als alternatief.';
+        }
     }
 
     /** E-mail uniek, maar zacht-verwijderde accounts tellen niet mee (die herstelt store()) */
@@ -109,7 +141,7 @@ class UserController extends Controller
         return $request->validate([
             'name' => ['required','string','max:150'],
             'email' => ['required','email','max:190', $this->emailUniqueRule($user)],
-            'password' => [$user ? 'nullable' : 'required','string','min:8'],
+            'password' => ['nullable','string','min:8'],
             'employee_id' => ['nullable','exists:employees,id'],
             'is_super_admin' => ['sometimes','boolean'],
             'active' => ['sometimes','boolean'],

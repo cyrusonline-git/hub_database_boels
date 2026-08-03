@@ -18,8 +18,13 @@
             <input type="email" name="email" value="{{ old('email', $user->email) }}" class="form-control" required>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Wachtwoord {{ $user->exists ? '(leeg laten om te behouden)' : '*' }}</label>
+            <label class="form-label">Wachtwoord</label>
             <input type="password" name="password" class="form-control" minlength="8">
+            <small class="text-muted">
+                {{ $user->exists
+                    ? 'Leeg laten om het huidige wachtwoord te behouden.'
+                    : 'Leeg laten = de medewerker krijgt een activatiemail en kiest zelf een wachtwoord (aanbevolen).' }}
+            </small>
         </div>
         <div class="col-md-6">
             <label class="form-label">Gekoppelde medewerker</label>
