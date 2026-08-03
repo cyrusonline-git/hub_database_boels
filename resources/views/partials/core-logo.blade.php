@@ -9,7 +9,8 @@
     $size = $size ?? 44;
     $light = $light ?? false;
     $textColor = $light ? '#ffffff' : '#111111';
-    $accent = config('boels.brand.color', '#FF6600');
+    // Op de oranje balk (light) zou een oranje O wegvallen — daar wordt hij zwart
+    $oColor = $light ? '#1a1a1a' : config('boels.brand.color', '#FF6600');
 @endphp
 <span class="core-wordmark" style="display:inline-block; line-height:1; user-select:none; white-space:nowrap;
         font-family:'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif;
@@ -17,12 +18,12 @@
         color:{{ $textColor }};">C<svg viewBox="0 0 100 100" role="img" aria-label="O"
         style="height:0.72em; width:0.72em; vertical-align:baseline; margin:0 0.055em 0 0.035em;">
         {{-- ring --}}
-        <circle cx="50" cy="50" r="38" fill="none" stroke="{{ $accent }}" stroke-width="16"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="{{ $oColor }}" stroke-width="16"/>
         {{-- kern --}}
-        <circle cx="50" cy="50" r="15" fill="{{ $accent }}"/>
+        <circle cx="50" cy="50" r="15" fill="{{ $oColor }}"/>
         {{-- satellieten óp de ring (diagonaal — de apps om de kern) --}}
-        <circle cx="76.9" cy="23.1" r="7.5" fill="{{ $accent }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-        <circle cx="76.9" cy="76.9" r="7.5" fill="{{ $accent }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-        <circle cx="23.1" cy="76.9" r="7.5" fill="{{ $accent }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-        <circle cx="23.1" cy="23.1" r="7.5" fill="{{ $accent }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
+        <circle cx="76.9" cy="23.1" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
+        <circle cx="76.9" cy="76.9" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
+        <circle cx="23.1" cy="76.9" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
+        <circle cx="23.1" cy="23.1" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
     </svg>RE</span>
