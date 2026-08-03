@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::post('infrastructuur/units', [InfrastructureController::class, 'storeUnit'])->name('infrastructure.units.store');
         Route::delete('infrastructuur/units/{unit}', [InfrastructureController::class, 'destroyUnit'])->name('infrastructure.units.destroy');
         Route::post('infrastructuur/areas', [InfrastructureController::class, 'storeArea'])->name('infrastructure.areas.store');
+        Route::put('infrastructuur/areas/{area}', [InfrastructureController::class, 'updateArea'])->name('infrastructure.areas.update');
         Route::delete('infrastructuur/areas/{area}', [InfrastructureController::class, 'destroyArea'])->name('infrastructure.areas.destroy');
         Route::post('infrastructuur/depots', [InfrastructureController::class, 'storeDepot'])->name('infrastructure.depots.store');
         Route::put('infrastructuur/depots/{depot}', [InfrastructureController::class, 'updateDepot'])->name('infrastructure.depots.update');

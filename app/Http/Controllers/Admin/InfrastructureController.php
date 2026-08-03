@@ -63,11 +63,68 @@ class InfrastructureController extends Controller
     public function updateDepot(Request $request, OrgDepot $depot)
     {
         $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
             'email' => ['nullable', 'email', 'max:190'],
-            'city' => ['nullable', 'string', 'max:100'],
         ]);
+
+        $oud = $depot->name;
         $depot->update($data);
+
+        // Infrastructuur is leidend: naamswijziging werkt overal door
+        if ($oud !== $data['name']) {
+            $this->hernoemOveral('depot', $oud, $data['name']);
+            return back()->with('status', "Depot hernoemd van \"$oud\" naar \"{$data['name']}\" — automatisch doorgevoerd bij medewerkers, gebruikers en app-restricties.");
+        }
         return back()->with('status', 'Depot bijgewerkt.');
+    }
+
+    public function updateArea(Request $request, OrgArea $area)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $oud = $area->name;
+        $area->update($data);
+
+        if ($oud !== $data['name']) {
+            $this->hernoemOveral('area', $oud, $data['name']);
+            return back()->with('status', "Area hernoemd van \"$oud\" naar \"{$data['name']}\" — automatisch doorgevoerd bij medewerkers, gebruikers en app-restricties.");
+        }
+        return back()->with('status', 'Area bijgewerkt.');
+    }
+
+    /**
+     * Naamswijziging in de Infrastructuur doorvoeren in de hele database:
+     * medewerkers, gebruikers-toegangslijsten en app-restricties.
+     */
+    private function hernoemOveral(string $soort, string $oud, string $nieuw): void
+    {
+        $kolom = $soort === 'depot' ? 'depot' : 'area';
+        $jsonKolom = $soort === 'depot' ? 'allowed_depots' : 'allowed_areas';
+        $appKolom = $soort === 'depot' ? 'restricted_to_depots' : 'restricted_to_areas';
+
+        \Illuminate\Support\Facades\DB::table('employees')
+            ->where($kolom, $oud)->update([$kolom => $nieuw]);
+
+        foreach (\App\Models\User::whereNotNull($jsonKolom)->get() as $u) {
+            $lijst = $u->{$jsonKolom};
+            if (is_array($lijst) && in_array($oud, $lijst, true)) {
+                $u->forceFill([$jsonKolom => array_values(array_unique(
+                    array_map(fn ($v) => $v === $oud ? $nieuw : $v, $lijst)
+                ))])->save();
+            }
+        }
+
+        foreach (\App\Models\Application::whereNotNull($appKolom)->get() as $a) {
+            $lijst = $a->{$appKolom};
+            if (is_array($lijst) && in_array($oud, $lijst, true)) {
+                $a->update([$appKolom => array_values(array_unique(
+                    array_map(fn ($v) => $v === $oud ? $nieuw : $v, $lijst)
+                ))]);
+            }
+        }
     }
 
     public function destroyUnit(BusinessUnit $unit)

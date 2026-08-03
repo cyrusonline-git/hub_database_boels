@@ -44,25 +44,37 @@
                 @foreach($unit->areas as $area)
                     <div class="col-lg-6">
                         <div class="border rounded p-3 h-100">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <strong><i class="bi bi-geo-alt text-boels"></i> {{ $area->name }}
-                                    @if($area->country)<span class="badge bg-secondary">{{ $area->country }}</span>@endif
-                                    <small class="text-muted">— {{ $employeesPerArea[$area->name] ?? 0 }} medewerkers</small>
-                                </strong>
-                                <form action="{{ route('admin.infrastructure.areas.destroy', $area) }}" method="POST"
-                                      onsubmit="return confirm('Area {{ $area->name }} incl. depots verwijderen?');">
-                                    @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger py-0"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </div>
+                            <form action="{{ route('admin.infrastructure.areas.update', $area) }}" method="POST"
+                                  class="d-flex align-items-center gap-1 mb-2">
+                                @csrf @method('PUT')
+                                <i class="bi bi-geo-alt text-boels"></i>
+                                <input type="text" name="name" value="{{ $area->name }}" class="form-control form-control-sm fw-bold" style="max-width:200px;"
+                                       title="Naam aanpassen werkt automatisch door bij medewerkers, gebruikers en apps">
+                                <input type="text" name="country" value="{{ $area->country }}" class="form-control form-control-sm" style="max-width:70px;" placeholder="Land">
+                                <button class="btn btn-sm btn-outline-secondary py-0" title="Opslaan (naamswijziging werkt overal door)"><i class="bi bi-check-lg"></i></button>
+                                <small class="text-muted text-nowrap ms-1">{{ $employeesPerArea[$area->name] ?? 0 }} mdw.</small>
+                                <span class="ms-auto"></span>
+                            </form>
+                            <form action="{{ route('admin.infrastructure.areas.destroy', $area) }}" method="POST" class="float-end"
+                                  onsubmit="return confirm('Area {{ $area->name }} incl. depots verwijderen?');" style="margin-top:-34px;">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger py-0"><i class="bi bi-trash"></i></button>
+                            </form>
 
                             <table class="table table-sm mb-2">
                                 <tbody>
                                     @forelse($area->depots as $depot)
                                         <tr>
-                                            <td>{{ $depot->name }}</td>
-                                            <td class="text-muted small">{{ $depot->email ?? '—' }}</td>
-                                            <td class="text-end text-muted small">{{ $employeesPerDepot[$depot->name] ?? 0 }} mdw.</td>
+                                            <td colspan="2">
+                                                <form action="{{ route('admin.infrastructure.depots.update', $depot) }}" method="POST" class="d-flex gap-1">
+                                                    @csrf @method('PUT')
+                                                    <input type="text" name="name" value="{{ $depot->name }}" class="form-control form-control-sm"
+                                                           title="Naam aanpassen werkt automatisch door bij medewerkers, gebruikers en apps">
+                                                    <input type="email" name="email" value="{{ $depot->email }}" class="form-control form-control-sm" placeholder="E-mail (optioneel)">
+                                                    <button class="btn btn-sm btn-outline-secondary py-0" title="Opslaan (naamswijziging werkt overal door)"><i class="bi bi-check-lg"></i></button>
+                                                </form>
+                                            </td>
+                                            <td class="text-end text-muted small text-nowrap">{{ $employeesPerDepot[$depot->name] ?? 0 }} mdw.</td>
                                             <td class="text-end" style="width:1%;">
                                                 <form action="{{ route('admin.infrastructure.depots.destroy', $depot) }}" method="POST"
                                                       onsubmit="return confirm('Depot {{ $depot->name }} verwijderen?');">
