@@ -8,9 +8,9 @@
             <div class="mb-3">
                 @include('partials.core-logo', ['size' => 52])
             </div>
-            <p class="text-muted small mb-1" style="letter-spacing:3px; text-transform:uppercase;">één login · alle applicaties</p>
+            <p class="text-muted mb-1" style="letter-spacing:2.5px; text-transform:uppercase; font-size:11px;">Powered by</p>
             <img src="{{ asset('images/boels-industrial-logo.jpg') }}" alt="Boels Industrial"
-                 style="width:120px; border-radius:8px; margin-top:10px;">
+                 style="width:110px; border-radius:8px;">
         </div>
 
         <div class="card shadow-sm">
