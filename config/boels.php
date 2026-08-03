@@ -3,7 +3,7 @@
 return [
     'brand' => [
         'name' => 'Boels',
-        'product' => 'CORE Platform',
+        'product' => 'CORE',
         'color' => env('BOELS_BRAND_COLOR', '#FF6600'),
         'text_color' => env('BOELS_BRAND_TEXT_COLOR', '#FFFFFF'),
     ],

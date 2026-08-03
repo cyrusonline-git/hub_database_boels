@@ -5,9 +5,12 @@
 <div class="row justify-content-center">
     <div class="col-md-5 col-lg-4">
         <div class="text-center mb-4 mt-5">
+            <div class="mb-3">
+                @include('partials.core-logo', ['size' => 52])
+            </div>
+            <p class="text-muted small mb-1" style="letter-spacing:3px; text-transform:uppercase;">één login · alle applicaties</p>
             <img src="{{ asset('images/boels-industrial-logo.jpg') }}" alt="Boels Industrial"
-                 style="width:230px; max-width:75%; border-radius:14px;">
-            <p class="text-muted mt-3 mb-0">{{ config('boels.brand.product') }}</p>
+                 style="width:120px; border-radius:8px; margin-top:10px;">
         </div>
 
         <div class="card shadow-sm">

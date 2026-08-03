@@ -2,8 +2,11 @@
 @section('title','Application Launcher')
 
 @section('content')
-<div class="text-center mb-5 mt-3">
-    <h2>Welkom, {{ explode(' ', auth()->user()->name)[0] }}</h2>
+<div class="text-center mb-5 mt-4">
+    <div class="mb-3">
+        @include('partials.core-logo', ['size' => 40])
+    </div>
+    <h2 class="mb-1">Welkom, {{ explode(' ', auth()->user()->name)[0] }}</h2>
     <p class="text-muted">Selecteer een applicatie om te starten.</p>
 </div>
 
