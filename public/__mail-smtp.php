@@ -59,44 +59,72 @@ $set = function (string $sleutel, string $waarde) use (&$contents) {
     echo "  [SET] " . ($sleutel === 'MAIL_PASSWORD' ? 'MAIL_PASSWORD=********' : $regel) . "\n";
 };
 
-$set('MAIL_MAILER', 'smtp');
-$set('MAIL_HOST', 'mail.sorai.nl');
-$set('MAIL_PORT', '465');
-$set('MAIL_ENCRYPTION', 'ssl');
-$set('MAIL_USERNAME', 'noreply@sorai.nl');
-$set('MAIL_PASSWORD', '"' . addslashes($pw) . '"');
-$set('MAIL_FROM_ADDRESS', 'noreply@sorai.nl');
-$set('MAIL_FROM_NAME', '"Boels CORE"');
-file_put_contents($envFile, $contents);
-echo "\n.env opgeslagen.\n";
-
+// Laravel booten om de kandidaten live te testen
 foreach ([__DIR__ . '/../laravel_app', __DIR__ . '/..'] as $p) {
     if (file_exists($p . '/vendor/autoload.php')) {
         require $p . '/vendor/autoload.php';
         $app = require_once $p . '/bootstrap/app.php';
         $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-        $buf = new \Symfony\Component\Console\Output\BufferedOutput;
-        app(\Illuminate\Contracts\Console\Kernel::class)->call('config:clear', [], $buf);
-        echo "Config cache gecleared.\n\n";
         break;
     }
 }
 
-if ($test !== '') {
-    echo "Testmail naar $test ... ";
+// Probeer servernamen tot er één werkt (certificaat moet de naam dekken)
+$kandidaten = [
+    ['mail.antagonist.nl', 465, 'ssl'],
+    ['s241.webhostingserver.nl', 465, 'ssl'],
+    ['mail.antagonist.nl', 587, 'tls'],
+    ['mail.sorai.nl', 465, 'ssl'],
+];
+$gelukt = null;
+foreach ($kandidaten as [$host, $poort, $enc]) {
+    echo "Proberen: $host:$poort ($enc) ... ";
+    config([
+        'mail.default' => 'smtp',
+        'mail.mailers.smtp.host' => $host,
+        'mail.mailers.smtp.port' => $poort,
+        'mail.mailers.smtp.encryption' => $enc,
+        'mail.mailers.smtp.scheme' => $enc === 'ssl' ? 'smtps' : null,
+        'mail.mailers.smtp.username' => 'noreply@sorai.nl',
+        'mail.mailers.smtp.password' => $pw,
+        'mail.from.address' => 'noreply@sorai.nl',
+        'mail.from.name' => 'Boels CORE',
+    ]);
+    app()->forgetInstance('mail.manager');
     try {
         \Illuminate\Support\Facades\Mail::raw(
-            "Dit is een testmail van Boels CORE via geauthenticeerd SMTP (noreply@sorai.nl).\nVerstuurd: " . date('Y-m-d H:i:s'),
+            "Dit is een testmail van Boels CORE via geauthenticeerd SMTP (noreply@sorai.nl, via $host).\nVerstuurd: " . date('Y-m-d H:i:s'),
             fn ($m) => $m->to($test)->subject('Boels CORE testmail (SMTP) ' . date('H:i:s'))
         );
-        echo "OK — verstuurd zonder fouten.\n";
+        echo "GELUKT!\n";
+        $gelukt = [$host, $poort, $enc];
+        break;
     } catch (\Throwable $e) {
-        echo "FOUT: " . $e->getMessage() . "\n";
-        echo "\nWachtwoord fout of mailbox bestaat niet? Herlaad de pagina en probeer opnieuw —\n";
-        echo "dit script blijft staan tot het lukt.\n";
-        exit;
+        echo "nee (" . substr($e->getMessage(), 0, 90) . ")\n";
     }
 }
+
+if (! $gelukt) {
+    echo "\nGeen enkele servernaam werkte. Controleer het wachtwoord (meest voorkomende\n";
+    echo "oorzaak bij 'authentication failed') en probeer opnieuw — dit script blijft staan.\n";
+    exit;
+}
+
+[$host, $poort, $enc] = $gelukt;
+$set('MAIL_MAILER', 'smtp');
+$set('MAIL_HOST', $host);
+$set('MAIL_PORT', (string) $poort);
+$set('MAIL_ENCRYPTION', $enc);
+$set('MAIL_USERNAME', 'noreply@sorai.nl');
+$set('MAIL_PASSWORD', '"' . addslashes($pw) . '"');
+$set('MAIL_FROM_ADDRESS', 'noreply@sorai.nl');
+$set('MAIL_FROM_NAME', '"Boels CORE"');
+file_put_contents($envFile, $contents);
+echo "\n.env opgeslagen met werkende server: $host:$poort ($enc).\n";
+
+$buf = new \Symfony\Component\Console\Output\BufferedOutput;
+app(\Illuminate\Contracts\Console\Kernel::class)->call('config:clear', [], $buf);
+echo "Config cache gecleared.\n";
 
 @unlink(__FILE__);
 echo "\n✓ Klaar. Dit script heeft zichzelf verwijderd.\n";
