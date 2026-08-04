@@ -7,6 +7,16 @@ use Illuminate\Support\Facades\Route;
 // Child-apps gebruiken deze endpoints om user-info + rechten op te halen.
 // Beschikbaar via sessie-cookie (cross-subdomein .sorai.nl) OF Sanctum tokens.
 
+// Interne data-toegang voor child-apps op dezelfde server (geen gebruikers-
+// sessie nodig — bv. klanten zoeken terwijl iemand lokaal is ingelogd in de
+// app). Alleen bereikbaar vanaf de eigen server, net als de core-users.php
+// conventie in de apps.
+Route::get('/internal/customers', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+    return app(\App\Http\Controllers\Api\DataController::class)->customers($request);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Volledig profiel — child-apps cachen dit per request
