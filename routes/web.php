@@ -42,6 +42,12 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 // Authenticated zone
 Route::middleware('auth')->group(function () {
     Route::get('/launcher', [LauncherController::class, 'index'])->name('launcher');
+    Route::get('/launcher/zoek', [LauncherController::class, 'search'])->middleware('throttle:60,1')->name('launcher.search');
+
+    // Artikelen zoeken + bekijken (specs uit de subgroeplijst) — voor iedereen
+    Route::get('/artikelen', [\App\Http\Controllers\ArticleController::class, 'index'])->name('articles.index');
+    Route::get('/artikel/subgroep/{subgroup}', [\App\Http\Controllers\ArticleController::class, 'subgroup'])->name('articles.subgroup');
+    Route::get('/artikel/{machine}', [\App\Http\Controllers\ArticleController::class, 'show'])->name('articles.show');
 
     // Eigen wachtwoord wijzigen (alle ingelogde medewerkers)
     Route::get('/wachtwoord-wijzigen', [\App\Http\Controllers\Auth\ChangePasswordController::class, 'show'])->name('password.change');
@@ -116,6 +122,12 @@ Route::middleware('auth')->group(function () {
         Route::post('imports/{importJob}/mapping', [ImportController::class, 'storeMapping'])->name('imports.storeMapping');
         Route::post('imports/{importJob}/run', [ImportController::class, 'run'])->name('imports.run');
         Route::get('imports/{importJob}', [ImportController::class, 'show'])->name('imports.show');
+
+        // Handige links op het dashboard (rekentools, documenten, sites)
+        Route::get('handige-links', [\App\Http\Controllers\Admin\QuickLinkController::class, 'index'])->name('quick-links.index');
+        Route::post('handige-links', [\App\Http\Controllers\Admin\QuickLinkController::class, 'store'])->name('quick-links.store');
+        Route::put('handige-links/{quickLink}', [\App\Http\Controllers\Admin\QuickLinkController::class, 'update'])->name('quick-links.update');
+        Route::delete('handige-links/{quickLink}', [\App\Http\Controllers\Admin\QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
 
         Route::get('audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
         Route::get('table-ownership', [TableOwnershipController::class, 'index'])->name('table-ownership.index');

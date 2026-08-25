@@ -60,7 +60,8 @@
         </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="{{ url('/launcher') }}"><i class="bi bi-grid-3x3-gap"></i> Launcher</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url('/launcher') }}"><i class="bi bi-grid-3x3-gap"></i> Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('articles.index') }}"><i class="bi bi-box-seam"></i> Artikelen</a></li>
                 @if(auth()->user()->is_super_admin)
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"><i class="bi bi-gear"></i> Beheer</a>
@@ -78,6 +79,7 @@
                             <li><a class="dropdown-item" href="{{ url('/admin/materieel') }}">Materieel</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/material-imports') }}">Materieel import</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/imports') }}">Import Engine</a></li>
+                            <li><a class="dropdown-item" href="{{ url('/admin/handige-links') }}">Handige links (dashboard)</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/audit-log') }}">Audit Log</a></li>
                             <li><a class="dropdown-item" href="{{ url('/admin/table-ownership') }}">Tabel-eigendom</a></li>
                         </ul>
