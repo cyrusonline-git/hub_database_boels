@@ -43,6 +43,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 Route::middleware('auth')->group(function () {
     Route::get('/launcher', [LauncherController::class, 'index'])->name('launcher');
     Route::get('/launcher/zoek', [LauncherController::class, 'search'])->middleware('throttle:60,1')->name('launcher.search');
+    Route::get('/launcher/badges', [LauncherController::class, 'badges'])->middleware('throttle:60,1')->name('launcher.badges');
 
     // Artikelen zoeken + bekijken (specs uit de subgroeplijst) — voor iedereen
     Route::get('/artikelen', [\App\Http\Controllers\ArticleController::class, 'index'])->name('articles.index');

@@ -285,3 +285,44 @@ Voorwaarden:
   de CORE `users.id` of e-mail als sleutel — zie autorisatie-sectie
 - Data (klanten/materieel/personeel) ophalen via de data-API met
   hetzelfde cookie-relay (zelfde headers, andere endpoints)
+
+## Notificatie-bolletje op de CORE-dashboard-tegel
+
+Als deze app openstaande items voor een medewerker heeft (nieuwe regel,
+toegewezen taak, iets dat actie vraagt), meld dan het AANTAL bij CORE.
+Op het CORE-dashboard verschijnt dan een rood bolletje met dat getal op
+de tegel van deze app. Meld 0 zodra het is afgehandeld — dan verdwijnt
+het bolletje.
+
+Regels:
+- De app bepaalt ZELF wat "nieuw/openstaand" is (CORE weet dat niet).
+- Meld ALTIJD het absolute aantal (geen +1/-1), dan is de melding
+  idempotent en kan hij gerust vaker gedaan worden.
+- Meld op elk moment dat het aantal kan veranderen: na aanmaken van een
+  item, na afhandelen, en eventueel bij een dagelijkse sync.
+- Sleutel = de `sync_key` van deze app in CORE Admin > Applicaties
+  (zelfde sleutel als voor core-users.php). Zet hem in de app-.env,
+  NOOIT hardcoded (publieke repo's!).
+
+```php
+// Eén medewerker (server-to-server, na een wijziging):
+$ch = curl_init('https://databasehub.sorai.nl/api/badge');
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POSTFIELDS => http_build_query([
+        'app' => '{APP_SLUG}',
+        'k' => getenv('CORE_SYNC_KEY'),
+        'email' => $medewerkerEmail,     // CORE-login e-mail
+        'count' => $aantalOpenstaand,    // absoluut aantal; 0 = bolletje weg
+    ]),
+]);
+curl_exec($ch); curl_close($ch);
+
+// Of in bulk (bv. dagelijkse sync), items als JSON:
+// POST /api/badge  { "app": "{APP_SLUG}", "k": "...",
+//                    "items": [ {"email": "...", "count": 2}, ... ] }
+```
+
+Response: `{ "ok": true, "updated": N, "unknown_emails": [...] }` —
+e-mails die (nog) geen CORE-account hebben worden overgeslagen.

@@ -39,6 +39,13 @@
         display: flex; align-items: center; justify-content: center; font-size: 20px;
         background: #fff4ec; color: var(--boels-orange);
     }
+    .app-badge {
+        position: absolute; top: 10px; right: 10px; z-index: 2;
+        min-width: 24px; height: 24px; border-radius: 12px; padding: 0 7px;
+        background: #dc3545; color: #fff; font-size: 13px; font-weight: 700;
+        display: none; align-items: center; justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    }
     .link-cat {
         font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
         color: #98a1ab; margin: 10px 0 4px;
@@ -103,7 +110,10 @@
             @foreach($apps as $app)
                 <div class="col-6 col-md-4">
                     <a href="{{ $app->url ?: '#' }}" target="_blank" class="text-decoration-none">
-                        <div class="card text-center p-4 app-tile h-100">
+                        <div class="card text-center p-4 app-tile h-100 position-relative">
+                            @php($b = $badges[$app->id] ?? 0)
+                            <span class="app-badge" data-badge-app="{{ $app->id }}"
+                                  @if($b > 0) style="display:flex;" @endif>{{ $b > 99 ? '99+' : $b }}</span>
                             <div class="icon-circle" style="background: {{ $app->color }}; color: #fff;">
                                 <i class="{{ $app->icon ?: 'bi-app' }}"></i>
                             </div>
@@ -291,6 +301,21 @@
             } catch (e) { /* stil falen — dashboard blijft bruikbaar */ }
         }, 250);
     });
+
+    // Tegel-bolletjes elke minuut verversen (child-apps melden tellers bij CORE)
+    async function refreshBadges() {
+        try {
+            const r = await fetch('{{ route('launcher.badges') }}', { headers: { 'Accept': 'application/json' } });
+            if (!r.ok) return;
+            const counts = await r.json();
+            document.querySelectorAll('[data-badge-app]').forEach(el => {
+                const c = counts[el.dataset.badgeApp] || 0;
+                el.textContent = c > 99 ? '99+' : c;
+                el.style.display = c > 0 ? 'flex' : 'none';
+            });
+        } catch (e) { /* stil falen */ }
+    }
+    setInterval(refreshBadges, 60000);
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.dash-search')) box.style.display = 'none';

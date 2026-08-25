@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppBadge;
 use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Employee;
@@ -21,6 +22,10 @@ class LauncherController extends Controller
         $apps = $user->applications();
 
         $isAdmin = $user->is_super_admin || $user->hasRole(['super-admin', 'administrator']);
+
+        // Notificatie-bolletjes op de tegels (gemeld door de child-apps)
+        $badges = AppBadge::where('user_id', $user->id)->where('count', '>', 0)
+            ->pluck('count', 'application_id');
 
         // Handige links (rekentools, documenten) — voor iedereen, per categorie
         $quickLinks = QuickLink::where('active', true)
@@ -47,7 +52,14 @@ class LauncherController extends Controller
             ];
         }
 
-        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks'));
+        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges'));
+    }
+
+    /** Actuele tellers voor de tegel-bolletjes — gepolld door het dashboard. */
+    public function badges(Request $request)
+    {
+        return AppBadge::where('user_id', $request->user()->id)
+            ->pluck('count', 'application_id');
     }
 
     /**
