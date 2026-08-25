@@ -29,7 +29,7 @@ class ArticleController extends Controller
                     ->orWhere('subgroup_name', 'like', $like)
                     ->orWhere('merk', 'like', $like)
                     ->orWhere('type', 'like', $like))
-                ->orderBy('subgroup_number')->limit(24)->get();
+                ->orderBy('subgroup_name')->get();
 
             $machines = Machine::with('subgroup')
                 ->where(fn ($w) => $w

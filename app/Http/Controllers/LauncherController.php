@@ -94,23 +94,16 @@ class LauncherController extends Controller
                 'phone' => $e->phone,
             ]);
 
-        $machines = Machine::query()
-            ->where(fn ($w) => $w
-                ->where('machine_number', 'like', $like)
-                ->orWhere('description', 'like', $like))
-            ->orderBy('machine_number')->limit(5)
-            ->get(['id', 'machine_number', 'description'])
-            ->map(fn ($m) => [
-                'label' => $m->machine_number,
-                'sub'   => $m->description,
-                'url'   => route('articles.show', $m),
-            ]);
-
+        // Materieel: alléén producttypes, en dan wel ALLE treffers — anders
+        // zijn types onderaan de lijst nooit te vinden. De resultatenlijst
+        // scrollt. Losse artikelnummers zoek je via de Artikelen-pagina.
         $subgroups = \App\Models\MachineSubgroup::query()
             ->where(fn ($w) => $w
                 ->where('subgroup_number', 'like', $like)
-                ->orWhere('subgroup_name', 'like', $like))
-            ->orderBy('subgroup_number')->limit(5)
+                ->orWhere('subgroup_name', 'like', $like)
+                ->orWhere('merk', 'like', $like)
+                ->orWhere('type', 'like', $like))
+            ->orderBy('subgroup_name')
             ->get(['id', 'subgroup_number', 'subgroup_name'])
             ->map(fn ($s) => [
                 'label' => $s->subgroup_name,
@@ -122,7 +115,6 @@ class LauncherController extends Controller
             'customers' => $customers,
             'employees' => $employees,
             'subgroups' => $subgroups,
-            'machines'  => $machines,
         ];
     }
 }

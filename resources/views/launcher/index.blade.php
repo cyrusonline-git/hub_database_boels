@@ -256,7 +256,7 @@
     function render(data) {
         const groups = [
             ['Klanten', data.customers], ["Collega's", data.employees],
-            ['Producttypes', data.subgroups], ['Artikelnummers', data.machines],
+            ['Producttypes', data.subgroups],
         ];
         let html = '';
         for (const [title, hits] of groups) {
