@@ -35,7 +35,12 @@ trait HasRoles
     public function hasRole(string|array $role): bool
     {
         $names = (array) $role;
-        return $this->roles()->whereIn('slug', $names)->orWhereIn('name', $names)->exists();
+        // De orWhereIn MOET gegroepeerd — anders valt hij buiten de
+        // user_id-voorwaarde van de relatie en matcht hij rollen van
+        // álle gebruikers.
+        return $this->roles()
+            ->where(fn ($q) => $q->whereIn('slug', $names)->orWhereIn('name', $names))
+            ->exists();
     }
 
     public function hasPermission(string $key): bool
