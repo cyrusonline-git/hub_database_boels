@@ -326,3 +326,9 @@ curl_exec($ch); curl_close($ch);
 
 Response: `{ "ok": true, "updated": N, "unknown_emails": [...] }` —
 e-mails die (nog) geen CORE-account hebben worden overgeslagen.
+
+Draait de app op DEZELFDE server als CORE? Gebruik dan het interne
+endpoint — geen sleutel nodig (zelfde conventie als core-users.php):
+`POST https://databasehub.sorai.nl/api/internal/badge` met JSON-body
+`{ "app": "{APP_SLUG}", "items": [ {"email": "...", "count": N}, ... ] }`.
+Referentie-implementatie: tankapp `includes/core-badge.php`.

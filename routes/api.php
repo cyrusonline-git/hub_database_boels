@@ -24,39 +24,8 @@ Route::get('/internal/customers', function (Request $request) {
 //
 //   POST /api/badge  { app: "tankapp", k: "<sync_key>", email: "x@boels.nl", count: 1 }
 //   of in bulk:      { app, k, items: [ { email, count }, ... ] }
-Route::post('/badge', function (Request $request) {
-    $data = $request->validate([
-        'app' => ['required', 'string', 'max:100'],
-        'k' => ['required', 'string', 'max:64'],
-        'email' => ['required_without:items', 'email'],
-        'count' => ['required_without:items', 'integer', 'min:0', 'max:9999'],
-        'items' => ['sometimes', 'array', 'max:500'],
-        'items.*.email' => ['required', 'email'],
-        'items.*.count' => ['required', 'integer', 'min:0', 'max:9999'],
-    ]);
-
-    $app = \App\Models\Application::where('slug', $data['app'])->whereNotNull('sync_key')->first();
-    abort_unless($app && hash_equals($app->sync_key, $data['k']), 403, 'Onbekende app of verkeerde sleutel.');
-
-    $items = $data['items'] ?? [['email' => $data['email'], 'count' => $data['count']]];
-    $updated = 0;
-    $unknown = [];
-
-    foreach ($items as $item) {
-        $user = \App\Models\User::where('email', $item['email'])->first();
-        if (! $user) {
-            $unknown[] = $item['email'];
-            continue;
-        }
-        \App\Models\AppBadge::updateOrCreate(
-            ['application_id' => $app->id, 'user_id' => $user->id],
-            ['count' => $item['count']],
-        );
-        $updated++;
-    }
-
-    return ['ok' => true, 'updated' => $updated, 'unknown_emails' => $unknown];
-})->middleware('throttle:120,1');
+Route::post('/badge', [\App\Http\Controllers\Api\BadgeController::class, 'store'])->middleware('throttle:120,1');
+Route::post('/internal/badge', [\App\Http\Controllers\Api\BadgeController::class, 'storeInternal'])->middleware('throttle:120,1');
 
 Route::middleware('auth:sanctum')->group(function () {
 
