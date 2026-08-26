@@ -45,6 +45,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/launcher/zoek', [LauncherController::class, 'search'])->middleware('throttle:60,1')->name('launcher.search');
     Route::get('/launcher/badges', [LauncherController::class, 'badges'])->middleware('throttle:60,1')->name('launcher.badges');
 
+    // Rekentools — voor iedereen
+    Route::view('/tools/generator', 'tools.generator')->name('tools.generator');
+
     // Artikelen zoeken + bekijken (specs uit de subgroeplijst) — voor iedereen
     Route::get('/artikelen', [\App\Http\Controllers\ArticleController::class, 'index'])->name('articles.index');
     Route::get('/artikel/subgroep/{subgroup}', [\App\Http\Controllers\ArticleController::class, 'subgroup'])->name('articles.subgroup');
