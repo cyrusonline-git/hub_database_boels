@@ -2,8 +2,9 @@
 /**
  * Boels CORE — Migrate-only script.
  *
- * Open: https://databasehub.sorai.nl/__migrate.php?k=BOELS_MIGRATE_2026
- * Verwijdert zichzelf na succes.
+ * Open: https://databasehub.sorai.nl/__migrate.php?k=<DEPLOY_SECRET>
+ * BLIJFT staan op de server (net als __pull_deploy.php) — je gebruikt hem
+ * bij elke deploy opnieuw, en hij is beveiligd met de DEPLOY_SECRET.
  */
 
 // Sleutel komt uit de server-.env (DEPLOY_SECRET); oude vaste sleutel
@@ -57,10 +58,8 @@ try {
 
     if ($exit === 0) {
         echo "\n✓ Migrate geslaagd.\n";
-        @unlink(__FILE__);
-        echo "Dit script heeft zichzelf verwijderd.\n";
     } else {
-        echo "\n⚠ Migrate gefaald — script blijft staan.\n";
+        echo "\n⚠ Migrate gefaald.\n";
     }
 } catch (\Throwable $e) {
     echo "EXCEPTION: " . $e->getMessage() . "\n";
