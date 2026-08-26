@@ -22,6 +22,31 @@ class UserController extends Controller
     }
 
     /**
+     * Stuurt (opnieuw) een inlog-mail naar één gebruiker: verse
+     * activatielink (7 dagen geldig) waarmee hij zelf een wachtwoord
+     * kiest. Kan altijd — ook voor een al actief account (dan werkt de
+     * link als "nieuw wachtwoord instellen"; het account blijft gewoon
+     * werken totdat de link gebruikt wordt).
+     */
+    public function sendLoginMail(User $user)
+    {
+        $token = Str::random(40);
+        $user->update([
+            'activation_token' => $token,
+            'activation_token_expires_at' => now()->addDays(7),
+        ]);
+
+        try {
+            Mail::to($user->email)->send(new AccountActivationMail($user, url('/activate/'.$token)));
+            $user->update(['activation_mail_sent_at' => now()]);
+            return back()->with('status', "Inlog-mail verstuurd naar {$user->email} — daarmee kiest de medewerker zelf een wachtwoord (link 7 dagen geldig).");
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withErrors("Inlog-mail naar {$user->email} kon NIET verstuurd worden (mailserverfout). Probeer het later opnieuw of laat de medewerker \"Wachtwoord vergeten?\" gebruiken op de loginpagina.");
+        }
+    }
+
+    /**
      * Stuurt in ÉÉN keer een activatiemail (CORE-login) naar alle
      * gebruikers die nog wachten op activatie. Tokens worden eerst
      * ververst (7 dagen geldig), dus dit mag ook later of opnieuw.
@@ -43,6 +68,7 @@ class UserController extends Controller
             ]);
             try {
                 Mail::to($user->email)->send(new AccountActivationMail($user, url('/activate/'.$token)));
+                $user->update(['activation_mail_sent_at' => now()]);
                 $verstuurd++;
             } catch (\Throwable $e) {
                 report($e);
@@ -124,6 +150,7 @@ class UserController extends Controller
         }
         try {
             Mail::to($user->email)->send(new AccountActivationMail($user, url('/activate/'.$token)));
+            $user->update(['activation_mail_sent_at' => now()]);
             return ' Activatiemail verstuurd naar '.$user->email.' — daarmee kiest de medewerker zelf een wachtwoord.';
         } catch (\Throwable $e) {
             report($e);

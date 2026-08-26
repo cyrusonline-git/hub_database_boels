@@ -144,6 +144,13 @@
                             <a href="{{ route('admin.users.edit', $loginByEmployee[$e->id]) }}" class="btn btn-sm btn-outline-success" title="Heeft al een login — open het account">
                                 <i class="bi bi-person-check"></i> Login
                             </a>
+                            <form action="{{ route('admin.users.send-login-mail', $loginByEmployee[$e->id]) }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Inlog-mail sturen naar {{ $e->name }}?\nDaarmee kiest de medewerker zelf een (nieuw) wachtwoord.');">
+                                @csrf
+                                <button class="btn btn-sm btn-outline-secondary" title="Stuur (opnieuw) een inlog-mail met activatielink">
+                                    <i class="bi bi-envelope-paper"></i>
+                                </button>
+                            </form>
                         @elseif($e->email)
                             <a href="{{ route('admin.users.create', ['employee_id' => $e->id]) }}" class="btn btn-sm btn-boels" title="Login-account aanmaken met vooringevulde gegevens">
                                 <i class="bi bi-person-plus"></i> Maak login

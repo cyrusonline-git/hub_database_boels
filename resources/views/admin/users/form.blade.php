@@ -2,7 +2,18 @@
 @section('title', $user->exists ? 'Gebruiker bewerken' : 'Nieuwe gebruiker')
 
 @section('content')
-<h3 class="mb-3">{{ $user->exists ? 'Gebruiker bewerken' : 'Nieuwe gebruiker' }}</h3>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">{{ $user->exists ? 'Gebruiker bewerken' : 'Nieuwe gebruiker' }}</h3>
+    @if($user->exists)
+        <form action="{{ route('admin.users.send-login-mail', $user) }}" method="POST"
+              onsubmit="return confirm('Inlog-mail sturen naar {{ $user->email }}?\nDaarmee kiest de medewerker zelf een (nieuw) wachtwoord (link 7 dagen geldig).');">
+            @csrf
+            <button class="btn btn-outline-secondary">
+                <i class="bi bi-envelope-paper"></i> Stuur inlog-mail
+            </button>
+        </form>
+    @endif
+</div>
 
 <form action="{{ $user->exists ? route('admin.users.update', $user) : route('admin.users.store') }}" method="POST" class="card p-4">
     @csrf

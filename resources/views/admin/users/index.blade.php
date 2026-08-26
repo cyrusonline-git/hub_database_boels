@@ -7,7 +7,7 @@
     <div class="d-flex gap-2">
         @if(($pendingCount ?? 0) > 0)
             <form action="{{ route('admin.users.mail-pending') }}" method="POST"
-                  onsubmit="return confirm('Activatiemail sturen naar alle {{ $pendingCount }} gebruikers die nog wachten op activatie?\nDaarmee kiezen ze zelf hun CORE-wachtwoord.');">
+                  onsubmit="return confirm('Activatiemail sturen naar alle {{ $pendingCount }} gebruikers die nog wachten op activatie?\nLET OP: ook wie al eerder een mail kreeg (maar nog niet activeerde) krijgt er dan opnieuw één — de oude link vervalt.\nVoor één persoon: gebruik de envelop-knop bij die gebruiker.');">
                 @csrf
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-envelope-paper"></i> Activatiemails versturen ({{ $pendingCount }} wachtend)
@@ -36,9 +36,25 @@
                             <span class="badge bg-secondary">{{ $r->name }}</span>
                         @endforeach
                     </td>
-                    <td>{!! $u->active ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle text-danger"></i>' !!}</td>
+                    <td>
+                        @if($u->status === \App\Models\User::STATUS_PENDING)
+                            <span class="badge bg-warning text-dark">wacht op activatie</span><br>
+                            <small class="text-muted">
+                                {{ $u->activation_mail_sent_at ? 'gemaild ' . $u->activation_mail_sent_at->format('d-m H:i') : 'nog geen mail gehad' }}
+                            </small>
+                        @else
+                            {!! $u->active ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle text-danger"></i>' !!}
+                        @endif
+                    </td>
                     <td>{{ $u->last_login_at?->format('d-m-Y H:i') ?? '—' }}</td>
                     <td class="text-end">
+                        <form action="{{ route('admin.users.send-login-mail', $u) }}" method="POST" class="d-inline"
+                              onsubmit="return confirm('Inlog-mail sturen naar {{ $u->email }}?\nDaarmee kiest de medewerker zelf een (nieuw) wachtwoord.');">
+                            @csrf
+                            <button class="btn btn-sm btn-outline-secondary" title="Stuur (opnieuw) een inlog-mail met activatielink">
+                                <i class="bi bi-envelope-paper"></i>
+                            </button>
+                        </form>
                         <a href="{{ route('admin.users.edit', $u) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
                         <form action="{{ route('admin.users.destroy', $u) }}" method="POST" class="d-inline" onsubmit="return confirm('Verwijderen?');">
                             @csrf @method('DELETE')

@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
         }
 
         Route::post('users/mail-wachtenden', [UserController::class, 'mailPending'])->name('users.mail-pending');
+        Route::post('users/{user}/inlogmail', [UserController::class, 'sendLoginMail'])->name('users.send-login-mail');
         Route::resource('users', UserController::class)->except(['show']);
         Route::resource('roles', RoleController::class)->except(['show']);
         Route::resource('permissions', PermissionController::class)->except(['show']);

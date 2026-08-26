@@ -22,7 +22,7 @@ class User extends Authenticatable
         'name', 'email', 'password', 'employee_id',
         'is_super_admin', 'active', 'last_login_at',
         'allowed_areas', 'allowed_depots', 'allowed_countries',
-        'status', 'activation_token', 'activation_token_expires_at',
+        'status', 'activation_token', 'activation_token_expires_at', 'activation_mail_sent_at',
     ];
 
     protected $hidden = ['password', 'remember_token', 'activation_token'];
@@ -33,6 +33,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'activation_token_expires_at' => 'datetime',
+            'activation_mail_sent_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'active' => 'boolean',
