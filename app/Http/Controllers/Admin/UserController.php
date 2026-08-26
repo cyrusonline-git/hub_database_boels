@@ -17,7 +17,45 @@ class UserController extends Controller
     public function index()
     {
         $users = User::with('roles')->orderBy('name')->paginate(25);
-        return view('admin.users.index', compact('users'));
+        $pendingCount = User::where('status', User::STATUS_PENDING)->count();
+        return view('admin.users.index', compact('users', 'pendingCount'));
+    }
+
+    /**
+     * Stuurt in ÉÉN keer een activatiemail (CORE-login) naar alle
+     * gebruikers die nog wachten op activatie. Tokens worden eerst
+     * ververst (7 dagen geldig), dus dit mag ook later of opnieuw.
+     */
+    public function mailPending()
+    {
+        $wachtend = User::where('status', User::STATUS_PENDING)->get();
+        if ($wachtend->isEmpty()) {
+            return back()->with('status', 'Er zijn geen gebruikers die op activatie wachten.');
+        }
+
+        $verstuurd = 0;
+        $mislukt = [];
+        foreach ($wachtend as $user) {
+            $token = Str::random(40);
+            $user->update([
+                'activation_token' => $token,
+                'activation_token_expires_at' => now()->addDays(7),
+            ]);
+            try {
+                Mail::to($user->email)->send(new AccountActivationMail($user, url('/activate/'.$token)));
+                $verstuurd++;
+            } catch (\Throwable $e) {
+                report($e);
+                $mislukt[] = $user->email;
+            }
+        }
+
+        $msg = "Activatiemail verstuurd naar $verstuurd gebruiker(s) — daarmee kiezen ze zelf hun CORE-wachtwoord (link 7 dagen geldig).";
+        if ($mislukt) {
+            $msg .= ' LET OP: mislukt voor '.implode(', ', array_slice($mislukt, 0, 10))
+                .(count($mislukt) > 10 ? '…' : '').' — die kunnen "Wachtwoord vergeten?" gebruiken.';
+        }
+        return back()->with('status', $msg);
     }
 
     public function create(Request $request)

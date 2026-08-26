@@ -74,6 +74,7 @@ Route::middleware('auth')->group(function () {
             Route::get("$r/{id}", fn ($id) => redirect("/admin/$r/$id/edit"))->whereNumber('id');
         }
 
+        Route::post('users/mail-wachtenden', [UserController::class, 'mailPending'])->name('users.mail-pending');
         Route::resource('users', UserController::class)->except(['show']);
         Route::resource('roles', RoleController::class)->except(['show']);
         Route::resource('permissions', PermissionController::class)->except(['show']);

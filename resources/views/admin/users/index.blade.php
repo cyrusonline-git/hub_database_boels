@@ -2,9 +2,20 @@
 @section('title','Gebruikers')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h3><i class="bi bi-people text-boels"></i> Gebruikers</h3>
-    <a href="{{ route('admin.users.create') }}" class="btn btn-boels"><i class="bi bi-plus-lg"></i> Nieuwe gebruiker</a>
+    <div class="d-flex gap-2">
+        @if(($pendingCount ?? 0) > 0)
+            <form action="{{ route('admin.users.mail-pending') }}" method="POST"
+                  onsubmit="return confirm('Activatiemail sturen naar alle {{ $pendingCount }} gebruikers die nog wachten op activatie?\nDaarmee kiezen ze zelf hun CORE-wachtwoord.');">
+                @csrf
+                <button class="btn btn-outline-secondary">
+                    <i class="bi bi-envelope-paper"></i> Activatiemails versturen ({{ $pendingCount }} wachtend)
+                </button>
+            </form>
+        @endif
+        <a href="{{ route('admin.users.create') }}" class="btn btn-boels"><i class="bi bi-plus-lg"></i> Nieuwe gebruiker</a>
+    </div>
 </div>
 
 <div class="card">
