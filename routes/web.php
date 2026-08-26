@@ -38,6 +38,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/wachtwoord-reset', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
 });
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
+// GET-variant voor de "Volledig uitloggen bij Boels CORE"-knop in
+// child-apps (offertes, inhuur, ...) — die kunnen geen CSRF-POST doen.
+Route::get('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout.get');
 
 // Authenticated zone
 Route::middleware('auth')->group(function () {
