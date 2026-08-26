@@ -97,37 +97,11 @@
     </a>
 </div>
 
-{{-- Twee kolommen: links de applicaties, rechts handige links & snelkoppelingen --}}
+{{-- Drie kolommen: links de tools (handige links), in het midden de
+     applicatie-tegels (3 per rij), rechts de snelkoppelingen.
+     Op mobiel komen de tegels bovenaan (order-classes). --}}
 <div class="row g-4 mb-4">
-    <div class="col-lg-8">
-        <div class="section-title">Jouw applicaties</div>
-        @if($apps->isEmpty())
-            <div class="alert alert-warning">
-                Je hebt nog geen toegang tot een applicatie. Neem contact op met een beheerder.
-            </div>
-        @else
-        <div class="row g-4">
-            @foreach($apps as $app)
-                <div class="col-6 col-md-4">
-                    <a href="{{ $app->url ?: '#' }}" target="_blank" class="text-decoration-none">
-                        <div class="card text-center p-4 app-tile h-100 position-relative">
-                            @php($b = $badges[$app->id] ?? 0)
-                            <span class="app-badge" data-badge-app="{{ $app->id }}"
-                                  @if($b > 0) style="display:flex;" @endif>{{ $b > 99 ? '99+' : $b }}</span>
-                            <div class="icon-circle" style="background: {{ $app->color }}; color: #fff;">
-                                <i class="{{ $app->icon ?: 'bi-app' }}"></i>
-                            </div>
-                            <h6 class="mb-1 text-dark">{{ $app->name }}</h6>
-                            <small class="text-muted">{{ $app->description }}</small>
-                        </div>
-                    </a>
-                </div>
-            @endforeach
-        </div>
-        @endif
-    </div>
-
-    <div class="col-lg-4">
+    <div class="col-lg-3 order-2 order-lg-1">
         <div class="section-title">Handige links</div>
         <div class="card stat-card shadow-sm p-3 mb-3">
             @forelse($quickLinks as $category => $links)
@@ -155,9 +129,39 @@
                 <a href="{{ url('/admin/handige-links') }}" class="small mt-2 d-inline-block"><i class="bi bi-pencil"></i> links beheren</a>
             @endif
         </div>
+    </div>
 
+    <div class="col-lg-6 order-1 order-lg-2">
+        <div class="section-title text-center">Jouw applicaties</div>
+        @if($apps->isEmpty())
+            <div class="alert alert-warning">
+                Je hebt nog geen toegang tot een applicatie. Neem contact op met een beheerder.
+            </div>
+        @else
+        <div class="row g-4">
+            @foreach($apps as $app)
+                <div class="col-6 col-md-4">
+                    <a href="{{ $app->url ?: '#' }}" target="_blank" class="text-decoration-none">
+                        <div class="card text-center p-4 app-tile h-100 position-relative">
+                            @php($b = $badges[$app->id] ?? 0)
+                            <span class="app-badge" data-badge-app="{{ $app->id }}"
+                                  @if($b > 0) style="display:flex;" @endif>{{ $b > 99 ? '99+' : $b }}</span>
+                            <div class="icon-circle" style="background: {{ $app->color }}; color: #fff;">
+                                <i class="{{ $app->icon ?: 'bi-app' }}"></i>
+                            </div>
+                            <h6 class="mb-1 text-dark">{{ $app->name }}</h6>
+                            <small class="text-muted">{{ $app->description }}</small>
+                        </div>
+                    </a>
+                </div>
+            @endforeach
+        </div>
+        @endif
+    </div>
+
+    <div class="col-lg-3 order-3">
         <div class="section-title">Snelkoppelingen</div>
-        <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="d-flex flex-column gap-2 mb-3">
             <a href="#" class="quick-link" onclick="document.getElementById('chatFab')?.click(); return false;">
                 <i class="bi bi-chat-dots"></i> Chat met een collega
             </a>
