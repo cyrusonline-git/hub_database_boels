@@ -2,22 +2,32 @@
 @section('title', $customer->customer_name)
 
 @section('content')
-<nav class="mb-2 small">
-    <a href="{{ route('admin.customers.index') }}">Klanten</a>
-    @if($customer->concern_name)
-        &rsaquo; <a href="{{ route('admin.customers.index', ['concern' => $customer->concern_number]) }}">{{ $customer->concern_name }}</a>
-    @endif
-    &rsaquo; <strong>{{ $customer->customer_number }}</strong>
-</nav>
+@php($adminView = request()->routeIs('admin.*'))
+
+@if($adminView)
+    <nav class="mb-2 small">
+        <a href="{{ route('admin.customers.index') }}">Klanten</a>
+        @if($customer->concern_name)
+            &rsaquo; <a href="{{ route('admin.customers.index', ['concern' => $customer->concern_number]) }}">{{ $customer->concern_name }}</a>
+        @endif
+        &rsaquo; <strong>{{ $customer->customer_number }}</strong>
+    </nav>
+@endif
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3><i class="bi bi-building text-boels"></i>
         {{ $customer->customer_name }}
         <small class="text-muted">#{{ $customer->customer_number }}</small>
     </h3>
-    <a href="{{ route('admin.customers.index') }}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Terug naar klanten
-    </a>
+    @if($adminView)
+        <a href="{{ route('admin.customers.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Terug naar klanten
+        </a>
+    @else
+        <a href="{{ route('launcher') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Terug naar dashboard
+        </a>
+    @endif
 </div>
 
 <div class="row g-3">
@@ -81,7 +91,7 @@
                 <ul class="list-group list-group-flush" style="max-height:340px; overflow-y:auto;">
                     @foreach($concernCustomers as $cc)
                         <li class="list-group-item d-flex justify-content-between">
-                            <a href="{{ route('admin.customers.show', $cc) }}">{{ $cc->customer_name }}</a>
+                            <a href="{{ $adminView ? route('admin.customers.show', $cc) : route('customers.view', $cc) }}">{{ $cc->customer_name }}</a>
                             <span class="text-muted">#{{ $cc->customer_number }}</span>
                         </li>
                     @endforeach

@@ -51,6 +51,10 @@ Route::middleware('auth')->group(function () {
     // Rekentools — voor iedereen
     Route::view('/tools/generator', 'tools.generator')->name('tools.generator');
 
+    // Klant-detail (alleen-lezen) — voor alle ingelogde medewerkers,
+    // o.a. klikbaar vanuit de dashboard-zoeker
+    Route::get('/klant/{customer}', [\App\Http\Controllers\Admin\CustomerController::class, 'show'])->name('customers.view');
+
     // Artikelen zoeken + bekijken (specs uit de subgroeplijst) — voor iedereen
     Route::get('/artikelen', [\App\Http\Controllers\ArticleController::class, 'index'])->name('articles.index');
     Route::get('/artikel/subgroep/{subgroup}', [\App\Http\Controllers\ArticleController::class, 'subgroup'])->name('articles.subgroup');

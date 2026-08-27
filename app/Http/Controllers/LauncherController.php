@@ -88,7 +88,7 @@ class LauncherController extends Controller
             ->map(fn ($c) => [
                 'label' => $c->customer_name,
                 'sub'   => trim($c->customer_number.' · '.($c->address_city ?? ''), ' ·'),
-                'url'   => $isAdmin ? url('/admin/klanten/'.$c->id) : null,
+                'url'   => $isAdmin ? url('/admin/klanten/'.$c->id) : route('customers.view', $c->id),
             ]);
 
         $employees = Employee::query()
