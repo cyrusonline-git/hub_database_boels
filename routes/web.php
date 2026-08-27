@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     // Rekentools — voor iedereen
     Route::view('/tools/generator', 'tools.generator')->name('tools.generator');
     Route::view('/tools/kabel', 'tools.kabel')->name('tools.kabel');
+    Route::view('/tools/verlichting', 'tools.verlichting')->name('tools.verlichting');
 
     // Klant-detail (alleen-lezen) — voor alle ingelogde medewerkers,
     // o.a. klikbaar vanuit de dashboard-zoeker
