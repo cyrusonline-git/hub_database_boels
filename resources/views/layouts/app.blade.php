@@ -53,7 +53,7 @@
         <a class="navbar-brand d-flex align-items-center" href="{{ url('/launcher') }}">
             <img src="{{ asset('images/boels-industrial-logo.jpg') }}" alt="Boels Industrial"
                  style="height:40px; background:#fff; padding:3px; border-radius:9px; margin-right:12px;">
-            @include('partials.core-logo', ['size' => 19, 'light' => true])
+            @include('partials.core-logo', ['size' => 34, 'light' => true])
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
             <span class="navbar-toggler-icon"></span>
