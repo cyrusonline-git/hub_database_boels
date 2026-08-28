@@ -55,6 +55,20 @@ Route::middleware('auth:sanctum')->group(function () {
     // Volledig profiel — child-apps cachen dit per request
     Route::get('/me', function (Request $request) {
         $u = $request->user();
+
+        // Vangnet: staan er geen toegangslijsten op het login-account
+        // (super-admins bijvoorbeeld), gebruik dan het depot/de area van
+        // de gekoppelde MEDEWERKERKAART — zo krijgen child-apps altijd
+        // een thuisdepot mee voor dashboards en nieuwe aanvragen.
+        $areas = $u->allowed_areas ?? [];
+        $depots = $u->allowed_depots ?? [];
+        if (empty($areas) && $u->employee?->area) {
+            $areas = [$u->employee->area];
+        }
+        if (empty($depots) && $u->employee?->depot) {
+            $depots = [$u->employee->depot];
+        }
+
         return [
             'id' => $u->id,
             'name' => $u->name,
@@ -62,8 +76,8 @@ Route::middleware('auth:sanctum')->group(function () {
             'is_super_admin' => $u->is_super_admin,
             'status' => $u->status,
             'employee_id' => $u->employee_id,
-            'allowed_areas' => $u->allowed_areas ?? [],
-            'allowed_depots' => $u->allowed_depots ?? [],
+            'allowed_areas' => $areas,
+            'allowed_depots' => $depots,
             'allowed_countries' => $u->allowed_countries ?? [],
             'roles' => $u->roles->pluck('slug'),
             'permissions' => $u->permissions()->pluck('key'),
