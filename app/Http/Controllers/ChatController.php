@@ -6,6 +6,7 @@ use App\Models\ChatMessage;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Interne chat tussen Boels-medewerkers (alle actieve CORE-gebruikers).
@@ -47,7 +48,7 @@ class ChatController extends Controller
                     'initials' => collect(explode(' ', trim($u->name)))
                         ->map(fn ($p) => mb_substr($p, 0, 1))->take(2)->implode(''),
                     'unread' => (int) ($unread[$u->id] ?? 0),
-                    'last_body' => $last ? mb_substr($last->body, 0, 40) : null,
+                    'last_body' => $last ? (trim($last->body) !== '' ? mb_substr($last->body, 0, 40) : '📷 Foto') : null,
                     'last_mine' => $last ? $last->sender_id === $me : false,
                     'last_at' => $last?->created_at?->format('d-m H:i'),
                     'last_id' => $last?->id ?? 0,
@@ -75,6 +76,7 @@ class ChatController extends Controller
                 'id' => $m->id,
                 'mine' => $m->sender_id === $me,
                 'body' => $m->body,
+                'image' => $m->image_path ? route('chat.image', $m->id) : null,
                 'time' => $m->created_at->format('d-m H:i'),
                 'read' => $m->read_at !== null,
             ]);
@@ -86,15 +88,46 @@ class ChatController extends Controller
     {
         $data = $request->validate([
             'recipient_id' => ['required', 'integer', 'exists:users,id', 'not_in:'.$request->user()->id],
-            'body' => ['required', 'string', 'max:2000'],
+            'body' => ['nullable', 'required_without:image', 'string', 'max:2000'],
+            'image' => ['nullable', 'required_without:body', 'image', 'mimes:jpeg,png,gif,webp', 'max:8192'],
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            // Privé-opslag (niet publiek benaderbaar); uitgeserveerd via chat.image
+            $imagePath = $request->file('image')->store('chat', 'local');
+        }
 
         $message = ChatMessage::create([
             'sender_id' => $request->user()->id,
             'recipient_id' => $data['recipient_id'],
-            'body' => trim($data['body']),
+            'body' => trim($data['body'] ?? ''),
+            'image_path' => $imagePath,
         ]);
 
         return ['ok' => true, 'id' => $message->id];
+    }
+
+    /** Meegestuurde foto tonen — alleen voor de twee gespreksdeelnemers */
+    public function image(Request $request, ChatMessage $message)
+    {
+        $me = $request->user()->id;
+        abort_unless(in_array($me, [$message->sender_id, $message->recipient_id], true), 403);
+        abort_unless($message->image_path && Storage::disk('local')->exists($message->image_path), 404);
+
+        return Storage::disk('local')->response($message->image_path);
+    }
+
+    /** Eigen bericht verwijderen (voor beide kanten weg, incl. eventuele foto) */
+    public function destroy(Request $request, ChatMessage $message)
+    {
+        abort_unless($message->sender_id === $request->user()->id, 403);
+
+        if ($message->image_path) {
+            Storage::disk('local')->delete($message->image_path);
+        }
+        $message->delete();
+
+        return ['ok' => true];
     }
 }

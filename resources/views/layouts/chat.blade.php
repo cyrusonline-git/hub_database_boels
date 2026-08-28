@@ -51,11 +51,19 @@
         align-items: center; justify-content: center; padding: 0 6px;
     }
     .chat-msgs { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-    .chat-msg { max-width: 78%; padding: 8px 12px; border-radius: 14px; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+    .chat-msg { position: relative; max-width: 78%; padding: 8px 12px; border-radius: 14px; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
     .chat-msg.mine { align-self: flex-end; background: var(--boels-orange, #FF6600); color: #fff; border-bottom-right-radius: 4px; }
     .chat-msg.theirs { align-self: flex-start; background: #fff; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
     .chat-msg .tm { display: block; font-size: 10px; opacity: .7; margin-top: 3px; text-align: right; }
-    .chat-input { flex: 0 0 auto; display: flex; gap: 8px; padding: 10px; background: #fff; border-top: 1px solid #eee; }
+    .chat-msg img.chat-photo { max-width: 100%; border-radius: 8px; display: block; margin-bottom: 4px; cursor: pointer; }
+    .chat-msg .msg-del {
+        position: absolute; top: -8px; left: -8px; width: 22px; height: 22px;
+        border-radius: 50%; border: none; background: #dc3545; color: #fff;
+        font-size: 11px; line-height: 1; display: none;
+        align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+    }
+    .chat-msg.mine:hover .msg-del, .chat-msg.mine.show-del .msg-del { display: inline-flex; }
+    .chat-input { flex: 0 0 auto; display: flex; gap: 6px; padding: 10px; background: #fff; border-top: 1px solid #eee; align-items: flex-end; }
     .chat-input textarea {
         flex: 1 1 auto; resize: none; border: 1px solid #ddd; border-radius: 10px;
         padding: 8px 10px; font-size: 14px; height: 42px; outline: none;
@@ -64,6 +72,24 @@
         flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px; border: none;
         background: var(--boels-orange, #FF6600); color: #fff; font-size: 17px;
     }
+    .chat-input button.btn-tool { background: #f1f2f4; color: #555; font-size: 19px; }
+    #chatEmojiPanel {
+        position: absolute; bottom: 62px; left: 8px; right: 8px; z-index: 5;
+        background: #fff; border: 1px solid #e5e5e5; border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: none;
+        grid-template-columns: repeat(8, 1fr); gap: 2px; max-height: 180px; overflow-y: auto;
+    }
+    #chatEmojiPanel.open { display: grid; }
+    #chatEmojiPanel button {
+        border: none; background: none; font-size: 22px; padding: 4px; border-radius: 8px; cursor: pointer;
+    }
+    #chatEmojiPanel button:hover { background: #fff4ec; }
+    #chatAttachPreview {
+        display: none; align-items: center; gap: 8px; padding: 6px 12px;
+        background: #fff8f2; border-top: 1px solid #ffe3cf; font-size: 12px; flex: 0 0 auto;
+    }
+    #chatAttachPreview img { height: 34px; border-radius: 6px; }
+    #chatAttachPreview .rm { border: none; background: none; color: #dc3545; font-size: 15px; margin-left: auto; }
     .chat-search { padding: 10px 12px; background: #fff; border-bottom: 1px solid #eee; flex: 0 0 auto; }
     .chat-search input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 7px 12px; font-size: 13px; outline: none; }
 </style>
@@ -84,7 +110,16 @@
         <input type="text" id="chatSearch" placeholder="Zoek collega...">
     </div>
     <div class="chat-body" id="chatBody"></div>
+    <div id="chatEmojiPanel"></div>
+    <div id="chatAttachPreview">
+        <img id="chatAttachThumb" alt="">
+        <span>Foto klaar om te versturen</span>
+        <button type="button" class="rm" id="chatAttachRemove" title="Foto verwijderen"><i class="bi bi-x-circle-fill"></i></button>
+    </div>
     <div class="chat-input" id="chatInputWrap" style="display:none;">
+        <button type="button" class="btn-tool" id="chatEmojiBtn" title="Emoji"><i class="bi bi-emoji-smile"></i></button>
+        <button type="button" class="btn-tool" id="chatAttachBtn" title="Foto meesturen"><i class="bi bi-image"></i></button>
+        <input type="file" id="chatFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
         <textarea id="chatText" placeholder="Typ een bericht..." maxlength="2000"></textarea>
         <button id="chatSend" title="Versturen"><i class="bi bi-send-fill"></i></button>
     </div>
@@ -211,7 +246,10 @@
         if (!currentContact) return;
         get('/chat/thread/' + currentContact.id).then(d => {
             var html = '<div class="chat-msgs">' + d.messages.map(m =>
-                '<div class="chat-msg ' + (m.mine ? 'mine' : 'theirs') + '">' + esc(m.body)
+                '<div class="chat-msg ' + (m.mine ? 'mine' : 'theirs') + '">'
+                + (m.mine ? '<button type="button" class="msg-del" data-id="' + m.id + '" title="Bericht verwijderen"><i class="bi bi-trash"></i></button>' : '')
+                + (m.image ? '<img class="chat-photo" src="' + esc(m.image) + '" alt="Foto" loading="lazy">' : '')
+                + esc(m.body)
                 + '<span class="tm">' + esc(m.time) + (m.mine && m.read ? ' ✓✓' : '') + '</span></div>'
             ).join('') + '</div>';
             if (html !== lastRender) {
@@ -219,6 +257,28 @@
                 lastRender = html;
                 body.innerHTML = html;
                 if (scroll || atBottom) body.scrollTop = body.scrollHeight;
+                // Foto aanklikken = groot openen in nieuw tabblad
+                body.querySelectorAll('.chat-photo').forEach(img => {
+                    img.addEventListener('click', () => window.open(img.src, '_blank'));
+                });
+                // Op telefoons: tik op je eigen bericht om het verwijder-knopje te tonen
+                body.querySelectorAll('.chat-msg.mine').forEach(el => {
+                    el.addEventListener('click', function (e) {
+                        if (e.target.closest('.msg-del') || e.target.classList.contains('chat-photo')) return;
+                        this.classList.toggle('show-del');
+                    });
+                });
+                // Eigen bericht verwijderen
+                body.querySelectorAll('.msg-del').forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        if (!confirm('Dit bericht verwijderen? Het verdwijnt ook bij de ontvanger.')) return;
+                        fetch('/chat/delete/' + this.dataset.id, {
+                            method: 'POST',
+                            headers: {'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
+                        }).then(() => { lastRender = ''; loadThread(false); }).catch(() => {});
+                    });
+                });
             }
             pollUnreadSoon();
         }).catch(() => {});
@@ -229,15 +289,71 @@
         unreadSoonTimer = setTimeout(pollUnread, 400);
     }
 
+    // --- Foto meesturen
+    var attachFile = null;
+    var fileInput = document.getElementById('chatFile');
+    var attachPreview = document.getElementById('chatAttachPreview');
+    var attachThumb = document.getElementById('chatAttachThumb');
+
+    document.getElementById('chatAttachBtn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', function () {
+        var f = this.files[0];
+        if (!f) return;
+        if (f.size > 8 * 1024 * 1024) { alert('De foto is te groot (max. 8 MB).'); this.value = ''; return; }
+        attachFile = f;
+        attachThumb.src = URL.createObjectURL(f);
+        attachPreview.style.display = 'flex';
+    });
+    document.getElementById('chatAttachRemove').addEventListener('click', clearAttach);
+    function clearAttach() {
+        attachFile = null;
+        fileInput.value = '';
+        attachPreview.style.display = 'none';
+    }
+
+    // --- Emoji-kiezer
+    var emojiPanel = document.getElementById('chatEmojiPanel');
+    var emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','🙂','😉','😍','😘','😎','🤔','🤨','😐','😴','🥳','😇',
+                  '👍','👎','👌','🙏','💪','👏','🤝','✌️','🤞','👋','🔥','⭐','✅','❌','⚠️','❗','❓','💡','🎉','🎊',
+                  '❤️','🧡','💚','💙','😢','😭','😤','😡','🤯','🤒','🚀','🚧','🔧','🔨','🏗️','🚜','📦','📸','📞','☕'];
+    emojiPanel.innerHTML = emojis.map(e => '<button type="button">' + e + '</button>').join('');
+    emojiPanel.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', function () {
+            var start = text.selectionStart ?? text.value.length;
+            var end = text.selectionEnd ?? text.value.length;
+            text.value = text.value.slice(0, start) + this.textContent + text.value.slice(end);
+            var pos = start + this.textContent.length;
+            text.focus();
+            text.setSelectionRange(pos, pos);
+        });
+    });
+    document.getElementById('chatEmojiBtn').addEventListener('click', function (e) {
+        e.stopPropagation();
+        emojiPanel.classList.toggle('open');
+    });
+    document.addEventListener('click', function (e) {
+        if (!emojiPanel.contains(e.target) && e.target.id !== 'chatEmojiBtn') {
+            emojiPanel.classList.remove('open');
+        }
+    });
+
     function send() {
         var msg = text.value.trim();
-        if (!msg || !currentContact) return;
+        if ((!msg && !attachFile) || !currentContact) return;
+        emojiPanel.classList.remove('open');
+
+        var fd = new FormData();
+        fd.append('recipient_id', currentContact.id);
+        if (msg) fd.append('body', msg);
+        if (attachFile) fd.append('image', attachFile);
         text.value = '';
+        clearAttach();
+
         fetch('{{ route('chat.send') }}', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
-            body: JSON.stringify({recipient_id: currentContact.id, body: msg}),
-        }).then(() => loadThread(true)).catch(() => {});
+            headers: {'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
+            body: fd,
+        }).then(() => { lastRender = ''; loadThread(true); }).catch(() => {});
     }
 
     fab.addEventListener('click', function () {

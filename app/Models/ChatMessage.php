@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChatMessage extends Model
 {
-    protected $fillable = ['sender_id', 'recipient_id', 'body', 'read_at'];
+    protected $fillable = ['sender_id', 'recipient_id', 'body', 'image_path', 'read_at'];
 
     protected $casts = ['read_at' => 'datetime'];
 

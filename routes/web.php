@@ -71,6 +71,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat/contacts', [ChatController::class, 'contacts'])->name('chat.contacts');
     Route::get('/chat/thread/{user}', [ChatController::class, 'thread'])->name('chat.thread');
     Route::post('/chat/send', [ChatController::class, 'send'])->middleware('throttle:60,1')->name('chat.send');
+    Route::get('/chat/image/{message}', [ChatController::class, 'image'])->name('chat.image');
+    Route::post('/chat/delete/{message}', [ChatController::class, 'destroy'])->name('chat.delete');
 
     // Super Admin / system management
     Route::middleware('role:super-admin,administrator')->prefix('admin')->name('admin.')->group(function () {
