@@ -1,29 +1,20 @@
 {{--
-    CORE woordmerk v2 — de "O" is een kern met satellieten óp de ring.
-    Typografisch strak: de O heeft exact kapitaalhoogte en staat op de
-    basislijn, krappe spatiëring, zwaar geometrisch gewicht.
+    CORE-woordmerk (logo aangeleverd 28-08-2026): "C CORE" met oranje kern.
+    Bestanden: public/images/core-logo-woordmerk.png (alleen woordmerk) en
+    core-logo-volledig.png (met "POWERED BY BOELS INDUSTRIAL").
     Gebruik: @include('partials.core-logo', ['size' => 44])
-    Optioneel: ['light' => true] voor donkere/oranje achtergrond.
+    Optioneel: ['light' => true] -> wit kader, voor op de oranje navbalk.
 --}}
 @php
     $size = $size ?? 44;
     $light = $light ?? false;
-    $textColor = $light ? '#ffffff' : '#111111';
-    // Op de oranje balk (light) zou een oranje O wegvallen — daar wordt hij zwart
-    $oColor = $light ? '#1a1a1a' : config('boels.brand.color', '#FF6600');
 @endphp
-<span class="core-wordmark" style="display:inline-block; line-height:1; user-select:none; white-space:nowrap;
-        font-family:'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif;
-        font-weight:900; font-size:{{ $size }}px; letter-spacing:0.045em;
-        color:{{ $textColor }};">C<svg viewBox="0 0 100 100" role="img" aria-label="O"
-        style="height:0.72em; width:0.72em; vertical-align:baseline; margin:0 0.055em 0 0.035em;">
-        {{-- ring --}}
-        <circle cx="50" cy="50" r="38" fill="none" stroke="{{ $oColor }}" stroke-width="16"/>
-        {{-- kern --}}
-        <circle cx="50" cy="50" r="15" fill="{{ $oColor }}"/>
-        {{-- satellieten óp de ring (diagonaal — de apps om de kern) --}}
-        <circle cx="76.9" cy="23.1" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-        <circle cx="76.9" cy="76.9" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-        <circle cx="23.1" cy="76.9" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-        <circle cx="23.1" cy="23.1" r="7.5" fill="{{ $oColor }}" stroke="{{ $light ? 'rgba(255,255,255,.9)' : '#fff' }}" stroke-width="3"/>
-    </svg>RE</span>
+@if ($light)
+    <span style="display:inline-flex; align-items:center; background:#fff; padding:7px 12px; border-radius:9px;">
+        <img src="{{ asset('images/core-logo-woordmerk.png') }}" alt="CORE"
+             style="height:{{ (int) round($size * 0.76) }}px; display:block;">
+    </span>
+@else
+    <img src="{{ asset('images/core-logo-woordmerk.png') }}" alt="CORE"
+         style="height:{{ (int) round($size * 0.85) }}px; display:inline-block; vertical-align:middle;">
+@endif

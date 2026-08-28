@@ -7,7 +7,14 @@
 
     <title>{{ config('app.name') }} @hasSection('title') — @yield('title') @endif</title>
 
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/boels-favicon.svg') }}">
+    {{-- CORE-pictogram: browsertab + "zet op beginscherm" op telefoons --}}
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/core-favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('images/core-favicon-64.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <meta name="apple-mobile-web-app-title" content="CORE">
+    <meta name="application-name" content="CORE">
+    <meta name="theme-color" content="#17181d">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
