@@ -6,7 +6,8 @@
     <h4 class="mb-0"><i class="bi bi-link-45deg text-boels"></i> Handige links op het dashboard</h4>
 </div>
 <p class="text-muted">Links naar rekentools (bv. de generator-tool), documenten of externe sites.
-    Ze verschijnen voor <strong>alle ingelogde medewerkers</strong> in het rechterpaneel van het dashboard, gegroepeerd per categorie.</p>
+    Ze verschijnen voor <strong>alle ingelogde medewerkers</strong> in het rechterpaneel van het dashboard, gegroepeerd per categorie.
+    Vul je een <strong>regio</strong> in (bv. <em>West</em>), dan ziet alleen personeel van die area de link (beheerders zien altijd alles).</p>
 
 {{-- Nieuwe link toevoegen --}}
 <div class="card shadow-sm mb-4">
@@ -20,9 +21,11 @@
                 <input name="url" class="form-control form-control-sm" required maxlength="500" placeholder="https://…"></div>
             <div class="col-md-2"><label class="form-label small mb-0">Categorie</label>
                 <input name="category" list="catList" class="form-control form-control-sm" maxlength="50" placeholder="Rekentools"></div>
+            <div class="col-md-1"><label class="form-label small mb-0">Regio</label>
+                <input name="area" class="form-control form-control-sm" maxlength="50" placeholder="Alle"></div>
             <div class="col-md-2"><label class="form-label small mb-0">Icoon (bootstrap)</label>
                 <input name="icon" class="form-control form-control-sm" maxlength="50" placeholder="bi-calculator"></div>
-            <div class="col-md-2"><label class="form-label small mb-0">Omschrijving</label>
+            <div class="col-md-1"><label class="form-label small mb-0">Omschrijving</label>
                 <input name="description" class="form-control form-control-sm" maxlength="255"></div>
             <div class="col-md-1"><button class="btn btn-boels btn-sm w-100"><i class="bi bi-plus-lg"></i> Toevoegen</button></div>
         </form>
@@ -42,9 +45,9 @@
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead><tr>
-                <th style="width:16%">Titel</th><th style="width:22%">URL</th>
-                <th style="width:12%">Categorie</th><th style="width:11%">Icoon</th>
-                <th style="width:18%">Omschrijving</th><th style="width:7%">Volgorde</th>
+                <th style="width:15%">Titel</th><th style="width:20%">URL</th>
+                <th style="width:10%">Categorie</th><th style="width:7%">Regio</th><th style="width:11%">Icoon</th>
+                <th style="width:16%">Omschrijving</th><th style="width:7%">Volgorde</th>
                 <th style="width:6%">Actief</th><th style="width:8%"></th>
             </tr></thead>
             <tbody>
@@ -54,6 +57,7 @@
                     <td><input form="{{ $fid }}" name="title" value="{{ $link->title }}" class="form-control form-control-sm" required maxlength="100"></td>
                     <td><input form="{{ $fid }}" name="url" value="{{ $link->url }}" class="form-control form-control-sm" required maxlength="500"></td>
                     <td><input form="{{ $fid }}" name="category" value="{{ $link->category }}" list="catList" class="form-control form-control-sm" maxlength="50"></td>
+                    <td><input form="{{ $fid }}" name="area" value="{{ $link->area }}" class="form-control form-control-sm" maxlength="50" placeholder="Alle" title="Leeg = iedereen; bv. West = alleen area West"></td>
                     <td>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text"><i class="{{ $link->icon ?: 'bi-link-45deg' }}"></i></span>

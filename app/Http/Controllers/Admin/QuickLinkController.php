@@ -44,6 +44,7 @@ class QuickLinkController extends Controller
             'url' => ['required', 'string', 'max:500'],
             'icon' => ['nullable', 'string', 'max:50'],
             'category' => ['nullable', 'string', 'max:50'],
+            'area' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer'],
         ]);

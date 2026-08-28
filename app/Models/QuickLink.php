@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class QuickLink extends Model
 {
     protected $fillable = [
-        'title', 'url', 'icon', 'category', 'description', 'sort_order', 'active',
+        'title', 'url', 'icon', 'category', 'area', 'description', 'sort_order', 'active',
     ];
 
     protected $casts = [

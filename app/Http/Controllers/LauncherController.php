@@ -27,9 +27,25 @@ class LauncherController extends Controller
         $badges = AppBadge::where('user_id', $user->id)->where('count', '>', 0)
             ->pluck('count', 'application_id');
 
-        // Handige links (rekentools, documenten) — voor iedereen, per categorie
+        // Handige links (rekentools, documenten) per categorie.
+        // Regio-gebonden links (kolom area) zijn alleen zichtbaar voor
+        // medewerkers van die area (uit de toegangslijst of de
+        // medewerkerkaart); beheerders zien altijd alles.
+        $userAreas = $user->allowed_areas ?? [];
+        if (empty($userAreas) && $user->employee?->area) {
+            $userAreas = [$user->employee->area];
+        }
+        $normArea = fn ($a) => trim(preg_replace('/^area\s+/', '', strtolower(trim((string) $a))));
+        $userAreasNorm = array_map($normArea, $userAreas);
+
         $quickLinks = QuickLink::where('active', true)
             ->orderBy('sort_order')->orderBy('title')->get()
+            ->filter(function ($l) use ($isAdmin, $userAreasNorm, $normArea) {
+                if (! $l->area || $isAdmin) {
+                    return true;
+                }
+                return in_array($normArea($l->area), $userAreasNorm, true);
+            })
             ->groupBy(fn ($l) => $l->category ?: 'Overig');
 
         // Beheer-informatie alleen voor admins — gewone gebruikers zien
