@@ -80,11 +80,6 @@
 
 <div class="text-center mt-3 mb-4">
     <h3 class="mb-1">Welkom, {{ explode(' ', $u->name)[0] }}</h3>
-    @if (strtolower($u->email) === 'lisanne.rodrigues@boels.nl')
-        {{-- Persoonlijke verrassing 😉 --}}
-        <img src="{{ asset('images/welkom-lisanne.jpg') }}" alt=""
-             style="height:130px; width:auto; border-radius:16px; margin:10px 0 4px; box-shadow:0 4px 14px rgba(0,0,0,.15);">
-    @endif
     <p class="text-muted mb-0">{{ \Illuminate\Support\Str::ucfirst(now()->locale('nl')->translatedFormat('l j F Y')) }}
         @if($u->last_login_at) · vorige login {{ $u->last_login_at->locale('nl')->diffForHumans() }} @endif
     </p>
@@ -165,6 +160,13 @@
     </div>
 
     <div class="col-lg-3 order-3">
+        @if (strtolower($u->email) === 'lisanne.rodrigues@boels.nl')
+            {{-- Persoonlijke verrassing 😉 — rechtsboven, direct onder haar naam in de header --}}
+            <div class="text-center mb-3">
+                <img src="{{ asset('images/welkom-lisanne.jpg') }}" alt=""
+                     style="height:140px; width:auto; border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,.15);">
+            </div>
+        @endif
         <div class="section-title">Snelkoppelingen</div>
         <div class="d-flex flex-column gap-2 mb-3">
             <a href="#" class="quick-link" onclick="document.getElementById('chatFab')?.click(); return false;">
