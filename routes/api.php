@@ -17,6 +17,29 @@ Route::get('/internal/customers', function (Request $request) {
     return app(\App\Http\Controllers\Api\DataController::class)->customers($request);
 });
 
+// Materieellijst (producttypes/subgroepen) voor child-apps op dezelfde
+// server — o.a. de artikel-zoeker van de offerte-app. Zelfde IP-guard.
+Route::get('/internal/subgroups', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+
+    $q = trim((string) $request->input('q'));
+    if (mb_strlen($q) < 2) {
+        return [];
+    }
+    $like = '%'.$q.'%';
+
+    return \App\Models\MachineSubgroup::query()
+        ->where(fn ($w) => $w
+            ->where('subgroup_number', 'like', $like)
+            ->orWhere('subgroup_name', 'like', $like)
+            ->orWhere('merk', 'like', $like)
+            ->orWhere('type', 'like', $like))
+        ->orderBy('subgroup_name')
+        ->limit(intval($request->input('limit', 20)))
+        ->get(['subgroup_number', 'subgroup_name', 'merk', 'type']);
+});
+
 // Notificatie-tellers voor de dashboard-tegels. Child-apps melden hier
 // (server-to-server, met hun eigen sync_key uit CORE Admin > Applicaties)
 // het absolute aantal openstaande items per medewerker. De app bepaalt
