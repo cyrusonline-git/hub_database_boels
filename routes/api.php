@@ -124,6 +124,52 @@ Route::middleware('auth:sanctum')->group(function () {
         ];
     });
 
+    // Alle CORE-gebruikers die een rol hebben BINNEN één app (plus de
+    // super-admins), zodat een child-app zijn toegangsbeheer vooraf kan
+    // vullen/spiegelen vanuit CORE — CORE is leidend. Alleen op te vragen
+    // door een super-admin of een app-beheerder (rol admin/superadmin in
+    // die app). Geen wachtwoorden, geen permissies.
+    Route::get('/app-users/{appSlug}', function (Request $request, string $appSlug) {
+        $app = \App\Models\Application::where('slug', $appSlug)->first();
+        abort_unless($app, 404, 'Onbekende applicatie.');
+        $u = $request->user();
+
+        $isAppBeheerder = $u->roles()
+            ->where('application_id', $app->id)
+            ->whereIn('slug', ['admin', 'superadmin', 'super-admin'])
+            ->exists();
+        abort_unless($u->is_super_admin || $isAppBeheerder, 403, 'Alleen voor beheerders van deze app.');
+
+        $users = \App\Models\User::query()
+            ->where('status', '!=', \App\Models\User::STATUS_DISABLED)
+            ->where(function ($q) use ($app) {
+                $q->where('is_super_admin', true)
+                  ->orWhereIn('id', function ($sub) use ($app) {
+                      $sub->select('user_id')->from('user_roles')
+                          ->whereIn('role_id', function ($r) use ($app) {
+                              $r->select('id')->from('roles')
+                                ->where('application_id', $app->id)
+                                ->whereNull('deleted_at');
+                          });
+                  });
+            })
+            ->with(['roles' => fn ($q) => $q->where('application_id', $app->id)])
+            ->orderBy('name')
+            ->get();
+
+        return [
+            'app' => $app->slug,
+            'users' => $users->map(fn ($x) => [
+                'id' => $x->id,
+                'name' => $x->name,
+                'email' => $x->email,
+                'status' => $x->status,
+                'is_super_admin' => (bool) $x->is_super_admin,
+                'roles' => $x->roles->pluck('slug')->values(),
+            ])->values(),
+        ];
+    });
+
     // Organisatiestructuur: business unit > area > depot — voor alle apps
     Route::get('/infrastructure', function () {
         return \App\Models\BusinessUnit::with('areas.depots')
