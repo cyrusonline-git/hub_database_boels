@@ -83,7 +83,7 @@
          haar naam in de header. pointer-events:none zodat het menu onder haar
          naam er gewoon overheen werkt. --}}
     <img src="{{ asset('images/welkom-lisanne.jpg') }}" alt=""
-         style="position:fixed; top:102px; right:12px; height:150px; width:auto;
+         style="position:fixed; top:102px; right:31px; height:150px; width:auto;
                 border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,.18);
                 z-index:1; pointer-events:none;">
 @endif
