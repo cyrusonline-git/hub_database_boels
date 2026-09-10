@@ -998,45 +998,14 @@ function toonMailModaal(aan,onderwerp,tekst,ref,ctx){
     + '<div class="mailkop"><span>Onderwerp: <b>'+esc(onderwerp)+'</b></span></div>'
     + '<textarea id="om_tekst" style="width:100%;min-height:260px;max-height:50vh;font:12.5px/1.45 ui-monospace,Menlo,monospace;white-space:pre;overflow:auto;border:1px solid var(--lijn,#cfd6dc);border-radius:8px;padding:10px;box-sizing:border-box">'+esc(tekst)+'</textarea>'
     + '<p class="hint" style="margin:8px 0 10px">Je kunt de tekst hierboven nog aanpassen. '
-    + (TESTMODUS ? '<b>Testmodus:</b> versturen gaat alleen naar je eigen adres, niet naar '+esc(aan)+'.' : 'Bij versturen via CORE krijg je zelf een kopie (cc) en gaan antwoorden naar jou.')
+    + (TESTMODUS ? '<b>Testmodus:</b> versturen gaat alleen naar je eigen adres, niet naar '+esc(aan)+'.' : 'Je krijgt zelf altijd een kopie (cc) in je mailbox en antwoorden komen bij jou binnen.')
     + '</p>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
     + '<button type="button" class="knop primair" id="om_verstuur">'+(TESTMODUS?'Testmail naar mezelf sturen':'Versturen via CORE')+'</button>'
-    + '<button type="button" class="knop" id="om_outlook">Openen in Outlook</button>'
-    + '<button type="button" class="knop" id="om_eml">Als .eml voor Outlook</button>'
     + '<button type="button" class="knop" id="om_kopie">Tekst kopi&euml;ren</button>'
     + '</div>');
   var ta = $("#om_tekst");
   $("#om_kopie").onclick = function(){ kopieer(ta.value, "Mailtekst gekopieerd."); };
-  $("#om_outlook").onclick = function(){
-    var body = ta.value;
-    api("mail_outlook", { aan:aan, onderwerp:onderwerp, tekst:body, test:TESTMODUS, ref:ref, project_id:ctx.project_id||null })
-      .then(function(){ laadAlles(); }).catch(function(){});
-    var url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp)+"&body="+encodeURIComponent(body);
-    if(url.length > 1900){
-      kopieer(body, "Outlook opent met het onderwerp; de tekst staat op je klembord — plak hem met Ctrl+V.");
-      url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp);
-    }
-    // Via een echte link-klik (betrouwbaarder dan location.href voor mailto)
-    var a=document.createElement("a"); a.href=url; a.style.display="none"; document.body.appendChild(a); a.click();
-    setTimeout(function(){ a.remove(); }, 1000);
-    toast("Opent Outlook niet? Gebruik 'Als .eml voor Outlook' of 'Versturen via CORE'.");
-  };
-  $("#om_eml").onclick = function(){
-    // .eml met X-Unsent: 1 → Outlook opent het als bewerkbaar concept
-    var body = ta.value;
-    api("mail_outlook", { aan:aan, onderwerp:onderwerp, tekst:body, test:TESTMODUS, ref:ref, project_id:ctx.project_id||null })
-      .then(function(){ laadAlles(); }).catch(function(){});
-    var eml = "To: "+aan+"\r\n"
-      + "Subject: =?UTF-8?B?"+btoa(unescape(encodeURIComponent(onderwerp)))+"?=\r\n"
-      + "X-Unsent: 1\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
-      + body.replace(/\r?\n/g, "\r\n");
-    var blob = new Blob([eml], {type:"message/rfc822"});
-    var naam = (ref || "go-assets") + ".eml";
-    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=naam; document.body.appendChild(a); a.click();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-    toast("Bestand "+naam+" gedownload — dubbelklik erop, Outlook opent de mail als concept.");
-  };
   $("#om_verstuur").onclick = function(){
     var knop = this; knop.disabled = true; knop.textContent = "Bezig…";
     api("mail", { aan:aan, onderwerp:onderwerp, tekst:ta.value, test:TESTMODUS, ref:ref, project_id:ctx.project_id||null })
@@ -1045,7 +1014,7 @@ function toonMailModaal(aan,onderwerp,tekst,ref,ctx){
         var a=$("#m_annuleer"); if(a) a.click();
         laadAlles();
       })
-      .catch(function(e){ toast("Versturen mislukt: "+e.message, true); knop.disabled=false; knop.textContent = TESTMODUS?'Testmail naar mezelf sturen':'Versturen via CORE'; });
+      .catch(function(e){ toast("Versturen mislukt: "+e.message+" — kopieer de tekst en mail hem handmatig.", true); knop.disabled=false; knop.textContent = TESTMODUS?'Testmail naar mezelf sturen':'Versturen via CORE'; });
   };
 }
 
