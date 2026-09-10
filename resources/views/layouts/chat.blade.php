@@ -146,7 +146,7 @@
 <script>
 (function () {
     var csrf = document.querySelector('meta[name="csrf-token"]').content;
-    var POPUP_AAN = @json(in_array(strtolower((string) auth()->user()->email), array_map('strtolower', config('boels.chat_popup.ontvangers', [])), true));
+    var POPUP_AAN = {{ in_array(strtolower((string) auth()->user()->email), array_map('strtolower', config('boels.chat_popup.ontvangers', [])), true) ? 'true' : 'false' }};
     var fab = document.getElementById('chatFab');
     var badge = document.getElementById('chatBadge');
     var panel = document.getElementById('chatPanel');
