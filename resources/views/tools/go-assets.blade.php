@@ -213,7 +213,7 @@
 
 <header class="app">
   <div class="hd">
-    <div class="logo"><span class="blok">BOELS</span> Go-Assets aanvraagtool</div>
+    <div class="logo"><img src="/images/boels-industrial-logo.jpg" alt="Boels Industrial" style="height:36px;width:auto;border-radius:6px;display:block"> Go-Assets aanvraagtool</div>
     <div class="sub">Industrial &rarr; Site Security</div>
     <div class="rechts">
       <span class="pill user" id="pillGebruiker" title="Klik om te wijzigen" style="cursor:pointer"></span>
