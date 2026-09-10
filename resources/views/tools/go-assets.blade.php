@@ -199,6 +199,15 @@
     .kaart{box-shadow:none;break-inside:avoid}
   }
 </style>
+<style>
+.klant-suggesties{position:absolute;z-index:50;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #cfd6dc;border-radius:10px;box-shadow:0 8px 24px rgba(15,24,32,.15);max-height:320px;overflow:auto}
+.klant-suggesties button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 12px;cursor:pointer;font:inherit;border-bottom:1px solid #eef1f4}
+.klant-suggesties button:last-child{border-bottom:0}
+.klant-suggesties button:hover,.klant-suggesties button.actief{background:#fbeadf}
+.klant-suggesties .nr{font-family:ui-monospace,Menlo,monospace;font-size:.85em;color:#6e7d89;margin-right:8px}
+.klant-suggesties .sub{display:block;font-size:.85em;color:#6e7d89}
+#klantzoekVeld{position:relative}
+</style>
 </head>
 <body>
 
@@ -285,6 +294,12 @@
     <div class="body">
       <p class="hint">Dit is de hoofdaannemer (client entity).</p>
       <div class="grid">
+        <div class="veld vol" id="klantzoekVeld">
+          <label for="f_klantzoek">Klant zoeken in Boels CORE</label>
+          <input type="text" id="f_klantzoek" autocomplete="off" placeholder="Typ klantnaam of klantnummer&hellip;">
+          <div id="klantSuggesties" class="klant-suggesties" hidden></div>
+          <p class="hint" id="klantGekozen" style="margin:6px 0 0">Kies een klant uit het CORE-klantenbestand; bedrijfsnaam, BTW-nummer en plaats worden dan ingevuld. Handmatig invullen kan ook.</p>
+        </div>
         <div class="veld"><label for="f_bedrijf">Bedrijfsnaam <span class="ster">*</span></label>
           <input type="text" id="f_bedrijf" data-verplicht></div>
         <div class="veld"><label for="f_btw">BTW-nummer <span class="ster">*</span></label>
@@ -733,6 +748,7 @@ function leesFormulier(){
     data_verwijderen: ($('input[name="dataverw"]:checked')||{}).value || "JA",
     klant: {
       bedrijfsnaam: $("#f_bedrijf").value.trim(),
+      klantnummer: (window.KLANT_CORE && window.KLANT_CORE.nummer) || "",
       btw: $("#f_btw").value.trim(),
       voornaam: $("#f_cp_voor").value.trim(),
       achternaam: $("#f_cp_achter").value.trim(),
@@ -773,6 +789,8 @@ function vulFormulier(d){
   var dv=$('input[name="dataverw"][value="'+(d.data_verwijderen||"JA")+'"]'); if(dv) dv.checked=true;
   var k=d.klant||{};
   $("#f_bedrijf").value=k.bedrijfsnaam||""; $("#f_btw").value=k.btw||"";
+  window.KLANT_CORE = k.klantnummer ? { nummer:k.klantnummer, naam:k.bedrijfsnaam||"" } : null;
+  if (typeof toonKlantKeuze === "function") toonKlantKeuze();
   $("#f_cp_voor").value=k.voornaam||""; $("#f_cp_achter").value=k.achternaam||"";
   $("#f_cp_mail").value=k.email||""; $("#f_cp_tel").value=k.telefoon||"";
   $("#f_cp_functie").value=k.functie||"";
@@ -1298,6 +1316,93 @@ function start(){
 }
 
 document.addEventListener("DOMContentLoaded", start);
+</script>
+<script>
+/* ---- Klant zoeken in Boels CORE (klantenbestand) ---- */
+(function(){
+  var invoer = document.getElementById("f_klantzoek");
+  var lijst  = document.getElementById("klantSuggesties");
+  if(!invoer || !lijst) return;
+  window.KLANT_CORE = window.KLANT_CORE || null;
+  var timer = null, laatste = "", actief = -1, items = [];
+  var LANDEN = { NL:"Nederland", BE:"Belgi\u00eb", DE:"Duitsland", NEDERLAND:"Nederland", BELGIE:"Belgi\u00eb", "BELGI\u00cb":"Belgi\u00eb", DUITSLAND:"Duitsland" };
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+  window.toonKlantKeuze = function(){
+    var el = document.getElementById("klantGekozen");
+    if(!el) return;
+    if(window.KLANT_CORE && window.KLANT_CORE.nummer){
+      el.innerHTML = "Gekozen uit CORE: <b>"+esc(window.KLANT_CORE.naam)+"</b> (klantnummer "+esc(window.KLANT_CORE.nummer)+") &mdash; <a href=\"#\" id=\"klantLos\">loskoppelen</a>";
+      var los = document.getElementById("klantLos");
+      if(los) los.onclick = function(e){ e.preventDefault(); window.KLANT_CORE=null; invoer.value=""; window.toonKlantKeuze(); };
+    } else {
+      el.textContent = "Kies een klant uit het CORE-klantenbestand; bedrijfsnaam, BTW-nummer en plaats worden dan ingevuld. Handmatig invullen kan ook.";
+    }
+  };
+
+  function sluit(){ lijst.hidden = true; lijst.innerHTML=""; actief=-1; items=[]; }
+
+  function zetVeld(id, waarde, alleenAlsLeeg){
+    var el = document.getElementById(id);
+    if(!el || waarde==null || waarde==="") return;
+    if(alleenAlsLeeg && el.value.trim()!=="") return;
+    el.value = waarde;
+  }
+
+  function kies(k){
+    window.KLANT_CORE = { nummer:k.nummer, naam:k.naam };
+    zetVeld("f_bedrijf", k.naam, false);
+    zetVeld("f_btw", k.btw, false);
+    zetVeld("f_plaats", k.plaats, true);
+    zetVeld("f_cp_mail", k.email, true);
+    zetVeld("f_cp_tel", k.telefoon, true);
+    var land = LANDEN[String(k.land||"").toUpperCase()] || "";
+    var sel = document.getElementById("f_land");
+    if(land && sel){ for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===land || sel.options[i].text===land){ sel.selectedIndex=i; break; } } }
+    invoer.value = k.naam + " (" + k.nummer + ")";
+    sluit(); window.toonKlantKeuze();
+    if(typeof bouwMail === "function") try{ bouwMail(); }catch(e){}
+  }
+
+  function teken(){
+    if(!items.length){ lijst.innerHTML='<button type="button" disabled>Geen klant gevonden</button>'; lijst.hidden=false; return; }
+    lijst.innerHTML = items.map(function(k,i){
+      return '<button type="button" data-i="'+i+'"'+(i===actief?' class="actief"':'')+'>'
+        + '<span class="nr">'+esc(k.nummer)+'</span>'+esc(k.naam)
+        + '<span class="sub">'+esc([k.adres, k.postcode, k.plaats].filter(Boolean).join(", "))+(k.concern && k.concern!==k.naam ? " &middot; concern: "+esc(k.concern) : "")+'</span>'
+        + '</button>';
+    }).join("");
+    lijst.hidden = false;
+    Array.prototype.forEach.call(lijst.querySelectorAll("button[data-i]"), function(b){
+      b.addEventListener("mousedown", function(e){ e.preventDefault(); kies(items[+b.dataset.i]); });
+    });
+  }
+
+  function zoek(q){
+    fetch(CONFIG.api + "?action=klanten&q=" + encodeURIComponent(q), { credentials:"same-origin", headers:{"X-Requested-With":"XMLHttpRequest"} })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if(q!==laatste) return; items = (j && j.klanten) || []; actief=-1; teken(); })
+      .catch(function(){ items=[]; teken(); });
+  }
+
+  invoer.addEventListener("input", function(){
+    var q = invoer.value.trim(); laatste = q;
+    if(window.KLANT_CORE){ window.KLANT_CORE=null; window.toonKlantKeuze(); }
+    clearTimeout(timer);
+    if(q.length < 2){ sluit(); return; }
+    timer = setTimeout(function(){ zoek(q); }, 250);
+  });
+  invoer.addEventListener("keydown", function(e){
+    if(lijst.hidden) return;
+    if(e.key==="ArrowDown"){ e.preventDefault(); actief=Math.min(actief+1, items.length-1); teken(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); actief=Math.max(actief-1, 0); teken(); }
+    else if(e.key==="Enter"){ if(actief>=0 && items[actief]){ e.preventDefault(); kies(items[actief]); } }
+    else if(e.key==="Escape"){ sluit(); }
+  });
+  invoer.addEventListener("blur", function(){ setTimeout(sluit, 150); });
+  window.toonKlantKeuze();
+})();
 </script>
 </body>
 </html>

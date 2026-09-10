@@ -38,6 +38,9 @@ class GoAssetsController extends Controller
 
             case 'log':
                 return $this->schrijfLog($in, $gebruiker);
+
+            case 'klanten':
+                return $this->klanten((string) $request->query('q', ''));
         }
 
         return response()->json(['ok' => false, 'fout' => 'Onbekende actie'], 400);
@@ -166,6 +169,36 @@ class GoAssetsController extends Controller
         ]);
 
         return ['ok' => true];
+    }
+
+    /** Klant zoeken in het CORE-klantenbestand op naam, concern of klantnummer. */
+    private function klanten(string $q): array
+    {
+        $q = trim($q);
+        if (mb_strlen($q) < 2) {
+            return ['ok' => true, 'klanten' => []];
+        }
+        $rijen = \App\Models\Customer::query()
+            ->where(fn ($w) => $w->where('customer_number', 'like', "%$q%")
+                ->orWhere('customer_name', 'like', "%$q%")
+                ->orWhere('concern_name', 'like', "%$q%"))
+            ->orderByRaw("CASE WHEN customer_number = ? THEN 0 ELSE 1 END", [$q])
+            ->orderBy('customer_name')
+            ->limit(15)
+            ->get();
+
+        return ['ok' => true, 'klanten' => $rijen->map(fn ($c) => [
+            'nummer' => $c->customer_number,
+            'naam' => $c->customer_name,
+            'concern' => $c->concern_name,
+            'btw' => $c->vat_number,
+            'adres' => trim(($c->address_street ?? '') . ' ' . ($c->address_number ?? '')),
+            'postcode' => $c->address_postal,
+            'plaats' => $c->address_city,
+            'land' => $c->address_country,
+            'email' => $c->email,
+            'telefoon' => $c->phone,
+        ])->values()->all()];
     }
 
     // ------------------------------------------------------------ helpers
