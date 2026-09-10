@@ -973,6 +973,9 @@ function afmeldTekst(p,reden,einddatum){
         ? "JA – 30 dagen na project (standaard)" : "NEE – conform gemaakte afspraak"));
   if(reden){ L.push(""); L.push("Toelichting: "+reden); }
   L.push("");
+  L.push("Graag ontvangen wij een korte bevestiging van deze afmelding zodra de omgeving is uitgezet.");
+  L.push("Beantwoorden van deze mail is voldoende; het antwoord komt rechtstreeks bij de aanvrager terecht.");
+  L.push("");
   L.push("Met vriendelijke groet,");
   L.push(GEBRUIKER.naam || "[naam aanvrager]");
   if(GEBRUIKER.email) L.push(GEBRUIKER.email);
@@ -1071,6 +1074,9 @@ function tekenProjecten(){
     }
     if(p.status==="afgemeld"){
       knoppen += '<button type="button" class="knop klein" data-actie="afmeldmail" data-id="'+esc(p.id)+'">Afmeldmail opnieuw</button>';
+      if(!p.afmelding_bevestigd_op){
+        knoppen += '<button type="button" class="knop klein" data-actie="bevestigd" data-id="'+esc(p.id)+'" title="Site Security heeft de afmelding per mail bevestigd">Bevestiging ontvangen</button>';
+      }
     }
     knoppen += '<button type="button" class="knop klein" data-actie="details" data-id="'+esc(p.id)+'">Details &amp; mail</button>';
 
@@ -1086,6 +1092,7 @@ function tekenProjecten(){
       +       '<span>Contract: '+esc(p.contractnummer||"—")+'</span>'
       +       '<span>Aangevraagd door: '+esc(p.aanvrager_naam||"—")+'</span>'
       +       (p.gestart_automatisch ? '<span title="Op de startdatum automatisch op Actief gezet">Automatisch gestart</span>' : '')
+      +       (p.afmelding_bevestigd_op ? '<span title="Bevestiging van Site Security ontvangen op '+tijdNL(p.afmelding_bevestigd_op)+'">&#10003; Afmelding bevestigd</span>' : '')
       +     '</div>'
       +   '</div>'
       +   '<span class="status s-'+esc(p.status)+'">'+esc(st.label)+'</span>'
@@ -1345,6 +1352,16 @@ function koppelGebeurtenissen(){
       if(knop.dataset.actie==="status")     statusActie(p.id,knop.dataset.naar);
       if(knop.dataset.actie==="support")    supportModaal(p);
       if(knop.dataset.actie==="details")    detailsModaal(p);
+      if(knop.dataset.actie==="bevestigd"){
+        modaal("Bevestiging ontvangen", "<p>Site Security heeft de afmelding van <b>"+esc(p.ref)+"</b> bevestigd? Dit wordt vastgelegd in het log.</p>", "Vastleggen", function(){
+          bewaarStatus(p.id, "afgemeld", { afmelding_bevestigd_op: nu() }).then(function(){
+            p.afmelding_bevestigd_op = nu();
+            schrijfLog(p.ref, "Bevestiging afmelding ontvangen", "Site Security heeft de afmelding bevestigd", p.id);
+            tekenProjecten(); toast("Bevestiging vastgelegd.");
+          });
+          return true;
+        });
+      }
       if(knop.dataset.actie==="afmeldmail") openMail(CONFIG.mailSiteSecurity,
           "Go-Assets afmelding "+p.ref+" – "+((p.klant&&p.klant.bedrijfsnaam)||""),
           afmeldTekst(p,p.afmeld_reden,p.einddatum), {ref:p.ref, project_id:p.id});
