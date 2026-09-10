@@ -45,16 +45,21 @@ $kernel->bootstrap();
 $buf = new \Symfony\Component\Console\Output\BufferedOutput;
 
 try {
-    echo "[1/2] migrate --force\n";
+    echo "[1/3] migrate --force\n";
     $exit = $kernel->call('migrate', ['--force' => true], $buf);
     echo $buf->fetch();
     echo "exit code: $exit\n\n";
 
-    echo "[2/2] cache clearen\n";
+    echo "[2/3] cache clearen\n";
     $kernel->call('config:clear', [], $buf);   echo $buf->fetch();
     $kernel->call('view:clear', [], $buf);     echo $buf->fetch();
     $kernel->call('route:clear', [], $buf);    echo $buf->fetch();
     $kernel->call('cache:clear', [], $buf);    echo $buf->fetch();
+
+    // Alle Blade-views alvast compileren: een fout in een view valt hier
+    // op i.p.v. pas bij de eerste bezoeker.
+    echo "[3/3] views compileren\n";
+    $kernel->call('view:cache', [], $buf);     echo $buf->fetch();
 
     if ($exit === 0) {
         echo "\n✓ Migrate geslaagd.\n";

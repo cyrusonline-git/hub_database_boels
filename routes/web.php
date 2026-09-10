@@ -53,6 +53,10 @@ Route::middleware('auth')->group(function () {
     Route::view('/tools/kabel', 'tools.kabel')->name('tools.kabel');
     Route::view('/tools/verlichting', 'tools.verlichting')->name('tools.verlichting');
     Route::view('/tools/transport', 'tools.transport')->name('tools.transport');
+    // Go-Assets aanvraagtool: pagina + JSON-backend (ingelogde gebruiker = aanvrager)
+    Route::view('/tools/go-assets', 'tools.go-assets')->name('tools.go-assets');
+    Route::match(['get', 'post'], '/tools/go-assets/api', [\App\Http\Controllers\Tools\GoAssetsController::class, 'api'])
+        ->name('tools.go-assets.api');
 
     // Klant-detail (alleen-lezen) — voor alle ingelogde medewerkers,
     // o.a. klikbaar vanuit de dashboard-zoeker
