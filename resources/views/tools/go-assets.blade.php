@@ -661,10 +661,7 @@ function opruimTest(){
     "Verwijderen", function(){
       api("opruim_test", {}).then(function(j){
         toast((j.verwijderd||0)+" testaanvra"+(j.verwijderd===1?"ag":"gen")+" opgeruimd.");
-        zetTestmodus(TESTMODUS);
-  var pt=$("#pillTest"); if(pt) pt.onclick=function(){ zetTestmodus(!TESTMODUS); toast(TESTMODUS ? "Testmodus AAN: TEST-nummers, geen Outlook." : "Testmodus uit."); };
-  var bo=$("#btnOpruimTest"); if(bo) bo.onclick=opruimTest;
-  laadAlles();
+              laadAlles();
       }).catch(function(e){ toast("Opruimen mislukt: "+e.message, true); });
       return true;
     });
@@ -1414,6 +1411,9 @@ function start(){
     toonGebruiker(); bouwMail();
     if(!gevonden) vraagGebruiker();
   });
+  zetTestmodus(TESTMODUS);
+  var pt=$("#pillTest"); if(pt) pt.onclick=function(){ zetTestmodus(!TESTMODUS); toast(TESTMODUS ? "Testmodus AAN: TEST-nummers, geen Outlook." : "Testmodus uit."); };
+  var bo=$("#btnOpruimTest"); if(bo) bo.onclick=opruimTest;
   laadAlles();
 }
 
