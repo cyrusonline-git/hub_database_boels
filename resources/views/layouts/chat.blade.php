@@ -94,6 +94,23 @@
     .chat-search input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 7px 12px; font-size: 13px; outline: none; }
 </style>
 
+@if (in_array(strtolower((string) auth()->user()->email), array_map('strtolower', config('boels.chat_popup.ontvangers', [])), true))
+<div class="modal fade" id="chatPopup" tabindex="-1" aria-labelledby="chatPopupTitel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:0;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.28);">
+      <div class="modal-header" style="background:#FF6600;color:#fff;border-radius:16px 16px 0 0;">
+        <h5 class="modal-title" id="chatPopupTitel"><i class="bi bi-chat-dots-fill me-2"></i>Nieuw chatbericht</h5>
+      </div>
+      <div class="modal-body" id="chatPopupBody" style="max-height:60vh;overflow:auto;"></div>
+      <div class="modal-footer" style="border-top:0;">
+        <button type="button" class="btn btn-outline-secondary" id="chatPopupSluit">Sluiten</button>
+        <button type="button" class="btn" id="chatPopupOpen" style="background:#FF6600;color:#fff;"><i class="bi bi-chat-dots me-1"></i>Chat openen</button>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
 <button id="chatFab" type="button" title="Chat met collega's">
     <i class="bi bi-chat-dots-fill"></i>
     <span id="chatBadge">0</span>
@@ -128,6 +145,7 @@
 <script>
 (function () {
     var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    var POPUP_AAN = @json(in_array(strtolower((string) auth()->user()->email), array_map('strtolower', config('boels.chat_popup.ontvangers', [])), true));
     var fab = document.getElementById('chatFab');
     var badge = document.getElementById('chatBadge');
     var panel = document.getElementById('chatPanel');
@@ -192,6 +210,56 @@
             // Nieuw bericht terwijl de lijst openstaat? Lijst verversen.
             if (open && !currentContact) loadContacts();
         }).catch(() => {});
+        if (POPUP_AAN) pollPopup();
+    }
+
+    /* ---- Pop-up voor ingestelde ontvangers (config boels.chat_popup) ---- */
+    var popupEl = document.getElementById('chatPopup');
+    var popupModal = (POPUP_AAN && popupEl && window.bootstrap) ? new bootstrap.Modal(popupEl) : null;
+    var popupIds = [];
+    var popupFrom = null;
+    var popupOpen = false;
+    function pollPopup() {
+        if (!popupModal || popupOpen) return;
+        get('{{ route('chat.popup') }}').then(d => {
+            var ms = (d && d.messages) || [];
+            if (!ms.length) return;
+            popupIds = ms.map(m => m.id);
+            popupFrom = {id: ms[0].from_id, name: ms[0].from};
+            document.getElementById('chatPopupTitel').innerHTML = '<i class="bi bi-chat-dots-fill me-2"></i>Bericht van ' + esc(ms[0].from);
+            document.getElementById('chatPopupBody').innerHTML = ms.map(m =>
+                '<div class="mb-3">' +
+                '<div class="small text-muted mb-1">' + esc(m.time || '') + '</div>' +
+                (m.body ? '<div style="white-space:pre-wrap;font-size:1.05rem;">' + esc(m.body) + '</div>' : '') +
+                (m.image ? '<img src="' + m.image + '" alt="" style="max-width:100%;border-radius:10px;margin-top:6px;">' : '') +
+                '</div>').join('');
+            popupOpen = true;
+            popupModal.show();
+            playDing();
+        }).catch(() => {});
+    }
+    function popupGezien() {
+        var ids = popupIds.slice(); popupIds = [];
+        if (!ids.length) return Promise.resolve();
+        return fetch('{{ route('chat.popup.seen') }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
+            body: JSON.stringify({ids: ids}),
+        }).catch(() => {});
+    }
+    if (popupModal) {
+        popupEl.addEventListener('hidden.bs.modal', function () { popupOpen = false; });
+        document.getElementById('chatPopupSluit').addEventListener('click', function () {
+            popupGezien(); popupModal.hide();
+        });
+        document.getElementById('chatPopupOpen').addEventListener('click', function () {
+            var van = popupFrom;
+            popupGezien().then(function () {
+                popupModal.hide();
+                if (!open) { open = true; panel.classList.add('open'); }
+                if (van && van.id) openThread(van.id, van.name); else showContacts();
+            });
+        });
     }
 
     function showContacts() {

@@ -24,4 +24,11 @@ return [
         'enabled' => true,
         'log_views' => false,
     ],
+
+    // Chat-pop-up: ontvangers krijgen een venster midden in beeld zodra een
+    // van de afzenders hun een chatbericht stuurt (alleen deze combinatie).
+    'chat_popup' => [
+        'ontvangers' => ['lisanne.rodrigues@boels.nl'],
+        'afzenders'  => ['w_groeneweg@hotmail.com', 'wim.groeneweg@boels.nl'],
+    ],
 ];

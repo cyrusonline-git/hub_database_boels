@@ -23,6 +23,57 @@ class ChatController extends Controller
         ];
     }
 
+    /**
+     * Pop-up-berichten (config boels.chat_popup): nieuwe, nog niet als pop-up
+     * getoonde berichten van de ingestelde afzenders aan deze ontvanger.
+     * Voor iedereen die niet in de ontvangerslijst staat: altijd leeg.
+     */
+    public function popup(Request $request)
+    {
+        $me = $request->user();
+        $ontvangers = array_map('strtolower', config('boels.chat_popup.ontvangers', []));
+        $afzenders = array_map('strtolower', config('boels.chat_popup.afzenders', []));
+        if (! in_array(strtolower((string) $me->email), $ontvangers, true) || empty($afzenders)) {
+            return ['messages' => []];
+        }
+
+        $afzenderIds = User::query()->whereIn(DB::raw('LOWER(email)'), $afzenders)->pluck('id')->all();
+        if (empty($afzenderIds)) {
+            return ['messages' => []];
+        }
+
+        $berichten = ChatMessage::with('sender')
+            ->where('recipient_id', $me->id)
+            ->whereIn('sender_id', $afzenderIds)
+            ->whereNull('read_at')
+            ->whereNull('popup_seen_at')
+            ->orderBy('id')
+            ->limit(10)
+            ->get();
+
+        return ['messages' => $berichten->map(fn ($m) => [
+            'id' => $m->id,
+            'from_id' => $m->sender_id,
+            'from' => $m->sender?->name ?? 'Collega',
+            'time' => $m->created_at?->format('d-m H:i'),
+            'body' => $m->body,
+            'image' => $m->image_path ? route('chat.image', $m) : null,
+        ])->values()];
+    }
+
+    /** Pop-up weggeklikt: deze berichten niet nog eens als pop-up tonen. */
+    public function popupSeen(Request $request)
+    {
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
+        if ($ids) {
+            ChatMessage::where('recipient_id', $request->user()->id)
+                ->whereIn('id', $ids)
+                ->whereNull('popup_seen_at')
+                ->update(['popup_seen_at' => now()]);
+        }
+        return ['ok' => true];
+    }
+
     /** Collega's: ongelezen eerst, dan recentste gesprek, dan alfabetisch */
     public function contacts(Request $request)
     {
