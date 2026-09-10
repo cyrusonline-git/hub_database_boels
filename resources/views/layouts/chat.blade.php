@@ -98,8 +98,9 @@
 <div class="modal fade" id="chatPopup" tabindex="-1" aria-labelledby="chatPopupTitel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border:0;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.28);">
-      <div class="modal-header" style="background:#FF6600;color:#fff;border-radius:16px 16px 0 0;">
-        <h5 class="modal-title" id="chatPopupTitel"><i class="bi bi-chat-dots-fill me-2"></i>Nieuw chatbericht</h5>
+      <div class="modal-header" style="background:#FF6600;color:#fff;border-radius:16px 16px 0 0;align-items:center;">
+        <h5 class="modal-title flex-grow-1" id="chatPopupTitel"><i class="bi bi-chat-dots-fill me-2"></i>Nieuw chatbericht</h5>
+        <span aria-hidden="true" title="Kaal poppetje" style="font-size:2.4rem;line-height:1;margin-left:12px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25));">&#x1F468;&#x200D;&#x1F9B2;</span>
       </div>
       <div class="modal-body" id="chatPopupBody" style="max-height:60vh;overflow:auto;"></div>
       <div class="modal-footer" style="border-top:0;">
