@@ -44,6 +44,9 @@ class GoAssetsController extends Controller
 
             case 'opruim_test':
                 return $this->opruimTest($gebruiker);
+
+            case 'mail':
+                return $this->verstuurMail($in, $user);
         }
 
         return response()->json(['ok' => false, 'fout' => 'Onbekende actie'], 400);
@@ -219,6 +222,54 @@ class GoAssetsController extends Controller
             ->orderByDesc('ref')->value('ref');
         $n = $laatste ? intval(substr($laatste, -3)) + 1 : 1;
         return sprintf('%s-%s-%03d', $prefix, $jaar, $n);
+    }
+
+    /**
+     * Mail versturen via de CORE-mailserver (mailto-links zijn voor deze
+     * mails te lang voor Windows/Outlook). Alleen naar de vaste adressen
+     * van de tool; afzender = CORE, reply-to en cc = de aanvrager.
+     * Testmodus: alleen naar de aanvrager zelf.
+     */
+    private function verstuurMail(array $in, $user)
+    {
+        $aan = strtolower($this->tekst($in['aan'] ?? '', 190));
+        $onderwerp = $this->tekst($in['onderwerp'] ?? '', 200);
+        $tekst = trim((string) ($in['tekst'] ?? ''));
+        $test = ! empty($in['test']);
+        $toegestaan = ['sitesecurity@boels.com', 'support@iq-pass.com'];
+
+        if ($onderwerp === '' || $tekst === '' || ! in_array($aan, $toegestaan, true)) {
+            return response()->json(['ok' => false, 'fout' => 'Ongeldige mailgegevens'], 422);
+        }
+        if (mb_strlen($tekst) > 20000) {
+            return response()->json(['ok' => false, 'fout' => 'Mailtekst te lang'], 422);
+        }
+
+        $naar = $test ? $user->email : $aan;
+        try {
+            \Illuminate\Support\Facades\Mail::raw($tekst, function ($m) use ($naar, $onderwerp, $user, $test) {
+                $m->to($naar)->subject(($test ? '[TEST] ' : '') . $onderwerp)
+                  ->replyTo($user->email, $user->name);
+                if (! $test) {
+                    $m->cc($user->email, $user->name);
+                }
+            });
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['ok' => false, 'fout' => 'Mailserver gaf een fout — probeer Outlook (tekst op klembord)'], 500);
+        }
+
+        DB::table('go_assets_log')->insert([
+            'id' => 'L' . now()->format('YmdHis') . substr(md5(uniqid('', true)), 0, 4),
+            'project_id' => $this->tekst($in['project_id'] ?? '', 40) ?: null,
+            'ref' => $this->tekst($in['ref'] ?? '', 20) ?: null,
+            'actie' => $test ? 'Testmail verstuurd (naar jezelf)' : 'Mail verstuurd via CORE',
+            'details' => 'Aan ' . $naar . ' — ' . $onderwerp,
+            'door' => $user->name, 'door_email' => $user->email,
+            'op' => now(), 'created_at' => now(),
+        ]);
+
+        return ['ok' => true, 'naar' => $naar, 'test' => $test];
     }
 
     /** Alle testaanvragen (is_test) plus hun logregels verwijderen. */

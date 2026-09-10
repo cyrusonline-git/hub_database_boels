@@ -983,25 +983,52 @@ function afmeldTekst(p,reden,einddatum){
   return L.join("\n");
 }
 
-function openMail(aan,onderwerp,tekst){
-  if (TESTMODUS){
-    // Testmodus: geen mailprogramma openen, mail alleen tonen
-    modaal("Testmodus — deze mail zou nu geopend worden",
-      '<div class="mailkop"><span>Aan: <b>'+esc(aan)+'</b></span></div>'
-      + '<div class="mailkop"><span>Onderwerp: <b>'+esc(onderwerp)+'</b></span></div>'
-      + '<div class="mailvoorbeeld" style="white-space:pre-wrap;max-height:50vh;overflow:auto">'+esc(tekst)+'</div>'
-      + '<p class="hint" style="margin:8px 0 0">Er is niets verstuurd en Outlook is niet geopend.</p>');
-    return;
-  }
-  var url = "mailto:"+encodeURIComponent(aan)
-          + "?subject="+encodeURIComponent(onderwerp)
-          + "&body="+encodeURIComponent(tekst);
-  if(url.length > 12000){
-    // Extreem lang: alleen onderwerp meegeven, tekst naar klembord.
-    kopieer(tekst, "Mail is erg lang: de tekst staat op je klembord — plak hem in Outlook met Ctrl+V.");
-    url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp);
-  }
-  window.location.href = url;
+function openMail(aan,onderwerp,tekst,ctx){
+  // Mailto-links met de volledige tekst zijn te lang voor Windows/Outlook
+  // (grens ± 2000 tekens, daarboven gebeurt er stil niets). Daarom: mail
+  // tonen en laten kiezen — versturen via CORE, of Outlook openen met de
+  // tekst op het klembord. In testmodus gaat versturen alleen naar jezelf.
+  ctx = ctx || {};
+  var ref = ctx.ref || (/GA-\d{4}-\d{3}|TEST-\d{4}-\d{3}/.exec(onderwerp)||[""])[0] || "";
+  // Uitgesteld: als openMail vanuit een bevestig-modaal wordt aangeroepen,
+  // sluit dat modaal direct daarna — dit venster moet daar ná komen.
+  setTimeout(function(){ toonMailModaal(aan,onderwerp,tekst,ref,ctx); }, 0);
+}
+
+function toonMailModaal(aan,onderwerp,tekst,ref,ctx){
+  modaal((TESTMODUS ? "Testmodus — " : "") + "Mail versturen",
+    '<div class="mailkop"><span>Aan: <b>'+esc(aan)+'</b></span></div>'
+    + '<div class="mailkop"><span>Onderwerp: <b>'+esc(onderwerp)+'</b></span></div>'
+    + '<textarea id="om_tekst" style="width:100%;min-height:260px;max-height:50vh;font:12.5px/1.45 ui-monospace,Menlo,monospace;white-space:pre;overflow:auto;border:1px solid var(--lijn,#cfd6dc);border-radius:8px;padding:10px;box-sizing:border-box">'+esc(tekst)+'</textarea>'
+    + '<p class="hint" style="margin:8px 0 10px">Je kunt de tekst hierboven nog aanpassen. '
+    + (TESTMODUS ? '<b>Testmodus:</b> versturen gaat alleen naar je eigen adres, niet naar '+esc(aan)+'.' : 'Bij versturen via CORE krijg je zelf een kopie (cc) en gaan antwoorden naar jou.')
+    + '</p>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button type="button" class="knop primair" id="om_verstuur">'+(TESTMODUS?'Testmail naar mezelf sturen':'Versturen via CORE')+'</button>'
+    + '<button type="button" class="knop" id="om_outlook">Openen in Outlook</button>'
+    + '<button type="button" class="knop" id="om_kopie">Tekst kopi&euml;ren</button>'
+    + '</div>');
+  var ta = $("#om_tekst");
+  $("#om_kopie").onclick = function(){ kopieer(ta.value, "Mailtekst gekopieerd."); };
+  $("#om_outlook").onclick = function(){
+    var body = ta.value;
+    var url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp)+"&body="+encodeURIComponent(body);
+    if(url.length > 1900){
+      kopieer(body, "Outlook opent met het onderwerp; de tekst staat op je klembord — plak hem met Ctrl+V.");
+      url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp);
+    }
+    window.location.href = url;
+  };
+  $("#om_verstuur").onclick = function(){
+    var knop = this; knop.disabled = true; knop.textContent = "Bezig…";
+    api("mail", { aan:aan, onderwerp:onderwerp, tekst:ta.value, test:TESTMODUS, ref:ref, project_id:ctx.project_id||null })
+      .then(function(j){
+        toast(TESTMODUS ? "Testmail verstuurd naar "+j.naar+"." : "Mail verstuurd naar "+j.naar+" (kopie naar jezelf).");
+        var a=$("#m_annuleer"); if(a) a.click();
+        laadAlles();
+      })
+      .catch(function(e){ toast("Versturen mislukt: "+e.message, true); knop.disabled=false; knop.textContent = TESTMODUS?'Testmail naar mezelf sturen':'Versturen via CORE'; });
+  };
 }
 
 function kopieer(tekst,melding){
@@ -1266,7 +1293,7 @@ function versturen(){
     tekenProjecten();
     openMail(CONFIG.mailSiteSecurity, mailOnderwerp(d,opgeslagen.ref), mailTekst(d,opgeslagen.ref));
     try{ localStorage.removeItem("ga_concept"); }catch(e){}
-    toast("Aanvraag "+opgeslagen.ref+" geregistreerd"+(TESTMODUS?" (testmodus — mail alleen getoond).":" — je mailprogramma opent."));
+    toast("Aanvraag "+opgeslagen.ref+" geregistreerd — kies hoe je de mail verstuurt.");
   }).catch(function(e){
     toast("Opslaan mislukt: "+e.message,true);
   }).then(function(){
