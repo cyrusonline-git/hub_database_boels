@@ -263,9 +263,12 @@
         });
     }
 
+    var naarBoven = false; // bij (her)openen van de lijst bovenaan beginnen
     function showContacts() {
         currentContact = null;
         clearInterval(threadTimer);
+        naarBoven = true;
+        body.scrollTop = 0;
         title.textContent = 'Chat — collega’s';
         back.style.display = 'none';
         inputWrap.style.display = 'none';
@@ -276,6 +279,8 @@
         get('{{ route('chat.contacts') }}').then(d => {
             contacts = d.contacts;
             renderContacts();
+            // Alleen bij openen naar boven — niet bij de 12-s verversing terwijl je scrolt
+            if (naarBoven && !currentContact) { body.scrollTop = 0; naarBoven = false; }
         }).catch(() => {});
     }
     function renderContacts() {
