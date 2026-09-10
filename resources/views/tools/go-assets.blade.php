@@ -494,7 +494,7 @@ var HARDWARE = [
 var STATUSSEN = {
   aangevraagd:      { label:"Aangevraagd",        volgende:"omgeving_gereed", knop:"Omgeving ontvangen" },
   omgeving_gereed:  { label:"Omgeving gereed",    volgende:"getest",          knop:"Test akkoord" },
-  getest:           { label:"Getest & akkoord",   volgende:"actief",          knop:"Project gestart" },
+  getest:           { label:"Getest & akkoord",   volgende:"actief",          knop:"Nu al starten" },
   actief:           { label:"Actief",             volgende:"afgemeld",        knop:"Project afmelden" },
   afgemeld:         { label:"Afgemeld",           volgende:"beeindigd",       knop:"Omgeving uit (bevestigd)" },
   beeindigd:        { label:"Beëindigd",     volgende:null,              knop:null }
@@ -1098,6 +1098,7 @@ function tekenProjecten(){
       +       '<span>Eind: '+datumNL(p.einddatum)+'</span>'
       +       '<span>Contract: '+esc(p.contractnummer||"—")+'</span>'
       +       '<span>Aangevraagd door: '+esc(p.aanvrager_naam||"—")+'</span>'
+      +       (p.gestart_automatisch ? '<span title="Op de startdatum automatisch op Actief gezet">Automatisch gestart</span>' : '')
       +     '</div>'
       +   '</div>'
       +   '<span class="status s-'+esc(p.status)+'">'+esc(st.label)+'</span>'

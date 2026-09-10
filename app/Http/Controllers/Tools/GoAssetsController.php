@@ -28,6 +28,7 @@ class GoAssetsController extends Controller
                 return ['ok' => true, 'gebruiker' => $gebruiker];
 
             case 'list':
+                $this->autoStart();
                 return ['ok' => true, 'projecten' => $this->projecten(), 'log' => $this->log()];
 
             case 'create':
@@ -53,6 +54,45 @@ class GoAssetsController extends Controller
     }
 
     // ------------------------------------------------------------ lezen
+
+    /**
+     * Projecten waarvan de startdatum is bereikt automatisch op Actief
+     * zetten — ook als de omgeving nog niet als ontvangen/getest is
+     * gemarkeerd. Draait bij elke lijst-aanroep; idempotent.
+     */
+    private function autoStart(): void
+    {
+        $vandaag = now()->toDateString();
+        $rijen = DB::table('go_assets_projecten')
+            ->whereIn('status', ['aangevraagd', 'omgeving_gereed', 'getest'])
+            ->get();
+
+        foreach ($rijen as $rij) {
+            $data = json_decode($rij->data, true) ?: [];
+            $start = substr((string) ($data['startdatum'] ?? ''), 0, 10);
+            if ($start === '' || $start > $vandaag) {
+                continue;
+            }
+            $data['status'] = 'actief';
+            $data['gestart_op'] = now()->toIso8601String();
+            $data['gestart_automatisch'] = true;
+            $data['gewijzigd_op'] = now()->toIso8601String();
+            DB::table('go_assets_projecten')->where('id', $rij->id)->update([
+                'status' => 'actief',
+                'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
+                'updated_at' => now(),
+            ]);
+            DB::table('go_assets_log')->insert([
+                'id' => 'L' . now()->format('YmdHis') . substr(md5(uniqid('', true)), 0, 4),
+                'project_id' => $rij->id, 'ref' => $rij->ref,
+                'actie' => 'Status → Actief (automatisch)',
+                'details' => 'Startdatum ' . $start . ' bereikt — project automatisch gestart'
+                    . ($rij->status !== 'getest' ? ' (vorige status: ' . $rij->status . ')' : ''),
+                'door' => 'CORE', 'door_email' => '',
+                'op' => now(), 'created_at' => now(),
+            ]);
+        }
+    }
 
     private function projecten(): array
     {
