@@ -207,6 +207,8 @@
 .klant-suggesties .nr{font-family:ui-monospace,Menlo,monospace;font-size:.85em;color:#6e7d89;margin-right:8px}
 .klant-suggesties .sub{display:block;font-size:.85em;color:#6e7d89}
 #klantzoekVeld{position:relative}
+.testbadge{display:inline-block;background:#8a5a00;color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+body.testmodus header.app{box-shadow:inset 0 -4px 0 #d9a73c}
 </style>
 </head>
 <body>
@@ -218,6 +220,8 @@
     <div class="rechts">
       <span class="pill user" id="pillGebruiker" title="Klik om te wijzigen" style="cursor:pointer"></span>
       <span class="pill" id="pillVerbinding">verbinden&hellip;</span>
+      <span class="pill" id="pillTest" title="Aan = TEST-nummers, geen Outlook (mail wordt getoond), testaanvragen zijn herkenbaar en in één keer op te ruimen" style="cursor:pointer">Testmodus: uit</span>
+      <button type="button" class="knop klein gevaar" id="btnOpruimTest" hidden title="Alle testaanvragen en hun logregels verwijderen">Testaanvragen opruimen</button>
     </div>
   </div>
   <nav class="tabs" role="tablist">
@@ -304,8 +308,8 @@
           <input type="text" id="f_bedrijf" data-verplicht></div>
         <div class="veld"><label for="f_klantnummer">Insphire klantnummer</label>
           <input type="text" id="f_klantnummer" placeholder="Wordt ingevuld bij keuze uit CORE"></div>
-        <div class="veld"><label for="f_btw">BTW-nummer <span class="ster">*</span></label>
-          <input type="text" id="f_btw" data-verplicht placeholder="NL123456789B01"></div>
+        <div class="veld"><label for="f_btw">BTW-nummer</label>
+          <input type="text" id="f_btw" placeholder="NL123456789B01 (optioneel)"></div>
         <div class="veld"><label for="f_cp_voor">Voornaam <span class="ster">*</span></label>
           <input type="text" id="f_cp_voor" data-verplicht></div>
         <div class="veld"><label for="f_cp_achter">Achternaam <span class="ster">*</span></label>
@@ -636,6 +640,36 @@ function zetVerbinding(){
     : "Aanvragen en log staan in de gedeelde database.";
 }
 
+/* --------------------------- testmodus --------------------------- */
+var TESTMODUS = false;
+try { TESTMODUS = localStorage.getItem("ga_testmodus") === "1"; } catch(e){}
+
+function zetTestmodus(aan){
+  TESTMODUS = !!aan;
+  try { localStorage.setItem("ga_testmodus", TESTMODUS ? "1" : "0"); } catch(e){}
+  var p=$("#pillTest");
+  if(p){ p.className = "pill " + (TESTMODUS ? "demo" : ""); p.textContent = "Testmodus: " + (TESTMODUS ? "AAN" : "uit"); }
+  var b=$("#btnOpruimTest"); if(b) b.hidden = !TESTMODUS;
+  document.body.classList.toggle("testmodus", TESTMODUS);
+}
+
+function opruimTest(){
+  var n = PROJECTEN.filter(function(p){ return p.test; }).length;
+  if(!n){ toast("Er zijn geen testaanvragen."); return; }
+  modaal("Testaanvragen opruimen",
+    "<p>Alle <b>"+n+"</b> testaanvra"+(n===1?"ag":"gen")+" (TEST-nummers) en hun logregels worden definitief verwijderd. Echte aanvragen blijven staan.</p>",
+    "Verwijderen", function(){
+      api("opruim_test", {}).then(function(j){
+        toast((j.verwijderd||0)+" testaanvra"+(j.verwijderd===1?"ag":"gen")+" opgeruimd.");
+        zetTestmodus(TESTMODUS);
+  var pt=$("#pillTest"); if(pt) pt.onclick=function(){ zetTestmodus(!TESTMODUS); toast(TESTMODUS ? "Testmodus AAN: TEST-nummers, geen Outlook." : "Testmodus uit."); };
+  var bo=$("#btnOpruimTest"); if(bo) bo.onclick=opruimTest;
+  laadAlles();
+      }).catch(function(e){ toast("Opruimen mislukt: "+e.message, true); });
+      return true;
+    });
+}
+
 function laadAlles(){
   return api("list").then(function(j){
     DEMO=false;
@@ -823,8 +857,7 @@ function valideer(d){
   $$("[data-verplicht]").forEach(function(el){ el.classList.remove("fout"); });
   function eis(sel,tekst){ var el=$(sel); if(el && !el.value.trim()){ el.classList.add("fout"); fouten.push(tekst); } }
   eis("#f_plaats","Plaats"); eis("#f_gewenst","Gewenste datum omgeving beschikbaar");
-  eis("#f_start","Startdatum project"); eis("#f_bedrijf","Bedrijfsnaam klant");
-  eis("#f_btw","BTW-nummer"); eis("#f_cp_voor","Voornaam contactpersoon");
+  eis("#f_start","Startdatum project"); eis("#f_bedrijf","Bedrijfsnaam klant"); eis("#f_cp_voor","Voornaam contactpersoon");
   eis("#f_cp_achter","Achternaam contactpersoon"); eis("#f_cp_mail","E-mailadres contactpersoon");
   eis("#f_cp_tel","Telefoonnummer contactpersoon"); eis("#f_contract","Contractnummer");
   if(d.klant.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.klant.email)){
@@ -867,7 +900,7 @@ function mailOnderwerp(d,ref){
 function mailTekst(d,ref){
   var L=[];
   function kop(t){ L.push("",t,"".padEnd(t.length,"=")); }
-  function rij(k,v){ L.push(k.padEnd(34," ")+": "+(v||"—")); }
+  function rij(k,v){ L.push(k.padEnd(24," ")+": "+(v||"—")); }
 
   L.push("Beste Site Security,");
   L.push("");
@@ -951,12 +984,21 @@ function afmeldTekst(p,reden,einddatum){
 }
 
 function openMail(aan,onderwerp,tekst){
+  if (TESTMODUS){
+    // Testmodus: geen mailprogramma openen, mail alleen tonen
+    modaal("Testmodus — deze mail zou nu geopend worden",
+      '<div class="mailkop"><span>Aan: <b>'+esc(aan)+'</b></span></div>'
+      + '<div class="mailkop"><span>Onderwerp: <b>'+esc(onderwerp)+'</b></span></div>'
+      + '<div class="mailvoorbeeld" style="white-space:pre-wrap;max-height:50vh;overflow:auto">'+esc(tekst)+'</div>'
+      + '<p class="hint" style="margin:8px 0 0">Er is niets verstuurd en Outlook is niet geopend.</p>');
+    return;
+  }
   var url = "mailto:"+encodeURIComponent(aan)
           + "?subject="+encodeURIComponent(onderwerp)
           + "&body="+encodeURIComponent(tekst);
-  if(url.length > 1900){
-    // Te lang voor sommige mailclients: alleen onderwerp meegeven, tekst naar klembord.
-    kopieer(tekst, "Mail was te lang voor de mailclient — tekst staat op je klembord, plak hem in Outlook.");
+  if(url.length > 12000){
+    // Extreem lang: alleen onderwerp meegeven, tekst naar klembord.
+    kopieer(tekst, "Mail is erg lang: de tekst staat op je klembord — plak hem in Outlook met Ctrl+V.");
     url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp);
   }
   window.location.href = url;
@@ -1021,6 +1063,7 @@ function tekenProjecten(){
     return '<div class="proj">'
       + '<div class="kop">'
       +   '<span class="ref">'+esc(p.ref)+'</span>'
+      +   (p.test ? '<span class="testbadge" title="Testaanvraag — telt niet mee, op te ruimen via Testmodus">TEST</span>' : '')
       +   '<div style="flex:1;min-width:180px">'
       +     '<div class="titel">'+esc((p.klant&&p.klant.bedrijfsnaam)||"onbekende klant")+' – '+esc(p.plaats||"")+'</div>'
       +     '<div class="meta">'
@@ -1209,6 +1252,7 @@ function versturen(){
     id: "P"+Date.now()+Math.random().toString(16).slice(2,6),
     ref: volgnummer(),
     status: "aangevraagd",
+    test: TESTMODUS,
     aanvrager_naam: GEBRUIKER.naam,
     aanvrager_email: GEBRUIKER.email,
     aangemaakt_op: nu()
@@ -1222,7 +1266,7 @@ function versturen(){
     tekenProjecten();
     openMail(CONFIG.mailSiteSecurity, mailOnderwerp(d,opgeslagen.ref), mailTekst(d,opgeslagen.ref));
     try{ localStorage.removeItem("ga_concept"); }catch(e){}
-    toast("Aanvraag "+opgeslagen.ref+" geregistreerd — je mailprogramma opent.");
+    toast("Aanvraag "+opgeslagen.ref+" geregistreerd"+(TESTMODUS?" (testmodus — mail alleen getoond).":" — je mailprogramma opent."));
   }).catch(function(e){
     toast("Opslaan mislukt: "+e.message,true);
   }).then(function(){

@@ -41,6 +41,9 @@ class GoAssetsController extends Controller
 
             case 'klanten':
                 return $this->klanten((string) $request->query('q', ''));
+
+            case 'opruim_test':
+                return $this->opruimTest($gebruiker);
         }
 
         return response()->json(['ok' => false, 'fout' => 'Onbekende actie'], 400);
@@ -63,6 +66,7 @@ class GoAssetsController extends Controller
         $data['status'] = $rij->status;
         $data['aanvrager_naam'] = $rij->aanvrager_naam;
         $data['aanvrager_email'] = $rij->aanvrager_email;
+        $data['test'] = ! empty($rij->is_test);
         return $data;
     }
 
@@ -86,14 +90,17 @@ class GoAssetsController extends Controller
         }
 
         $id = $this->tekst($p['id'] ?? '', 40) ?: ('P' . now()->format('YmdHis') . substr(md5(uniqid('', true)), 0, 4));
+        // Testmodus: eigen reeks TEST-JJJJ-NNN, de echte GA-reeks blijft ongemoeid
+        $isTest = ! empty($p['test']);
         // Referentie server-side bepalen (per jaar oplopend) — voorkomt
         // dubbele nummers als twee collega's tegelijk aanvragen.
-        $ref = $this->volgendeRef();
+        $ref = $this->volgendeRef($isTest ? 'TEST' : 'GA');
 
         // Aanvrager = ingelogde CORE-gebruiker, altijd
         $p['id'] = $id;
         $p['ref'] = $ref;
         $p['status'] = 'aangevraagd';
+        $p['test'] = $isTest;
         $p['aanvrager_naam'] = $gebruiker['naam'];
         $p['aanvrager_email'] = $gebruiker['email'];
         $p['aangemaakt_op'] = $p['aangemaakt_op'] ?? now()->toIso8601String();
@@ -102,6 +109,7 @@ class GoAssetsController extends Controller
             'id' => $id,
             'ref' => $ref,
             'status' => 'aangevraagd',
+            'is_test' => $isTest,
             'aanvrager_naam' => $gebruiker['naam'],
             'aanvrager_email' => $gebruiker['email'],
             'contractnummer' => $this->tekst($p['contractnummer'] ?? '', 60),
@@ -203,14 +211,36 @@ class GoAssetsController extends Controller
 
     // ------------------------------------------------------------ helpers
 
-    private function volgendeRef(): string
+    private function volgendeRef(string $prefix = 'GA'): string
     {
         $jaar = now()->format('Y');
         $laatste = DB::table('go_assets_projecten')
-            ->where('ref', 'like', "GA-$jaar-%")
+            ->where('ref', 'like', "$prefix-$jaar-%")
             ->orderByDesc('ref')->value('ref');
         $n = $laatste ? intval(substr($laatste, -3)) + 1 : 1;
-        return sprintf('GA-%s-%03d', $jaar, $n);
+        return sprintf('%s-%s-%03d', $prefix, $jaar, $n);
+    }
+
+    /** Alle testaanvragen (is_test) plus hun logregels verwijderen. */
+    private function opruimTest(array $gebruiker): array
+    {
+        $ids = DB::table('go_assets_projecten')->where('is_test', true)->pluck('id')->all();
+        $aantal = count($ids);
+        DB::transaction(function () use ($ids) {
+            DB::table('go_assets_log')->where(fn ($w) => $w->whereIn('project_id', $ids)->orWhere('ref', 'like', 'TEST-%'))->delete();
+            DB::table('go_assets_projecten')->where('is_test', true)->delete();
+        });
+        if ($aantal > 0) {
+            DB::table('go_assets_log')->insert([
+                'id' => 'L' . now()->format('YmdHis') . substr(md5(uniqid('', true)), 0, 4),
+                'project_id' => null, 'ref' => null,
+                'actie' => 'Testaanvragen opgeruimd',
+                'details' => "$aantal testaanvra" . ($aantal === 1 ? 'ag' : 'gen') . ' met logregels verwijderd',
+                'door' => $gebruiker['naam'], 'door_email' => $gebruiker['email'],
+                'op' => now(), 'created_at' => now(),
+            ]);
+        }
+        return ['ok' => true, 'verwijderd' => $aantal];
     }
 
     private function tekst($v, int $max): string
