@@ -298,10 +298,12 @@
           <label for="f_klantzoek">Klant zoeken in Boels CORE</label>
           <input type="text" id="f_klantzoek" autocomplete="off" placeholder="Typ klantnaam of klantnummer&hellip;">
           <div id="klantSuggesties" class="klant-suggesties" hidden></div>
-          <p class="hint" id="klantGekozen" style="margin:6px 0 0">Kies een klant uit het CORE-klantenbestand; bedrijfsnaam, BTW-nummer en plaats worden dan ingevuld. Handmatig invullen kan ook.</p>
+          <p class="hint" id="klantGekozen" style="margin:6px 0 0">Kies een klant uit het CORE-klantenbestand; bedrijfsnaam, Insphire klantnummer, BTW-nummer en plaats worden dan ingevuld. Handmatig invullen kan ook.</p>
         </div>
         <div class="veld"><label for="f_bedrijf">Bedrijfsnaam <span class="ster">*</span></label>
           <input type="text" id="f_bedrijf" data-verplicht></div>
+        <div class="veld"><label for="f_klantnummer">Insphire klantnummer</label>
+          <input type="text" id="f_klantnummer" placeholder="Wordt ingevuld bij keuze uit CORE"></div>
         <div class="veld"><label for="f_btw">BTW-nummer <span class="ster">*</span></label>
           <input type="text" id="f_btw" data-verplicht placeholder="NL123456789B01"></div>
         <div class="veld"><label for="f_cp_voor">Voornaam <span class="ster">*</span></label>
@@ -748,7 +750,7 @@ function leesFormulier(){
     data_verwijderen: ($('input[name="dataverw"]:checked')||{}).value || "JA",
     klant: {
       bedrijfsnaam: $("#f_bedrijf").value.trim(),
-      klantnummer: (window.KLANT_CORE && window.KLANT_CORE.nummer) || "",
+      klantnummer: $("#f_klantnummer").value.trim() || (window.KLANT_CORE && window.KLANT_CORE.nummer) || "",
       btw: $("#f_btw").value.trim(),
       voornaam: $("#f_cp_voor").value.trim(),
       achternaam: $("#f_cp_achter").value.trim(),
@@ -789,6 +791,7 @@ function vulFormulier(d){
   var dv=$('input[name="dataverw"][value="'+(d.data_verwijderen||"JA")+'"]'); if(dv) dv.checked=true;
   var k=d.klant||{};
   $("#f_bedrijf").value=k.bedrijfsnaam||""; $("#f_btw").value=k.btw||"";
+  $("#f_klantnummer").value=k.klantnummer||"";
   window.KLANT_CORE = k.klantnummer ? { nummer:k.klantnummer, naam:k.bedrijfsnaam||"" } : null;
   if (typeof toonKlantKeuze === "function") toonKlantKeuze();
   $("#f_cp_voor").value=k.voornaam||""; $("#f_cp_achter").value=k.achternaam||"";
@@ -888,7 +891,7 @@ function mailTekst(d,ref){
       ? "JA (standaard)" : "NEE – graag afspraken maken");
 
   kop("CONTACTPERSOON BEDRIJF (HOOFDAANNEMER / CLIENT ENTITY)");
-  rij("Bedrijfsnaam",d.klant.bedrijfsnaam); rij("BTW-nummer",d.klant.btw);
+  rij("Bedrijfsnaam",d.klant.bedrijfsnaam); rij("Insphire klantnummer",d.klant.klantnummer); rij("BTW-nummer",d.klant.btw);
   rij("Naam",(d.klant.voornaam+" "+d.klant.achternaam).trim());
   rij("E-mailadres",d.klant.email); rij("Telefoonnummer",d.klant.telefoon);
   rij("Functie",d.klant.functie);
@@ -903,6 +906,7 @@ function mailTekst(d,ref){
 
   kop("INSPHIRE");
   rij("Koppeling naar Insphire", d.insphire==="JA"?"Ja":"Nee");
+  rij("Insphire klantnummer", d.klant.klantnummer);
   rij("Insphire projectcode", d.projectcode);
   rij("Contractnummer", d.contractnummer);
 
@@ -929,7 +933,7 @@ function afmeldTekst(p,reden,einddatum){
   L.push("Bij dezen melden wij onderstaand Go-Assets project af. Graag de omgeving uitzetten.");
   L.push("");
   L.push("Referentie          : "+p.ref);
-  L.push("Klant               : "+(p.klant?p.klant.bedrijfsnaam:""));
+  L.push("Klant               : "+(p.klant?p.klant.bedrijfsnaam:"")+(p.klant&&p.klant.klantnummer?" (Insphire klantnr "+p.klant.klantnummer+")":""));
   L.push("Plaats              : "+(p.plaats||""));
   L.push("Subdomein           : "+(p.subdomein? p.subdomein+CONFIG.suffix : "door Go-Workforce ingevuld"));
   L.push("Contractnummer      : "+(p.contractnummer||"—"));
@@ -1085,7 +1089,7 @@ function supportModaal(p){
       var tekst=["Beste Support,","",
         soort+" voor onderstaande Go-Assets omgeving.","",
         "Referentie   : "+p.ref,
-        "Klant        : "+((p.klant&&p.klant.bedrijfsnaam)||""),
+        "Klant        : "+((p.klant&&p.klant.bedrijfsnaam)||"")+(p.klant&&p.klant.klantnummer?" (Insphire klantnr "+p.klant.klantnummer+")":""),
         "Plaats       : "+(p.plaats||""),
         "Subdomein    : "+(p.subdomein? p.subdomein+CONFIG.suffix : "door Go-Workforce ingevuld"),
         "Startdatum   : "+datumNL(p.startdatum),"",
@@ -1337,7 +1341,7 @@ document.addEventListener("DOMContentLoaded", start);
       var los = document.getElementById("klantLos");
       if(los) los.onclick = function(e){ e.preventDefault(); window.KLANT_CORE=null; invoer.value=""; window.toonKlantKeuze(); };
     } else {
-      el.textContent = "Kies een klant uit het CORE-klantenbestand; bedrijfsnaam, BTW-nummer en plaats worden dan ingevuld. Handmatig invullen kan ook.";
+      el.textContent = "Kies een klant uit het CORE-klantenbestand; bedrijfsnaam, Insphire klantnummer, BTW-nummer en plaats worden dan ingevuld. Handmatig invullen kan ook.";
     }
   };
 
@@ -1353,6 +1357,7 @@ document.addEventListener("DOMContentLoaded", start);
   function kies(k){
     window.KLANT_CORE = { nummer:k.nummer, naam:k.naam };
     zetVeld("f_bedrijf", k.naam, false);
+    zetVeld("f_klantnummer", k.nummer, false);
     zetVeld("f_btw", k.btw, false);
     zetVeld("f_plaats", k.plaats, true);
     zetVeld("f_cp_mail", k.email, true);
