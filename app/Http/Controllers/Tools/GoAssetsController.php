@@ -295,7 +295,11 @@ class GoAssetsController extends Controller
         try {
             $html = $this->naarHtml($tekst);
             \Illuminate\Support\Facades\Mail::html($html, function ($m) use ($naar, $onderwerp, $user, $test, $tekst) {
-                $m->to($naar)->subject(($test ? '[TEST] ' : '') . $onderwerp)
+                // Afzenderadres blijft het CORE-adres (SPF/DKIM), maar de naam is
+                // die van de aanvrager en "Beantwoorden" gaat naar de aanvrager.
+                $vanAdres = config('mail.from.address') ?: 'noreply@sorai.nl';
+                $m->from($vanAdres, $user->name . ' via Boels CORE')
+                  ->to($naar)->subject(($test ? '[TEST] ' : '') . $onderwerp)
                   ->replyTo($user->email, $user->name)
                   ->text($tekst); // platte-tekstversie als alternatief deel
                 if (! $test) {
