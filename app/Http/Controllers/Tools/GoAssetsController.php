@@ -293,9 +293,11 @@ class GoAssetsController extends Controller
 
         $naar = $test ? $user->email : $aan;
         try {
-            \Illuminate\Support\Facades\Mail::raw($tekst, function ($m) use ($naar, $onderwerp, $user, $test) {
+            $html = $this->naarHtml($tekst);
+            \Illuminate\Support\Facades\Mail::html($html, function ($m) use ($naar, $onderwerp, $user, $test, $tekst) {
                 $m->to($naar)->subject(($test ? '[TEST] ' : '') . $onderwerp)
-                  ->replyTo($user->email, $user->name);
+                  ->replyTo($user->email, $user->name)
+                  ->text($tekst); // platte-tekstversie als alternatief deel
                 if (! $test) {
                     $m->cc($user->email, $user->name);
                 }
@@ -317,6 +319,42 @@ class GoAssetsController extends Controller
         ]);
 
         return ['ok' => true, 'naar' => $naar, 'test' => $test];
+    }
+
+    /**
+     * Platte mailtekst van de tool omzetten naar nette HTML: koppen vet,
+     * "Label: waarde"-regels als tabel (labels lijnen uit, ongeacht lettertype).
+     */
+    private function naarHtml(string $tekst): string
+    {
+        $regels = preg_split('/\r?\n/', $tekst);
+        $uit = [];
+        $inTabel = false;
+        $sluitTabel = function () use (&$uit, &$inTabel) {
+            if ($inTabel) { $uit[] = '</table>'; $inTabel = false; }
+        };
+        foreach ($regels as $r) {
+            $rt = rtrim($r);
+            if ($rt === '') { $sluitTabel(); $uit[] = '<div style="height:8px"></div>'; continue; }
+            if (preg_match('/^=+$/', $rt)) { continue; }
+            if (preg_match('/^(\s*)([^:]{2,45}?):\s(.*)$/u', $rt, $m) || preg_match('/^(\s*)([^:]{2,45}?):$/u', $rt, $m)) {
+                $inspring = strlen($m[1]) > 0;
+                $label = e(trim($m[2]));
+                $waarde = e(trim($m[3] ?? ''));
+                if (! $inTabel) { $uit[] = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse">'; $inTabel = true; }
+                $uit[] = '<tr><td style="padding:1px 14px 1px ' . ($inspring ? '18px' : '0') . ';color:#555;white-space:nowrap;vertical-align:top">' . $label . '</td>'
+                       . '<td style="padding:1px 0;vertical-align:top"><b>' . ($waarde !== '' ? $waarde : '—') . '</b></td></tr>';
+                continue;
+            }
+            $sluitTabel();
+            if (preg_match('/^[A-Z0-9 \-\/()&]{4,}$/u', $rt) && $rt === mb_strtoupper($rt)) {
+                $uit[] = '<div style="margin:14px 0 4px;font-weight:700;font-size:15px;color:#d25405;border-bottom:2px solid #d25405;padding-bottom:2px">' . e($rt) . '</div>';
+            } else {
+                $uit[] = '<div>' . e($rt) . '</div>';
+            }
+        }
+        $sluitTabel();
+        return '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.45;color:#111">' . implode("\n", $uit) . '</div>';
     }
 
     /** Mailkopie bewaren (verstuurd via CORE of geopend in Outlook). */

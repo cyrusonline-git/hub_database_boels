@@ -896,8 +896,8 @@ function mailOnderwerp(d,ref){
 
 function mailTekst(d,ref){
   var L=[];
-  function kop(t){ L.push("",t,"".padEnd(t.length,"=")); }
-  function rij(k,v){ L.push(k.padEnd(24," ")+": "+(v||"—")); }
+  function kop(t){ L.push("",t.toUpperCase()); }
+  function rij(k,v){ L.push(k+": "+(v||"—")); }
 
   L.push("Beste Site Security,");
   L.push("");
@@ -962,14 +962,14 @@ function afmeldTekst(p,reden,einddatum){
   L.push("");
   L.push("Bij dezen melden wij onderstaand Go-Assets project af. Graag de omgeving uitzetten.");
   L.push("");
-  L.push("Referentie          : "+p.ref);
-  L.push("Klant               : "+(p.klant?p.klant.bedrijfsnaam:"")+(p.klant&&p.klant.klantnummer?" (Insphire klantnr "+p.klant.klantnummer+")":""));
-  L.push("Plaats              : "+(p.plaats||""));
-  L.push("Subdomein           : "+(p.subdomein? p.subdomein+CONFIG.suffix : "door Go-Workforce ingevuld"));
-  L.push("Contractnummer      : "+(p.contractnummer||"—"));
+  L.push("Referentie: "+p.ref);
+  L.push("Klant: "+(p.klant?p.klant.bedrijfsnaam:"")+(p.klant&&p.klant.klantnummer?" (Insphire klantnr "+p.klant.klantnummer+")":""));
+  L.push("Plaats: "+(p.plaats||""));
+  L.push("Subdomein: "+(p.subdomein? p.subdomein+CONFIG.suffix : "door Go-Workforce ingevuld"));
+  L.push("Contractnummer: "+(p.contractnummer||"—"));
   L.push("Insphire projectcode: "+(p.projectcode||"—"));
-  L.push("Einddatum project   : "+datumNL(einddatum||p.einddatum));
-  L.push("Data verwijderen    : "+(p.data_verwijderen==="JA"
+  L.push("Einddatum project: "+datumNL(einddatum||p.einddatum));
+  L.push("Data verwijderen: "+(p.data_verwijderen==="JA"
         ? "JA – 30 dagen na project (standaard)" : "NEE – conform gemaakte afspraak"));
   if(reden){ L.push(""); L.push("Toelichting: "+reden); }
   L.push("");
@@ -1177,11 +1177,11 @@ function supportModaal(p){
       if(!om){ toast("Vul een omschrijving in.",true); return false; }
       var tekst=["Beste Support,","",
         soort+" voor onderstaande Go-Assets omgeving.","",
-        "Referentie   : "+p.ref,
-        "Klant        : "+((p.klant&&p.klant.bedrijfsnaam)||"")+(p.klant&&p.klant.klantnummer?" (Insphire klantnr "+p.klant.klantnummer+")":""),
-        "Plaats       : "+(p.plaats||""),
-        "Subdomein    : "+(p.subdomein? p.subdomein+CONFIG.suffix : "door Go-Workforce ingevuld"),
-        "Startdatum   : "+datumNL(p.startdatum),"",
+        "Referentie: "+p.ref,
+        "Klant: "+((p.klant&&p.klant.bedrijfsnaam)||"")+(p.klant&&p.klant.klantnummer?" (Insphire klantnr "+p.klant.klantnummer+")":""),
+        "Plaats: "+(p.plaats||""),
+        "Subdomein: "+(p.subdomein? p.subdomein+CONFIG.suffix : "door Go-Workforce ingevuld"),
+        "Startdatum: "+datumNL(p.startdatum),"",
         "Omschrijving :",om,"",
         "Met vriendelijke groet,",
         GEBRUIKER.naam||"[naam]", GEBRUIKER.email||"", "Boels Industrial"].join("\n");
