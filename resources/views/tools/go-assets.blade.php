@@ -413,12 +413,12 @@ body.testmodus header.app{box-shadow:inset 0 -4px 0 #d9a73c}
     <div class="body">
       <p class="hint">Volledige registratie van wie wat heeft aangevraagd, gewijzigd of afgemeld.</p>
       <div class="filterbalk">
-        <input type="text" id="zoekLog" placeholder="Zoek in log&hellip;">
+        <input type="text" id="zoekLog" placeholder="Zoek in log (referentie, klant, wie, actie)&hellip;">
         <button type="button" class="knop klein" id="btnExportLog">Export CSV</button>
       </div>
       <div class="logwrap">
         <table class="log"><thead><tr>
-          <th style="width:150px">Tijdstip</th><th style="width:110px">Referentie</th>
+          <th style="width:150px">Tijdstip</th><th style="width:110px">Referentie</th><th style="width:170px">Klant</th>
           <th style="width:160px">Wie</th><th style="width:150px">Actie</th><th>Details</th>
         </tr></thead><tbody id="logtabel"></tbody></table>
       </div>
@@ -1012,6 +1012,8 @@ function toonMailModaal(aan,onderwerp,tekst,ref,ctx){
   $("#om_kopie").onclick = function(){ kopieer(ta.value, "Mailtekst gekopieerd."); };
   $("#om_outlook").onclick = function(){
     var body = ta.value;
+    api("mail_outlook", { aan:aan, onderwerp:onderwerp, tekst:body, test:TESTMODUS, ref:ref, project_id:ctx.project_id||null })
+      .then(function(){ laadAlles(); }).catch(function(){});
     var url = "mailto:"+encodeURIComponent(aan)+"?subject="+encodeURIComponent(onderwerp)+"&body="+encodeURIComponent(body);
     if(url.length > 1900){
       kopieer(body, "Outlook opent met het onderwerp; de tekst staat op je klembord — plak hem met Ctrl+V.");
@@ -1139,7 +1141,7 @@ function afmeldModaal(p){
         tekenProjecten();
         if(mailen) openMail(CONFIG.mailSiteSecurity,
           "Go-Assets afmelding "+p.ref+" – "+((p.klant&&p.klant.bedrijfsnaam)||""),
-          afmeldTekst(p,reden,eind));
+          afmeldTekst(p,reden,eind), {ref:p.ref, project_id:p.id});
         toast("Project afgemeld en vastgelegd in de log.");
       });
       return true;
@@ -1167,7 +1169,7 @@ function supportModaal(p){
         "Omschrijving :",om,"",
         "Met vriendelijke groet,",
         GEBRUIKER.naam||"[naam]", GEBRUIKER.email||"", "Boels Industrial"].join("\n");
-      openMail(CONFIG.mailSupport, soort+" – Go-Assets "+p.ref, tekst);
+      openMail(CONFIG.mailSupport, soort+" – Go-Assets "+p.ref, tekst, {ref:p.ref, project_id:p.id});
       schrijfLog(p.ref,"Melding naar Support",soort+": "+om,p.id);
       return true;
     });
@@ -1182,8 +1184,27 @@ function detailsModaal(p){
     + '<button type="button" class="knop klein" id="d_mail">Mail opnieuw opstellen</button>'
     + '<button type="button" class="knop klein" id="d_kopie">Tekst kopiëren</button>'
     + '<button type="button" class="knop klein" id="d_kopieform">Als nieuwe aanvraag overnemen</button>'
-    + '</div>', null, null);
-  $("#d_mail").onclick=function(){ openMail(CONFIG.mailSiteSecurity,mailOnderwerp(p,p.ref),tekst); };
+    + '</div>'
+    + '<h4 style="margin:16px 0 6px">Verstuurde mails</h4>'
+    + '<div id="d_mails" class="hint">Laden&hellip;</div>', null, null);
+  fetch(CONFIG.api + "?action=mails&project_id=" + encodeURIComponent(p.id) + "&ref=" + encodeURIComponent(p.ref||""), { credentials:"same-origin", headers:{"X-Requested-With":"XMLHttpRequest"} })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){
+      var el=$("#d_mails"); if(!el) return;
+      var ms=(j && j.mails)||[];
+      if(!ms.length){ el.textContent="Nog geen mails verstuurd voor dit project."; return; }
+      el.className="";
+      el.innerHTML = '<table class="log" style="width:100%"><thead><tr><th style="width:150px">Tijdstip</th><th style="width:160px">Wie</th><th>Onderwerp</th><th style="width:90px">Via</th><th style="width:90px"></th></tr></thead><tbody>'
+        + ms.map(function(m,i){ return '<tr><td class="tijd">'+tijdNL(m.op)+'</td><td>'+esc(m.door||"")+'</td><td>'+esc(m.onderwerp)+(m.test?' <span class="testbadge">TEST</span>':'')+'</td><td>'+(m.via==="core"?"CORE":"Outlook")+'</td><td><button type="button" class="knop klein" data-mail="'+i+'">Bekijken</button></td></tr>'; }).join("")
+        + '</tbody></table>';
+      Array.prototype.forEach.call(el.querySelectorAll("button[data-mail]"), function(b){
+        b.onclick=function(){
+          var m=ms[+b.dataset.mail];
+          modaal("Mail van "+tijdNL(m.op), '<div class="mailkop"><span>Aan: <b>'+esc(m.aan)+'</b></span></div><div class="mailkop"><span>Onderwerp: <b>'+esc(m.onderwerp)+'</b></span></div><div class="mailvoorbeeld" style="white-space:pre-wrap;max-height:55vh;overflow:auto">'+esc(m.tekst)+'</div>');
+        };
+      });
+    }).catch(function(){ var el=$("#d_mails"); if(el) el.textContent="Mails konden niet geladen worden."; });
+  $("#d_mail").onclick=function(){ openMail(CONFIG.mailSiteSecurity,mailOnderwerp(p,p.ref),tekst,{ref:p.ref,project_id:p.id}); };
   $("#d_kopie").onclick=function(){ kopieer(tekst); };
   $("#d_kopieform").onclick=function(){
     var kopie=JSON.parse(JSON.stringify(p));
@@ -1194,20 +1215,25 @@ function detailsModaal(p){
 }
 
 /* --------------------------------- log --------------------------------- */
+function klantVanLog(r){
+  var p = PROJECTEN.find(function(x){ return (r.project_id && x.id===r.project_id) || (r.ref && x.ref===r.ref); });
+  return p && p.klant ? (p.klant.bedrijfsnaam||"") : "";
+}
 function tekenLog(){
   var zoek=($("#zoekLog").value||"").toLowerCase();
   var lijst=LOGREGELS.filter(function(r){
     if(!zoek) return true;
-    return [r.ref,r.actie,r.details,r.door].join(" ").toLowerCase().indexOf(zoek)>-1;
+    return [r.ref,klantVanLog(r),r.actie,r.details,r.door].join(" ").toLowerCase().indexOf(zoek)>-1;
   });
   $("#telLog").textContent=LOGREGELS.length;
   if(!lijst.length){
-    $("#logtabel").innerHTML='<tr><td colspan="5"><div class="leeg">Nog geen logregels.</div></td></tr>';
+    $("#logtabel").innerHTML='<tr><td colspan="6"><div class="leeg">Nog geen logregels.</div></td></tr>';
     return;
   }
   $("#logtabel").innerHTML=lijst.slice(0,500).map(function(r){
     return '<tr><td class="tijd">'+tijdNL(r.op)+'</td>'
       + '<td class="ref">'+esc(r.ref||"—")+'</td>'
+      + '<td>'+esc(klantVanLog(r)||"—")+'</td>'
       + '<td>'+esc(r.door||"—")+'</td>'
       + '<td>'+esc(r.actie||"")+'</td>'
       + '<td>'+esc(r.details||"")+'</td></tr>';
@@ -1292,7 +1318,7 @@ function versturen(){
     schrijfLog(opgeslagen.ref,"Aanvraag ingediend",
       (d.klant.bedrijfsnaam||"")+" – "+(d.plaats||"")+" – start "+datumNL(d.startdatum), opgeslagen.id);
     tekenProjecten();
-    openMail(CONFIG.mailSiteSecurity, mailOnderwerp(d,opgeslagen.ref), mailTekst(d,opgeslagen.ref));
+    openMail(CONFIG.mailSiteSecurity, mailOnderwerp(d,opgeslagen.ref), mailTekst(d,opgeslagen.ref), {ref:opgeslagen.ref, project_id:opgeslagen.id});
     try{ localStorage.removeItem("ga_concept"); }catch(e){}
     toast("Aanvraag "+opgeslagen.ref+" geregistreerd — kies hoe je de mail verstuurt.");
   }).catch(function(e){
@@ -1336,7 +1362,7 @@ function koppelGebeurtenissen(){
       if(knop.dataset.actie==="details")    detailsModaal(p);
       if(knop.dataset.actie==="afmeldmail") openMail(CONFIG.mailSiteSecurity,
           "Go-Assets afmelding "+p.ref+" – "+((p.klant&&p.klant.bedrijfsnaam)||""),
-          afmeldTekst(p,p.afmeld_reden,p.einddatum));
+          afmeldTekst(p,p.afmeld_reden,p.einddatum), {ref:p.ref, project_id:p.id});
     }
   });
 
@@ -1368,8 +1394,8 @@ function koppelGebeurtenissen(){
     download("go-assets-projecten.csv",csv(rijen));
   };
   $("#btnExportLog").onclick=function(){
-    var rijen=[["Tijdstip","Referentie","Wie","E-mail","Actie","Details"]];
-    LOGREGELS.forEach(function(r){ rijen.push([r.op,r.ref,r.door,r.door_email,r.actie,r.details]); });
+    var rijen=[["Tijdstip","Referentie","Klant","Wie","E-mail","Actie","Details"]];
+    LOGREGELS.forEach(function(r){ rijen.push([r.op,r.ref,klantVanLog(r),r.door,r.door_email,r.actie,r.details]); });
     download("go-assets-log.csv",csv(rijen));
   };
   document.addEventListener("keydown", function(e){ if(e.key==="Escape") sluitModaal(); });

@@ -48,6 +48,12 @@ class GoAssetsController extends Controller
 
             case 'mail':
                 return $this->verstuurMail($in, $user);
+
+            case 'mail_outlook':
+                return $this->registreerOutlookMail($in, $user);
+
+            case 'mails':
+                return $this->mails((string) $request->query('project_id', ''), (string) $request->query('ref', ''));
         }
 
         return response()->json(['ok' => false, 'fout' => 'Onbekende actie'], 400);
@@ -299,6 +305,7 @@ class GoAssetsController extends Controller
             return response()->json(['ok' => false, 'fout' => 'Mailserver gaf een fout — probeer Outlook (tekst op klembord)'], 500);
         }
 
+        $this->bewaarMail($in, $user, $naar, $onderwerp, $tekst, 'core', $test);
         DB::table('go_assets_log')->insert([
             'id' => 'L' . now()->format('YmdHis') . substr(md5(uniqid('', true)), 0, 4),
             'project_id' => $this->tekst($in['project_id'] ?? '', 40) ?: null,
@@ -312,6 +319,65 @@ class GoAssetsController extends Controller
         return ['ok' => true, 'naar' => $naar, 'test' => $test];
     }
 
+    /** Mailkopie bewaren (verstuurd via CORE of geopend in Outlook). */
+    private function bewaarMail(array $in, $user, string $naar, string $onderwerp, string $tekst, string $via, bool $test): void
+    {
+        DB::table('go_assets_mails')->insert([
+            'project_id' => $this->tekst($in['project_id'] ?? '', 40) ?: null,
+            'ref' => $this->tekst($in['ref'] ?? '', 20) ?: null,
+            'aan' => $naar,
+            'onderwerp' => $onderwerp,
+            'tekst' => $tekst,
+            'via' => $via,
+            'is_test' => $test,
+            'door' => $user->name,
+            'door_email' => $user->email,
+            'verzonden_op' => now(),
+            'created_at' => now(),
+        ]);
+    }
+
+    /** Mail die in Outlook is geopend registreren (tekst zoals in de tool stond). */
+    private function registreerOutlookMail(array $in, $user)
+    {
+        $aan = strtolower($this->tekst($in['aan'] ?? '', 190));
+        $onderwerp = $this->tekst($in['onderwerp'] ?? '', 200);
+        $tekst = trim((string) ($in['tekst'] ?? ''));
+        if ($aan === '' || $onderwerp === '' || $tekst === '') {
+            return response()->json(['ok' => false, 'fout' => 'Ongeldige mailgegevens'], 422);
+        }
+        $test = ! empty($in['test']);
+        $this->bewaarMail($in, $user, $aan, $onderwerp, mb_substr($tekst, 0, 20000), 'outlook', $test);
+        DB::table('go_assets_log')->insert([
+            'id' => 'L' . now()->format('YmdHis') . substr(md5(uniqid('', true)), 0, 4),
+            'project_id' => $this->tekst($in['project_id'] ?? '', 40) ?: null,
+            'ref' => $this->tekst($in['ref'] ?? '', 20) ?: null,
+            'actie' => 'Mail geopend in Outlook',
+            'details' => 'Aan ' . $aan . ' — ' . $onderwerp,
+            'door' => $user->name, 'door_email' => $user->email,
+            'op' => now(), 'created_at' => now(),
+        ]);
+        return ['ok' => true];
+    }
+
+    /** Bewaarde mails, per project of alle (nieuwste eerst). */
+    private function mails(string $projectId, string $ref = ''): array
+    {
+        $q = DB::table('go_assets_mails')->orderByDesc('verzonden_op');
+        if ($projectId !== '' || $ref !== '') {
+            $q->where(function ($w) use ($projectId, $ref) {
+                if ($projectId !== '') { $w->where('project_id', $projectId); }
+                if ($ref !== '') { $w->orWhere('ref', $ref); }
+            });
+        }
+        return ['ok' => true, 'mails' => $q->limit(200)->get()->map(fn ($m) => [
+            'id' => $m->id, 'project_id' => $m->project_id, 'ref' => $m->ref,
+            'aan' => $m->aan, 'onderwerp' => $m->onderwerp, 'tekst' => $m->tekst,
+            'via' => $m->via, 'test' => (bool) $m->is_test,
+            'door' => $m->door, 'op' => $this->iso($m->verzonden_op),
+        ])->values()->all()];
+    }
+
     /** Alle testaanvragen (is_test) plus hun logregels verwijderen. */
     private function opruimTest(array $gebruiker): array
     {
@@ -320,6 +386,7 @@ class GoAssetsController extends Controller
         DB::transaction(function () use ($ids) {
             DB::table('go_assets_log')->where(fn ($w) => $w->whereIn('project_id', $ids)->orWhere('ref', 'like', 'TEST-%'))->delete();
             DB::table('go_assets_projecten')->where('is_test', true)->delete();
+            DB::table('go_assets_mails')->where(fn ($w) => $w->where('is_test', true)->orWhereIn('project_id', $ids))->delete();
         });
         if ($aantal > 0) {
             DB::table('go_assets_log')->insert([
