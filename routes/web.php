@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/send', [ChatController::class, 'send'])->middleware('throttle:60,1')->name('chat.send');
     Route::get('/chat/image/{message}', [ChatController::class, 'image'])->name('chat.image');
     Route::post('/chat/delete/{message}', [ChatController::class, 'destroy'])->name('chat.delete');
+    Route::post('/chat/thread/{user}/delete', [ChatController::class, 'destroyThread'])->name('chat.thread.delete');
     Route::get('/chat/popup', [ChatController::class, 'popup'])->name('chat.popup');
     Route::post('/chat/popup/seen', [ChatController::class, 'popupSeen'])->name('chat.popup.seen');
 

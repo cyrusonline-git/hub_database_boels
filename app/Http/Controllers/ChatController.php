@@ -181,4 +181,26 @@ class ChatController extends Controller
 
         return ['ok' => true];
     }
+
+    /**
+     * Heel gesprek met één collega in één keer verwijderen (beide kanten,
+     * inclusief foto's). Alleen een deelnemer van het gesprek kan dit doen.
+     */
+    public function destroyThread(Request $request, User $user)
+    {
+        $me = $request->user()->id;
+        abort_if($user->id === $me, 422);
+
+        $query = ChatMessage::where(fn ($q) => $q
+            ->where(fn ($a) => $a->where('sender_id', $me)->where('recipient_id', $user->id))
+            ->orWhere(fn ($b) => $b->where('sender_id', $user->id)->where('recipient_id', $me)));
+
+        $fotos = (clone $query)->whereNotNull('image_path')->pluck('image_path')->all();
+        foreach ($fotos as $pad) {
+            Storage::disk('local')->delete($pad);
+        }
+        $aantal = $query->delete();
+
+        return ['ok' => true, 'deleted' => $aantal];
+    }
 }

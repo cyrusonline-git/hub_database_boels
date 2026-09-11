@@ -122,6 +122,7 @@
         <button class="btn-back" id="chatBack" style="display:none;"><i class="bi bi-arrow-left"></i></button>
         <i class="bi bi-chat-dots-fill" id="chatHeadIcon"></i>
         <strong id="chatTitle" class="flex-grow-1 text-truncate">Chat</strong>
+        <button class="btn-back" id="chatWis" style="display:none;" title="Heel gesprek verwijderen"><i class="bi bi-trash"></i></button>
         <button class="btn-back" id="chatClose"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="chat-search" id="chatSearchWrap">
@@ -153,6 +154,7 @@
     var body = document.getElementById('chatBody');
     var title = document.getElementById('chatTitle');
     var back = document.getElementById('chatBack');
+    var wis = document.getElementById('chatWis');
     var inputWrap = document.getElementById('chatInputWrap');
     var searchWrap = document.getElementById('chatSearchWrap');
     var text = document.getElementById('chatText');
@@ -271,6 +273,7 @@
         body.scrollTop = 0;
         title.textContent = 'Chat — collega’s';
         back.style.display = 'none';
+        wis.style.display = 'none';
         inputWrap.style.display = 'none';
         searchWrap.style.display = '';
         loadContacts();
@@ -307,6 +310,7 @@
         currentContact = {id: id, name: name};
         title.textContent = name;
         back.style.display = '';
+        wis.style.display = '';
         searchWrap.style.display = 'none';
         inputWrap.style.display = 'flex';
         body.innerHTML = '<div class="text-center text-muted p-4 small">Laden...</div>';
@@ -441,6 +445,15 @@
         clearInterval(threadTimer); currentContact = null;
     });
     back.addEventListener('click', showContacts);
+    // Heel gesprek in één keer wissen (beide kanten)
+    wis.addEventListener('click', function () {
+        if (!currentContact) return;
+        if (!confirm('Alle berichten tussen jou en ' + currentContact.name + ' verwijderen? Dit wist het hele gesprek, ook bij de ander, en kan niet ongedaan worden gemaakt.')) return;
+        fetch('/chat/thread/' + currentContact.id + '/delete', {
+            method: 'POST',
+            headers: {'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
+        }).then(() => { lastRender = ''; loadThread(true); }).catch(() => {});
+    });
     search.addEventListener('input', renderContacts);
     document.getElementById('chatSend').addEventListener('click', send);
     text.addEventListener('keydown', function (e) {
