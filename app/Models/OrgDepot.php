@@ -11,7 +11,13 @@ class OrgDepot extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['area_id', 'name', 'email', 'city', 'sort_order'];
+    protected $fillable = ['area_id', 'name', 'number', 'email', 'city', 'sort_order'];
+
+    /** Depotnummers als lijst ("384, 769" → ['384', '769']). */
+    public function numbers(): array
+    {
+        return array_values(array_filter(array_map('trim', explode(',', (string) $this->number))));
+    }
 
     public function area(): BelongsTo
     {

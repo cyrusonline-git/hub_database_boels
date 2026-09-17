@@ -70,6 +70,7 @@
                                                     @csrf @method('PUT')
                                                     <input type="text" name="name" value="{{ $depot->name }}" class="form-control form-control-sm"
                                                            title="Naam aanpassen werkt automatisch door bij medewerkers, gebruikers en apps">
+                                                    <input type="text" name="number" value="{{ $depot->number }}" class="form-control form-control-sm" style="max-width:110px" placeholder="Depotnr" title="Depotnummer(s) uit het ERP / de materieellijst, bijv. 759 — meerdere gescheiden door komma. Wordt door child-apps (o.a. Voorraad tool) gebruikt.">
                                                     <input type="email" name="email" value="{{ $depot->email }}" class="form-control form-control-sm" placeholder="E-mail (optioneel)">
                                                     <button class="btn btn-sm btn-boels text-nowrap" title="Naamswijziging werkt automatisch overal door">Opslaan</button>
                                                 </form>
@@ -92,8 +93,9 @@
                             <form method="POST" action="{{ route('admin.infrastructure.depots.store') }}" class="row g-1">
                                 @csrf
                                 <input type="hidden" name="area_id" value="{{ $area->id }}">
-                                <div class="col-5"><input type="text" name="name" class="form-control form-control-sm" placeholder="Nieuw depot" required></div>
-                                <div class="col-5"><input type="email" name="email" class="form-control form-control-sm" placeholder="E-mail (optioneel)"></div>
+                                <div class="col-4"><input type="text" name="name" class="form-control form-control-sm" placeholder="Nieuw depot" required></div>
+                                <div class="col-2"><input type="text" name="number" class="form-control form-control-sm" placeholder="Depotnr"></div>
+                                <div class="col-4"><input type="email" name="email" class="form-control form-control-sm" placeholder="E-mail (optioneel)"></div>
                                 <div class="col-2"><button class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-plus"></i></button></div>
                             </form>
                         </div>

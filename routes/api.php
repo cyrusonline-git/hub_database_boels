@@ -181,6 +181,8 @@ Route::middleware('auth:sanctum')->group(function () {
                     'country' => $a->country,
                     'depots' => $a->depots->map(fn ($d) => [
                         'name' => $d->name,
+                        'number' => $d->number,          // "759" of "384, 769" (depotnummers uit het ERP)
+                        'numbers' => $d->numbers(),
                         'email' => $d->email,
                         'city' => $d->city,
                     ])->values(),

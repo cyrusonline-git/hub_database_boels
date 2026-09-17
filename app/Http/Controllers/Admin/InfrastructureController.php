@@ -50,12 +50,13 @@ class InfrastructureController extends Controller
         $data = $request->validate([
             'area_id' => ['required', 'exists:org_areas,id'],
             'name' => ['required', 'string', 'max:100'],
+            'number' => ['nullable', 'string', 'max:60', 'regex:/^[0-9]+(\s*,\s*[0-9]+)*$/'],
             'email' => ['nullable', 'email', 'max:190'],
             'city' => ['nullable', 'string', 'max:100'],
-        ]);
+        ], ['number.regex' => 'Depotnummer: alleen cijfers, meerdere nummers gescheiden door een komma (bijv. 384, 769).']);
         OrgDepot::firstOrCreate(
             ['area_id' => $data['area_id'], 'name' => $data['name']],
-            ['email' => $data['email'] ?? null, 'city' => $data['city'] ?? null],
+            ['number' => self::netNummer($data['number'] ?? null), 'email' => $data['email'] ?? null, 'city' => $data['city'] ?? null],
         );
         return back()->with('status', 'Depot toegevoegd.');
     }
@@ -64,8 +65,10 @@ class InfrastructureController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
+            'number' => ['nullable', 'string', 'max:60', 'regex:/^[0-9]+(\s*,\s*[0-9]+)*$/'],
             'email' => ['nullable', 'email', 'max:190'],
-        ]);
+        ], ['number.regex' => 'Depotnummer: alleen cijfers, meerdere nummers gescheiden door een komma (bijv. 384, 769).']);
+        $data['number'] = self::netNummer($data['number'] ?? null);
 
         $oud = $depot->name;
         $depot->update($data);
@@ -99,6 +102,14 @@ class InfrastructureController extends Controller
      * Naamswijziging in de Infrastructuur doorvoeren in de hele database:
      * medewerkers, gebruikers-toegangslijsten en app-restricties.
      */
+    /** "384 ,769" → "384, 769" */
+    private static function netNummer(?string $n): ?string
+    {
+        $lijst = array_values(array_filter(array_map('trim', explode(',', (string) $n))));
+
+        return $lijst ? implode(', ', array_unique($lijst)) : null;
+    }
+
     private function hernoemOveral(string $soort, string $oud, string $nieuw): void
     {
         $kolom = $soort === 'depot' ? 'depot' : 'area';
