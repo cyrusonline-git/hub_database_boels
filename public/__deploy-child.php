@@ -96,6 +96,14 @@ foreach (['public_html.zip' => $publicDir, 'laravel_app.zip' => $larDir] as $zip
     $z->close();
     echo "      → $zipNaam uitgepakt in $doel\n";
 }
+// DirectAdmin zet bij een nieuw domein een placeholder index.html neer die vóór index.php gaat
+foreach (['index.html', 'index.htm'] as $ph) {
+    $pad = $publicDir . '/' . $ph;
+    if (file_exists($pad) && stripos((string) file_get_contents($pad), 'tijdelijke') !== false) {
+        @unlink($pad);
+        echo "      → placeholder $ph van DirectAdmin verwijderd\n";
+    }
+}
 foreach (['storage/app', 'storage/framework/cache/data', 'storage/framework/sessions', 'storage/framework/views', 'storage/logs', 'database'] as $sub) {
     if (! is_dir("$larDir/$sub")) @mkdir("$larDir/$sub", 0755, true);
 }
