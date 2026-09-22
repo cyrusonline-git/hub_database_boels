@@ -69,8 +69,34 @@ class EmployeeController extends Controller
             'cost_center'     => ['nullable','string','max:50'],
             'active'          => ['sometimes','boolean'],
         ]);
+        $oudDepot = $employee->depot;
+        $oudArea = $employee->area;
         $employee->update($data);
-        return redirect()->route('admin.employees.index')->with('status', 'Medewerker bijgewerkt.');
+
+        // Child-apps krijgen depot/area via /api/me van het INLOGACCOUNT (allowed_*),
+        // niet van de medewerkerkaart. Verandert het depot of de area op de kaart,
+        // werk dan het gekoppelde account mee bij — alleen als dat account nog op
+        // de oude kaartwaarde stond (of leeg was), zodat bewuste afwijkingen op het
+        // account blijven staan.
+        $melding = 'Medewerker bijgewerkt.';
+        $account = $employee->user;
+        if ($account) {
+            $wijzig = [];
+            foreach ([['depot', 'allowed_depots', $oudDepot], ['area', 'allowed_areas', $oudArea]] as [$veld, $kolom, $oud]) {
+                $nieuw = trim((string) ($data[$veld] ?? ''));
+                $huidig = array_values(array_filter((array) ($account->$kolom ?? [])));
+                $stondOpOud = empty($huidig) || (count($huidig) === 1 && $oud !== null && strcasecmp((string) $huidig[0], (string) $oud) === 0);
+                if ($nieuw !== '' && $stondOpOud && strcasecmp((string) ($huidig[0] ?? ''), $nieuw) !== 0) {
+                    $wijzig[$kolom] = [$nieuw];
+                }
+            }
+            if ($wijzig) {
+                $account->update($wijzig);
+                $melding .= ' Inlogaccount meegewijzigd: ' . implode(', ', array_map(fn ($v) => $v[0], $wijzig)) . ' — de medewerker moet opnieuw inloggen om dit in de apps te zien.';
+            }
+        }
+
+        return redirect()->route('admin.employees.index')->with('status', $melding);
     }
 
     public function destroy(Employee $employee)
