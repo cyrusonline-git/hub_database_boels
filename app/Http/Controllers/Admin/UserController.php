@@ -108,6 +108,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateUser($request);
+        $data = $this->guardSuperAdmin($request, $data);
         $data = $this->normalizeAccessLists($data);
 
         // Wachtwoord leeg gelaten? Dan krijgt de medewerker een activatiemail
@@ -179,7 +180,9 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        abort_if($user->is_super_admin && ! $request->user()->is_super_admin, 403, 'Alleen een super-admin mag een super-admin-account bewerken.');
         $data = $this->validateUser($request, $user);
+        $data = $this->guardSuperAdmin($request, $data);
         $data = $this->normalizeAccessLists($data);
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
@@ -194,6 +197,7 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        abort_if($user->is_super_admin && ! request()->user()->is_super_admin, 403);
         if ($user->is_super_admin) {
             return back()->withErrors('Super Admin kan niet verwijderd worden.');
         }
@@ -201,12 +205,22 @@ class UserController extends Controller
         return back()->with('status', 'Gebruiker verwijderd.');
     }
 
+    /** Alleen een super-admin mag de super-admin-vlag zetten of weghalen. */
+    private function guardSuperAdmin(Request $request, array $data): array
+    {
+        if (! $request->user()->is_super_admin) {
+            unset($data['is_super_admin']);
+        }
+
+        return $data;
+    }
+
     private function validateUser(Request $request, ?User $user = null): array
     {
         return $request->validate([
             'name' => ['required','string','max:150'],
             'email' => ['required','email','max:190', $this->emailUniqueRule($user)],
-            'password' => ['nullable','string','min:8'],
+            'password' => ['nullable','string',\Illuminate\Validation\Rules\Password::min(10)->letters()->numbers()],
             'employee_id' => ['nullable','exists:employees,id'],
             'is_super_admin' => ['sometimes','boolean'],
             'active' => ['sometimes','boolean'],

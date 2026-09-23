@@ -35,4 +35,6 @@
     Header always set X-Content-Type-Options "nosniff"
     Header always set Referrer-Policy "same-origin"
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    # HTTPS afdwingen in de browser (1 jaar, ook subdomeinen)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 </IfModule>

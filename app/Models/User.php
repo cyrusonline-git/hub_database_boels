@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAuditLog;
 use App\Models\Concerns\HasRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens;
+    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens, HasAuditLog;
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_PENDING = 'pending_activation';

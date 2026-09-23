@@ -25,7 +25,7 @@ return [
     // Voor SSO over alle *.sorai.nl subdomeinen: zet SESSION_DOMAIN=.sorai.nl in .env
     'domain' => env('SESSION_DOMAIN'),
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', true),
     'http_only' => env('SESSION_HTTP_ONLY', true),
     'same_site' => env('SESSION_SAME_SITE', 'lax'),
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),

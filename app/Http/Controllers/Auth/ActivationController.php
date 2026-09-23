@@ -21,7 +21,7 @@ class ActivationController extends Controller
         $user = $this->findUserByToken($token);
 
         $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', \Illuminate\Validation\Rules\Password::min(10)->letters()->numbers(), 'confirmed'],
         ]);
 
         $user->forceFill([

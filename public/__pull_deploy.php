@@ -6,25 +6,24 @@
  * (omzeilt de instabiele FTP-verbinding van Antagonist).
  *
  * Aanroep:
- *   https://databasehub.sorai.nl/__pull_deploy.php?k=BOELS_PULL_2026
+ *   https://databasehub.sorai.nl/__pull_deploy.php?k=<DEPLOY_SECRET>
  *
  * Optioneel: een specifieke tag:
- *   https://databasehub.sorai.nl/__pull_deploy.php?k=BOELS_PULL_2026&tag=v1.0.5
+ *   https://databasehub.sorai.nl/__pull_deploy.php?k=<DEPLOY_SECRET>&tag=v1.0.5
  *
  * BLIJFT staan op de server — verwijdert zichzelf NIET, want je gebruikt
  * hem bij elke deploy opnieuw.
  */
 
-// Sleutel komt uit de server-.env (DEPLOY_SECRET). Zolang die nog niet
-// bestaat (vóór het draaien van __harden.php) geldt de oude vaste sleutel.
-$secret = 'BOELS_PULL_2026';
+// Sleutel komt uitsluitend uit de server-.env (DEPLOY_SECRET); zonder die regel is dit script dicht.
+$secret = null;
 foreach ([__DIR__ . '/../laravel_app/.env', __DIR__ . '/../.env'] as $envFile) {
     if (file_exists($envFile) && preg_match('/^DEPLOY_SECRET=(.+)$/m', file_get_contents($envFile), $m)) {
         $secret = trim($m[1]);
         break;
     }
 }
-if (! hash_equals($secret, (string) ($_GET['k'] ?? ''))) {
+if ($secret === null || $secret === '' || ! hash_equals($secret, (string) ($_GET['k'] ?? ''))) {
     http_response_code(403);
     exit('forbidden');
 }
@@ -175,6 +174,18 @@ foreach ($downloads as $path) {
 echo "      → Tijdelijke bestanden verwijderd.\n\n";
 
 echo str_repeat('=', 60) . "\n";
+// Oude eenmalige hulpscripts die niet meer in de repo zitten van de server halen
+// (een pull-deploy pakt alleen uit en verwijdert niets).
+foreach (['__check-access.php', '__check-apps.php', '__check-depots.php', '__check-klanten.php',
+          '__env-bp.php', '__env-offertes.php', '__env-projectschade.php', '__env-rmw.php', '__env-scanner.php',
+          '__env-shell.php', '__env-tankapp.php', '__env-voorraad.php', '__fix-depotnamen.php', '__mail-smtp.php',
+          '__harden.php', '__phpinfo.php', '__test.php'] as $oud) {
+    if (is_file($here . '/' . $oud)) {
+        @unlink($here . '/' . $oud);
+        echo "  - verwijderd: $oud\n";
+    }
+}
+
 echo "✓ Deploy klaar! Boels CORE is bijgewerkt.\n";
 echo str_repeat('=', 60) . "\n";
 echo "\nTip: voor een specifieke versie, gebruik:\n";

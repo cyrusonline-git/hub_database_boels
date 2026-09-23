@@ -9,14 +9,14 @@
 
 // Sleutel komt uit de server-.env (DEPLOY_SECRET); oude vaste sleutel
 // geldt alleen zolang __harden.php nog niet gedraaid heeft.
-$secret = 'BOELS_MIGRATE_2026';
+$secret = null; // alleen DEPLOY_SECRET uit de server-.env
 foreach ([__DIR__ . '/../laravel_app/.env', __DIR__ . '/../.env'] as $envFile) {
     if (file_exists($envFile) && preg_match('/^DEPLOY_SECRET=(.+)$/m', file_get_contents($envFile), $m)) {
         $secret = trim($m[1]);
         break;
     }
 }
-if (! hash_equals($secret, (string) ($_GET['k'] ?? ''))) {
+if ($secret === null || $secret === '' || ! hash_equals($secret, (string) ($_GET['k'] ?? ''))) {
     http_response_code(403);
     exit('forbidden');
 }

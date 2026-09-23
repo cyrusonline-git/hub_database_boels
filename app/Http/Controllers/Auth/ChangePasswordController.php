@@ -17,7 +17,7 @@ class ChangePasswordController extends Controller
     {
         $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'string', 'min:8', 'confirmed', 'different:current_password'],
+            'password' => ['required', 'string', \Illuminate\Validation\Rules\Password::min(10)->letters()->numbers(), 'confirmed', 'different:current_password'],
         ], [
             'current_password.current_password' => 'Je huidige wachtwoord klopt niet.',
             'password.different' => 'Het nieuwe wachtwoord moet anders zijn dan het huidige.',

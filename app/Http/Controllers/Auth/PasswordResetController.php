@@ -64,7 +64,7 @@ class PasswordResetController extends Controller
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', \Illuminate\Validation\Rules\Password::min(10)->letters()->numbers(), 'confirmed'],
         ]);
 
         $email = strtolower(trim($request->input('email')));

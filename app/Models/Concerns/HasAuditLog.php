@@ -20,6 +20,13 @@ trait HasAuditLog
 
     public function writeAuditLog(string $event, ?array $old, ?array $new): void
     {
+        // Geheimen nooit in de audit-log; en pure logins (last_login_at) niet als wijziging loggen
+        $verborgen = array_merge(method_exists($this, 'getHidden') ? $this->getHidden() : [], ['password', 'remember_token', 'activation_token']);
+        $old = $old !== null ? array_diff_key($old, array_flip($verborgen)) : null;
+        $new = $new !== null ? array_diff_key($new, array_flip($verborgen)) : null;
+        if ($event === 'updated' && $new !== null && array_diff(array_keys($new), ['last_login_at', 'updated_at']) === []) {
+            return;
+        }
         AuditLog::create([
             'user_id' => Auth::id(),
             'auditable_id' => $this->getKey(),
