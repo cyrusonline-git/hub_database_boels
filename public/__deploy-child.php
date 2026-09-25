@@ -13,6 +13,7 @@
  */
 $apps = [
     'voorraad' => ['domein' => 'voorraad.sorai.nl', 'repo' => 'cyrusonline-git/voorraad-tool', 'naam' => 'Voorraad tool'],
+    'spoedverhuur' => ['domein' => 'spoedverhuur.sorai.nl', 'repo' => 'cyrusonline-git/spoedverhuur', 'naam' => 'Spoedverhuur'],
 ];
 
 $coreEnv = null;
@@ -136,6 +137,23 @@ if (! file_exists($envPad)) {
 }
 $dbPad = $larDir . '/database/database.sqlite';
 if (! file_exists($dbPad)) { touch($dbPad); echo "      → lege SQLite-database aangemaakt\n"; }
+
+// 4b. Subdomein aanmelden bij CORE als stateful SSO-domein (SANCTUM_STATEFUL_DOMAINS)
+$coreEnv = (string) @file_get_contents($envFile);
+if (preg_match('/^SANCTUM_STATEFUL_DOMAINS=(.*)$/m', $coreEnv, $sm)) {
+    $lijst = array_values(array_filter(array_map('trim', explode(',', $sm[1]))));
+    if (! in_array($app['domein'], $lijst, true)) {
+        $lijst[] = $app['domein'];
+        $coreEnv = preg_replace('/^SANCTUM_STATEFUL_DOMAINS=.*$/m', 'SANCTUM_STATEFUL_DOMAINS=' . implode(',', $lijst), $coreEnv);
+        file_put_contents($envFile, $coreEnv);
+        @unlink(dirname($envFile) . '/bootstrap/cache/config.php');
+        echo "      → {$app['domein']} toegevoegd aan SANCTUM_STATEFUL_DOMAINS van CORE\n";
+    } else {
+        echo "      → {$app['domein']} stond al in SANCTUM_STATEFUL_DOMAINS\n";
+    }
+} else {
+    echo "      → LET OP: SANCTUM_STATEFUL_DOMAINS niet gevonden in de CORE-.env; handmatig toevoegen\n";
+}
 
 // 5. Migreren + caches
 echo "\n[5/5] Migreren + cache...\n";
