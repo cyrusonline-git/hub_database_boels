@@ -46,4 +46,18 @@ CREATE TABLE order_regels (id INTEGER PRIMARY KEY, upload_id INTEGER, contract_n
 INSERT INTO depots VALUES (1,'Rotterdam-Europoort','759','759','West'),(2,'Geleen - Chemelot','384','384, 769','Zuid'); INSERT INTO uploads VALUES (1,'materieel',1,'$nu'),(2,'reserveringen',1,'$nu');
 INSERT INTO materieel (upload_id,uniek_nr,subgroep_nr,subgroep_naam,depot_nummer,depot_naam,status_code,laatste_uithuur) VALUES (1,'A1','1234','Hoogwerker 12m','759','Rotterdam','available','2025-01-01'),(1,'A2','1234','Hoogwerker 12m','759','Rotterdam','on_hire',NULL),(1,'A3','5678','Compressor','384','Chemelot','available','$nu');
 INSERT INTO min_voorraad VALUES (1,'759','5678','Compressor',2);");
+
+// Spoedverhuur (minimaal schema)
+@unlink("$D/spoedverhuur.sorai.nl/laravel_app/database/database.sqlite");
+$sp = new PDO("sqlite:$D/spoedverhuur.sorai.nl/laravel_app/database/database.sqlite");
+$ma = date('Y-m-d', strtotime('monday this week')); $zo = date('Y-m-d', strtotime('sunday this week'));
+$sp->exec("CREATE TABLE rooster_weken (id INTEGER PRIMARY KEY, jaar INTEGER, weeknummer INTEGER, van TEXT, tm TEXT);
+CREATE TABLE dienst_soorten (id INTEGER PRIMARY KEY, naam TEXT, volgorde INTEGER, betaald INTEGER, actief INTEGER, vast INTEGER, vaste_naam TEXT, vaste_telefoon TEXT);
+CREATE TABLE medewerkers (id INTEGER PRIMARY KEY, naam TEXT, telefoon TEXT, telefoon_handmatig TEXT);
+CREATE TABLE toewijzingen (id INTEGER PRIMARY KEY, rooster_week_id INTEGER, dienst_soort_id INTEGER, medewerker_id INTEGER, rooster_naam TEXT, dag_van INTEGER, dag_tm INTEGER, oorsprong TEXT);
+CREATE TABLE ruilingen (id INTEGER PRIMARY KEY, type TEXT, status TEXT, van_medewerker_id INTEGER, naar_medewerker_id INTEGER, created_at TEXT, bevestigd_op TEXT);
+CREATE TABLE maandoverzichten (id INTEGER PRIMARY KEY, jaar INTEGER, maand INTEGER, aantal_regels INTEGER, totaal_bedrag REAL, verzonden_op TEXT, vergrendeld INTEGER);
+CREATE TABLE meldingen_multiline (id INTEGER PRIMARY KEY, datum TEXT, tijd TEXT, dienst_soort_id INTEGER);
+INSERT INTO rooster_weken VALUES (1," . date('o') . "," . date('W') . ",'$ma','$zo'); INSERT INTO dienst_soorten VALUES (1,'Spoedverhuur 1e lijns',0,1,1,0,NULL,NULL),(2,'Tweede lijn h&h',9,0,1,1,'Michiel Thijs','06-1');
+INSERT INTO medewerkers VALUES (1,'Anne Vasseur','06-2',NULL); INSERT INTO toewijzingen VALUES (1,1,1,1,NULL,1,7,'rooster');");
 echo "fixtures ok\n";
