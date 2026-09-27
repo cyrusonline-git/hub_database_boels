@@ -39,3 +39,26 @@ if (! empty($_GET['test'])) {
     }
     echo "\nOK: $ok, FOUT: $fout\n";
 }
+
+// ?render=1 → de toolpagina en de catalogus-API server-side renderen als de eerste super-admin (alleen diagnose, geen sessie)
+if (! empty($_GET['render'])) {
+    echo "\nRender-test:\n";
+    try {
+        $u = \App\Models\User::where('is_super_admin', true)->orderBy('id')->first();
+        auth()->setUser($u);
+        $html = view('tools.vraagbaak')->render();
+        echo "  view: " . strlen($html) . " tekens, titel aanwezig: " . (str_contains($html, 'Boels Vraagbaak') ? 'ja' : 'NEE') . "\n";
+        $req = \Illuminate\Http\Request::create('/tools/vraagbaak/api?action=catalogus', 'GET');
+        $req->setUserResolver(fn () => $u);
+        $res = app(\App\Http\Controllers\Tools\VraagbaakController::class)->api($req);
+        $json = is_array($res) ? $res : $res->getData(true);
+        echo "  catalogus: " . count($json['bronnen'] ?? []) . " bronnen, manager=" . var_export($json['manager'] ?? null, true) . "\n";
+        $req = \Illuminate\Http\Request::create('/tools/vraagbaak/api?action=vraag', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['vraag' => 'hoeveel liter heeft rotterdam getankt deze maand']));
+        $req->setUserResolver(fn () => $u);
+        $res = app(\App\Http\Controllers\Tools\VraagbaakController::class)->api($req);
+        $json = is_array($res) ? $res : $res->getData(true);
+        echo "  vraag: status=" . ($json['status'] ?? '?') . " waarde=" . json_encode($json['resultaat']['waarde'] ?? $json['melding'] ?? null) . "\n";
+    } catch (\Throwable $e) {
+        echo "  FOUT: " . get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine() . "\n";
+    }
+}
