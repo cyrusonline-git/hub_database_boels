@@ -54,6 +54,10 @@ Route::middleware('auth')->group(function () {
     Route::view('/tools/verlichting', 'tools.verlichting')->name('tools.verlichting');
     Route::view('/tools/transport', 'tools.transport')->name('tools.transport');
     // Go-Assets aanvraagtool: pagina + JSON-backend (ingelogde gebruiker = aanvrager)
+    // Boels Vraagbaak — eigen AI: vragen over de data van alle apps (rekent read-only in de app-databases)
+    Route::view('/tools/vraagbaak', 'tools.vraagbaak')->name('tools.vraagbaak');
+    Route::match(['get', 'post'], '/tools/vraagbaak/api', [\App\Http\Controllers\Tools\VraagbaakController::class, 'api'])->name('tools.vraagbaak.api');
+
     Route::view('/tools/go-assets', 'tools.go-assets')->name('tools.go-assets');
     Route::match(['get', 'post'], '/tools/go-assets/api', [\App\Http\Controllers\Tools\GoAssetsController::class, 'api'])
         ->name('tools.go-assets.api');
@@ -84,6 +88,7 @@ Route::middleware('auth')->group(function () {
 
     // Super Admin / system management
     Route::middleware('role:super-admin,administrator')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('vraagbaak', [\App\Http\Controllers\Admin\VraagbaakController::class, 'index'])->name('vraagbaak.index');
         // Redirect /admin/{resource}/{id}  -> /admin/{resource}/{id}/edit
         // (sommige links sturen naar /show terwijl we alleen edit hebben)
         foreach (['users','roles','permissions','applications','custom-fields','field-aliases'] as $r) {

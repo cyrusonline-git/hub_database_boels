@@ -151,7 +151,7 @@
         <div class="row g-4">
             @foreach($apps as $app)
                 <div class="col-6 col-md-4">
-                    <a href="{{ $app->url ?: '#' }}" target="_blank" class="text-decoration-none">
+                    <a href="{{ $app->url ?: '#' }}" @if(! str_starts_with((string) $app->url, '/')) target="_blank" @endif class="text-decoration-none">
                         <div class="card text-center p-4 app-tile h-100 position-relative">
                             @php($b = $badges[$app->id] ?? 0)
                             <span class="app-badge" data-badge-app="{{ $app->id }}"
