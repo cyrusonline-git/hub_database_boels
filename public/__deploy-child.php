@@ -14,6 +14,7 @@
 $apps = [
     'voorraad' => ['domein' => 'voorraad.sorai.nl', 'repo' => 'cyrusonline-git/voorraad-tool', 'naam' => 'Voorraad tool'],
     'spoedverhuur' => ['domein' => 'spoedverhuur.sorai.nl', 'repo' => 'cyrusonline-git/spoedverhuur', 'naam' => 'Spoedverhuur'],
+    'planner' => ['domein' => 'planning.sorai.nl', 'repo' => 'cyrusonline-git/planning', 'naam' => 'Transportplanner'],
 ];
 
 $coreEnv = null;
@@ -138,15 +139,16 @@ if (! file_exists($envPad)) {
 $dbPad = $larDir . '/database/database.sqlite';
 if (! file_exists($dbPad)) { touch($dbPad); echo "      → lege SQLite-database aangemaakt\n"; }
 
-// 4b. Subdomein aanmelden bij CORE als stateful SSO-domein (SANCTUM_STATEFUL_DOMAINS)
-$coreEnv = (string) @file_get_contents($envFile);
-if (preg_match('/^SANCTUM_STATEFUL_DOMAINS=(.*)$/m', $coreEnv, $sm)) {
+// 4b. Subdomein aanmelden bij CORE als stateful SSO-domein (SANCTUM_STATEFUL_DOMAINS).
+//     $coreEnv is het PAD naar de CORE-.env (realpath, hierboven bepaald).
+$coreEnvInhoudNu = (string) @file_get_contents($coreEnv);
+if (preg_match('/^SANCTUM_STATEFUL_DOMAINS=(.*)$/m', $coreEnvInhoudNu, $sm)) {
     $lijst = array_values(array_filter(array_map('trim', explode(',', $sm[1]))));
     if (! in_array($app['domein'], $lijst, true)) {
         $lijst[] = $app['domein'];
-        $coreEnv = preg_replace('/^SANCTUM_STATEFUL_DOMAINS=.*$/m', 'SANCTUM_STATEFUL_DOMAINS=' . implode(',', $lijst), $coreEnv);
-        file_put_contents($envFile, $coreEnv);
-        @unlink(dirname($envFile) . '/bootstrap/cache/config.php');
+        $coreEnvInhoudNu = preg_replace('/^SANCTUM_STATEFUL_DOMAINS=.*$/m', 'SANCTUM_STATEFUL_DOMAINS=' . implode(',', $lijst), $coreEnvInhoudNu);
+        file_put_contents($coreEnv, $coreEnvInhoudNu);
+        @unlink(dirname($coreEnv) . '/bootstrap/cache/config.php');
         echo "      → {$app['domein']} toegevoegd aan SANCTUM_STATEFUL_DOMAINS van CORE\n";
     } else {
         echo "      → {$app['domein']} stond al in SANCTUM_STATEFUL_DOMAINS\n";
