@@ -40,6 +40,28 @@ Route::get('/internal/subgroups', function (Request $request) {
         ->get(['subgroup_number', 'subgroup_name', 'merk', 'type']);
 });
 
+// Transporttarief voor de transportplanner (planning.sorai.nl) op dezelfde server.
+// Zelfde IP-guard. Geeft kosten (inkoop) + verkoop (klant-tarief) voor een postcode +
+// wagentype + periode, uit de centrale transport_settings (zie TransportTarief-service).
+Route::get('/internal/transport-tarief', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+    return \App\Services\TransportTarief::bereken(
+        $request->input('postcode', ''),
+        (int) $request->input('middel', 0),
+        (int) $request->input('periode', 0),
+        $request->input('jaar') ?: null,
+        $request->input('maand') ?: null
+    );
+});
+
+// De 16 wagentypes + periodes, zodat de planner ze kan tonen (voertuig-koppeling, aanvraag).
+Route::get('/internal/transport-middelen', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+    return \App\Services\TransportTarief::middelen();
+});
+
 // Notificatie-tellers voor de dashboard-tegels. Child-apps melden hier
 // (server-to-server, met hun eigen sync_key uit CORE Admin > Applicaties)
 // het absolute aantal openstaande items per medewerker. De app bepaalt
