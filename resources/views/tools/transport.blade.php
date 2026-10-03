@@ -383,6 +383,7 @@ function viewCalc(){
         rung('Marge <b>+'+pct(S.marge)+'</b>', money(res.margeBedrag)) +
       '</div>' +
       '<div class="headline"><div><div class="k">Verkoopprijs excl. btw</div></div><div class="v">'+money(res.verkoop)+'</div></div>' +
+      '<a class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none" target="_blank" href="'+aanvraagUrl(res, pcNum)+'">→ Transport aanvragen in de planner</a>' +
       '<div class="footnotes">' + S.notities.map(function(n){ return '<span>'+esc(n)+'</span>'; }).join('') + '</div>';
   }
 
@@ -399,6 +400,20 @@ function viewCalc(){
 }
 function rung(lbl, amt, cls){
   return '<div class="rung'+(cls?' '+cls:'')+'"><div class="lbl">'+lbl+'</div><div class="amt">'+amt+'</div></div>';
+}
+/* Link naar de transportplanner-aanvraag, met postcode + wagentype + tarieven voorgevuld. */
+function aanvraagUrl(res, postcode){
+  var base = 'https://planning.sorai.nl/aanvraag.php';
+  var q = [
+    'postcode=' + encodeURIComponent(postcode),
+    'middel=' + encodeURIComponent(ui.middelId),
+    'middel_naam=' + encodeURIComponent(middelById(ui.middelId).naam),
+    'periode=' + encodeURIComponent(ui.periode),
+    'kosten=' + encodeURIComponent(res.inkoop.toFixed(2)),
+    'verkoop=' + encodeURIComponent(res.verkoop.toFixed(2)),
+    'bron=calculator'
+  ];
+  return base + '?' + q.join('&');
 }
 function tariefOntbreekt(jaar, middelId){
   var rows = S.jaren[jaar].rows;
