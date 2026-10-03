@@ -52,7 +52,9 @@ Route::middleware('auth')->group(function () {
     Route::view('/tools/generator', 'tools.generator')->name('tools.generator');
     Route::view('/tools/kabel', 'tools.kabel')->name('tools.kabel');
     Route::view('/tools/verlichting', 'tools.verlichting')->name('tools.verlichting');
-    Route::view('/tools/transport', 'tools.transport')->name('tools.transport');
+    Route::get('/tools/transport', [\App\Http\Controllers\Tools\TransportController::class, 'page'])->name('tools.transport');
+    Route::get('/tools/transport/data', [\App\Http\Controllers\Tools\TransportController::class, 'show'])->name('tools.transport.data');
+    Route::post('/tools/transport/data', [\App\Http\Controllers\Tools\TransportController::class, 'update'])->name('tools.transport.save');
     // Go-Assets aanvraagtool: pagina + JSON-backend (ingelogde gebruiker = aanvrager)
     // Boels Vraagbaak — eigen AI: vragen over de data van alle apps (rekent read-only in de app-databases)
     Route::view('/tools/vraagbaak', 'tools.vraagbaak')->name('tools.vraagbaak');
