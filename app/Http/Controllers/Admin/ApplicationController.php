@@ -293,7 +293,8 @@ class ApplicationController extends Controller
             'name' => ['required','string','max:150'],
             'slug' => ['nullable','string','max:100', 'unique:applications,slug'.($app ? ','.$app->id : '')],
             'description' => ['nullable','string'],
-            'url' => ['nullable','url','max:255'],
+            // Laat zowel volledige URLs (https://…) als interne paden (/tools/vraagbaak) toe.
+            'url' => ['nullable','string','max:255','regex:#^(https?://\S+|/\S*)$#'],
             'sync_key' => ['nullable','string','max:64'],
             'icon' => ['nullable','string','max:100'],
             'color' => ['nullable','string','max:20'],
@@ -302,6 +303,8 @@ class ApplicationController extends Controller
             'restricted_to_areas' => ['nullable','string'],
             'restricted_to_depots' => ['nullable','string'],
             'restricted_to_countries' => ['nullable','string'],
+        ], [
+            'url.regex' => 'Vul een volledige link in (https://…) of een interne link die met / begint, bijv. /tools/vraagbaak.',
         ]);
     }
 
