@@ -144,10 +144,17 @@
     </div>
 </div>
 
+@php
+    // Komma-rijke expressies horen NIET in {{ }} (Blade breekt dan met "unexpected ;").
+    // Daarom hier berekenen en als simpele variabele doorgeven.
+    $__chatEmail = strtolower((string) (auth()->user()->email ?? ''));
+    $__chatOntvangers = array_map('strtolower', (array) config('boels.chat_popup.ontvangers', []));
+    $__popupAan = ($__chatEmail !== '' && in_array($__chatEmail, $__chatOntvangers, true)) ? 'true' : 'false';
+@endphp
 <script>
 (function () {
     var csrf = document.querySelector('meta[name="csrf-token"]').content;
-    var POPUP_AAN = {{ in_array(strtolower((string) auth()->user()->email), array_map('strtolower', config('boels.chat_popup.ontvangers', [])), true) ? 'true' : 'false' }};
+    var POPUP_AAN = {{ $__popupAan }};
     var fab = document.getElementById('chatFab');
     var badge = document.getElementById('chatBadge');
     var panel = document.getElementById('chatPanel');
