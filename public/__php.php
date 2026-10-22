@@ -29,3 +29,8 @@ foreach (['Build Date', 'Build System', 'Loaded Configuration File'] as $k) {
 foreach (['/opt/alt/php84/usr/bin/lsphp', '/opt/alt/php84/usr/bin/php', PHP_BINARY] as $bin) {
     if (@file_exists($bin)) { echo str_pad('Binary ' . basename($bin), 22) . ": " . date('Y-m-d H:i:s', filemtime($bin)) . " (geïnstalleerd) $bin\n"; break; }
 }
+echo "\nAlle PHP-versies op deze server (binary-datum = bouwdatum van de CloudLinux-package):\n";
+foreach (glob('/opt/alt/php*/usr/bin/lsphp') ?: [] as $b) {
+    preg_match('#/php(\d)(\d+)/#', $b, $m);
+    echo "  PHP {$m[1]}.{$m[2]}" . str_repeat(' ', 4 - strlen($m[2])) . ": " . date('Y-m-d H:i', filemtime($b)) . "\n";
+}
