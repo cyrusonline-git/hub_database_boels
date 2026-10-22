@@ -29,9 +29,3 @@ foreach (['Build Date', 'Build System', 'Loaded Configuration File'] as $k) {
 foreach (['/opt/alt/php84/usr/bin/lsphp', '/opt/alt/php84/usr/bin/php', PHP_BINARY] as $bin) {
     if (@file_exists($bin)) { echo str_pad('Binary ' . basename($bin), 22) . ": " . date('Y-m-d H:i:s', filemtime($bin)) . " (geïnstalleerd) $bin\n"; break; }
 }
-if (function_exists('exec') && ! in_array('exec', array_map('trim', explode(',', (string) ini_get('disable_functions'))), true)) {
-    @exec('rpm -q --changelog alt-php84 2>&1 | grep -m3 -E "CVE-2026-(109618|109619)|^\* "', $out, $rc);
-    echo "rpm-changelog         : " . ($out ? implode(' | ', $out) : "geen uitvoer (rc=$rc)") . "\n";
-} else {
-    echo "rpm-changelog         : exec niet beschikbaar\n";
-}
