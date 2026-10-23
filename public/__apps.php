@@ -47,6 +47,11 @@ $verwacht = [
     'damen'         => 'Damen klantportaal',
     'rmw'           => 'Rotterdam Marine Works klantportaal',
     'bp'            => 'BP klantportaal',
+    'shell'         => 'Shell klantportaal',
+    'voorraad'      => 'Voorraad tool (Laravel)',
+    'spoedverhuur'  => 'Spoedverhuur (Laravel)',
+    'planner'       => 'Transportplanner (planning.sorai.nl)',
+    'servicedesk'   => 'Servicedesk / Parts System',
 ];
 
 echo "Boels CORE — applicaties en slugs (" . date('Y-m-d H:i') . ")\n" . str_repeat('=', 70) . "\n\n";
