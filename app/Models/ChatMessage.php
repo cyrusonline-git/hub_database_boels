@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChatMessage extends Model
 {
-    protected $fillable = ['sender_id', 'recipient_id', 'body', 'image_path', 'read_at'];
+    protected $fillable = ['sender_id', 'recipient_id', 'body', 'image_path', 'reply_to_id', 'read_at'];
 
     protected $casts = ['read_at' => 'datetime'];
 
@@ -19,5 +19,11 @@ class ChatMessage extends Model
     public function recipient(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recipient_id');
+    }
+
+    /** Het bericht waarop dit bericht een reactie is (WhatsApp-stijl citaat). */
+    public function replyTo(): BelongsTo
+    {
+        return $this->belongsTo(ChatMessage::class, 'reply_to_id');
     }
 }

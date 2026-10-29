@@ -122,6 +122,7 @@ class ChatController extends Controller
         $messages = ChatMessage::where(fn ($q) => $q
                 ->where(fn ($a) => $a->where('sender_id', $me)->where('recipient_id', $user->id))
                 ->orWhere(fn ($b) => $b->where('sender_id', $user->id)->where('recipient_id', $me)))
+            ->with('replyTo')
             ->orderByDesc('id')->limit(60)->get()->reverse()->values()
             ->map(fn ($m) => [
                 'id' => $m->id,
@@ -130,6 +131,14 @@ class ChatController extends Controller
                 'image' => $m->image_path ? route('chat.image', $m->id) : null,
                 'time' => $m->created_at->format('d-m H:i'),
                 'read' => $m->read_at !== null,
+                // Geciteerd bericht (reactie-op), compact: naam, fragment, foto-indicator
+                'reply' => $m->replyTo ? [
+                    'id' => $m->replyTo->id,
+                    'from' => $m->replyTo->sender_id === $me ? 'Jij' : $user->name,
+                    'mine' => $m->replyTo->sender_id === $me,
+                    'body' => mb_substr(trim((string) $m->replyTo->body), 0, 160),
+                    'has_image' => $m->replyTo->image_path !== null,
+                ] : null,
             ]);
 
         return ['with' => ['id' => $user->id, 'name' => $user->name], 'messages' => $messages];
@@ -141,7 +150,20 @@ class ChatController extends Controller
             'recipient_id' => ['required', 'integer', 'exists:users,id', 'not_in:'.$request->user()->id],
             'body' => ['nullable', 'required_without:image', 'string', 'max:2000'],
             'image' => ['nullable', 'required_without:body', 'image', 'mimes:jpeg,png,gif,webp', 'max:8192'],
+            'reply_to_id' => ['nullable', 'integer'],
         ]);
+
+        // Reactie-op: alleen op een bericht uit dít gesprek (beide richtingen), anders stil negeren
+        $replyToId = null;
+        if (! empty($data['reply_to_id'])) {
+            $me = $request->user()->id;
+            $ander = (int) $data['recipient_id'];
+            $replyToId = ChatMessage::where('id', (int) $data['reply_to_id'])
+                ->where(fn ($q) => $q
+                    ->where(fn ($a) => $a->where('sender_id', $me)->where('recipient_id', $ander))
+                    ->orWhere(fn ($b) => $b->where('sender_id', $ander)->where('recipient_id', $me)))
+                ->value('id');
+        }
 
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -154,6 +176,7 @@ class ChatController extends Controller
             'recipient_id' => $data['recipient_id'],
             'body' => trim($data['body'] ?? ''),
             'image_path' => $imagePath,
+            'reply_to_id' => $replyToId,
         ]);
 
         return ['ok' => true, 'id' => $message->id];

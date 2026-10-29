@@ -63,6 +63,31 @@
         align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.3);
     }
     .chat-msg.mine:hover .msg-del, .chat-msg.mine.show-del .msg-del { display: inline-flex; }
+    /* Reageren (WhatsApp-stijl) */
+    .chat-msg .msg-reply {
+        position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
+        border-radius: 50%; border: none; background: #6c757d; color: #fff;
+        font-size: 11px; line-height: 1; display: none;
+        align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+    }
+    .chat-msg:hover .msg-reply, .chat-msg.show-del .msg-reply { display: inline-flex; }
+    .chat-quote {
+        display: block; border-left: 3px solid #FF6600; border-radius: 6px;
+        background: rgba(0,0,0,.06); padding: 5px 8px; margin-bottom: 6px;
+        font-size: 12px; line-height: 1.3; cursor: pointer; white-space: pre-wrap;
+        max-height: 64px; overflow: hidden;
+    }
+    .chat-msg.mine .chat-quote { background: rgba(255,255,255,.22); border-left-color: #fff; }
+    .chat-quote .q-from { display: block; font-weight: 700; font-size: 11px; margin-bottom: 1px; }
+    .chat-msg.theirs .chat-quote .q-from { color: #c65200; }
+    .chat-msg.flash { outline: 3px solid rgba(255,102,0,.55); outline-offset: 2px; transition: outline .3s; }
+    #chatReplyBar {
+        display: none; align-items: center; gap: 8px; padding: 6px 12px;
+        background: #fff8f2; border-top: 1px solid #ffe3cf; border-left: 4px solid #FF6600; font-size: 12px; flex: 0 0 auto;
+    }
+    #chatReplyBar .q { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #chatReplyBar .q b { display: block; color: #c65200; font-size: 11px; }
+    #chatReplyBar .rm { border: none; background: none; color: #dc3545; font-size: 15px; flex: 0 0 auto; }
     .chat-input { flex: 0 0 auto; display: flex; gap: 6px; padding: 10px; background: #fff; border-top: 1px solid #eee; align-items: flex-end; }
     .chat-input textarea {
         flex: 1 1 auto; resize: none; border: 1px solid #ddd; border-radius: 10px;
@@ -130,6 +155,11 @@
     </div>
     <div class="chat-body" id="chatBody"></div>
     <div id="chatEmojiPanel"></div>
+    <div id="chatReplyBar">
+        <i class="bi bi-reply-fill" style="color:#FF6600;"></i>
+        <div class="q"><b id="chatReplyFrom"></b><span id="chatReplyText"></span></div>
+        <button type="button" class="rm" id="chatReplyCancel" title="Niet reageren"><i class="bi bi-x-circle-fill"></i></button>
+    </div>
     <div id="chatAttachPreview">
         <img id="chatAttachThumb" alt="">
         <span>Foto klaar om te versturen</span>
@@ -314,6 +344,7 @@
     }
 
     function openThread(id, name) {
+        if (!currentContact || currentContact.id !== id) clearReply();
         currentContact = {id: id, name: name};
         title.textContent = name;
         back.style.display = '';
@@ -331,8 +362,11 @@
         if (!currentContact) return;
         get('/chat/thread/' + currentContact.id).then(d => {
             var html = '<div class="chat-msgs">' + d.messages.map(m =>
-                '<div class="chat-msg ' + (m.mine ? 'mine' : 'theirs') + '">'
+                '<div class="chat-msg ' + (m.mine ? 'mine' : 'theirs') + '" id="chatmsg-' + m.id + '" data-id="' + m.id + '" data-body="' + esc(m.body) + '" data-img="' + (m.image ? '1' : '') + '" data-mine="' + (m.mine ? '1' : '') + '">'
                 + (m.mine ? '<button type="button" class="msg-del" data-id="' + m.id + '" title="Bericht verwijderen"><i class="bi bi-trash"></i></button>' : '')
+                + '<button type="button" class="msg-reply" data-id="' + m.id + '" title="Reageren op dit bericht"><i class="bi bi-reply-fill"></i></button>'
+                + (m.reply ? '<span class="chat-quote" data-jump="' + m.reply.id + '"><span class="q-from">' + esc(m.reply.from) + '</span>'
+                    + (m.reply.body ? esc(m.reply.body) : (m.reply.has_image ? '📷 Foto' : '<i>(verwijderd bericht)</i>')) + '</span>' : '')
                 + (m.image ? '<img class="chat-photo" src="' + esc(m.image) + '" alt="Foto" loading="lazy">' : '')
                 + esc(m.body)
                 + '<span class="tm">' + esc(m.time) + (m.mine && m.read ? ' ✓✓' : '') + '</span></div>'
@@ -346,10 +380,36 @@
                 body.querySelectorAll('.chat-photo').forEach(img => {
                     img.addEventListener('click', () => window.open(img.src, '_blank'));
                 });
+                // Reageren op een bericht
+                body.querySelectorAll('.msg-reply').forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var el = this.closest('.chat-msg');
+                        setReply({id: parseInt(this.dataset.id), body: el.dataset.body, img: el.dataset.img === '1', mine: el.dataset.mine === '1'});
+                    });
+                });
+                // Citaat aanklikken = naar het oorspronkelijke bericht springen
+                body.querySelectorAll('.chat-quote').forEach(q => {
+                    q.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var doel = document.getElementById('chatmsg-' + this.dataset.jump);
+                        if (!doel) return;
+                        doel.scrollIntoView({behavior: 'smooth', block: 'center'});
+                        doel.classList.add('flash');
+                        setTimeout(() => doel.classList.remove('flash'), 1600);
+                    });
+                });
+                // Op telefoons: tik op een bericht van de ander om het reageer-knopje te tonen
+                body.querySelectorAll('.chat-msg.theirs').forEach(el => {
+                    el.addEventListener('click', function (e) {
+                        if (e.target.closest('.msg-reply') || e.target.closest('.chat-quote') || e.target.classList.contains('chat-photo')) return;
+                        this.classList.toggle('show-del');
+                    });
+                });
                 // Op telefoons: tik op je eigen bericht om het verwijder-knopje te tonen
                 body.querySelectorAll('.chat-msg.mine').forEach(el => {
                     el.addEventListener('click', function (e) {
-                        if (e.target.closest('.msg-del') || e.target.classList.contains('chat-photo')) return;
+                        if (e.target.closest('.msg-del') || e.target.closest('.msg-reply') || e.target.closest('.chat-quote') || e.target.classList.contains('chat-photo')) return;
                         this.classList.toggle('show-del');
                     });
                 });
@@ -373,6 +433,20 @@
         clearTimeout(unreadSoonTimer);
         unreadSoonTimer = setTimeout(pollUnread, 400);
     }
+
+    // --- Reageren op een bericht (citaat boven je antwoord)
+    var replyTo = null; // {id, body, img, mine}
+    var replyBar = document.getElementById('chatReplyBar');
+    function setReply(r) {
+        replyTo = r;
+        document.getElementById('chatReplyFrom').textContent = r.mine ? 'Jij' : (currentContact ? currentContact.name : '');
+        document.getElementById('chatReplyText').textContent = r.body ? r.body.slice(0, 120) : (r.img ? '📷 Foto' : '');
+        replyBar.style.display = 'flex';
+        text.focus();
+    }
+    function clearReply() { replyTo = null; replyBar.style.display = 'none'; }
+    document.getElementById('chatReplyCancel').addEventListener('click', clearReply);
+    text.addEventListener('keydown', function (e) { if (e.key === 'Escape' && replyTo) clearReply(); });
 
     // --- Foto meesturen
     var attachFile = null;
@@ -431,8 +505,10 @@
         fd.append('recipient_id', currentContact.id);
         if (msg) fd.append('body', msg);
         if (attachFile) fd.append('image', attachFile);
+        if (replyTo) fd.append('reply_to_id', replyTo.id);
         text.value = '';
         clearAttach();
+        clearReply();
 
         fetch('{{ route('chat.send') }}', {
             method: 'POST',
