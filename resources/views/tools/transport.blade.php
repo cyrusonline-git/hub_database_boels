@@ -216,7 +216,7 @@ var ui = {
   kolomFilter: 'alle',
   zoek: '',
   pagina: 0,
-  maand: ''         // '' = actuele DOT (instellingen), anders 'YYYY-MM' uit de DOT-maandtabel
+  maand: ''         // 'YYYY-MM' uit de DOT-maandtabel; '' = actuele DOT (instellingen). Wordt bij start op de huidige maand gezet.
 };
 
 /* ---------------- beheerslot ---------------- */
@@ -270,6 +270,15 @@ function middelById(id){ for(var i=0;i<S.middelen.length;i++){ if(S.middelen[i].
 function markDirty(){ dirty = true; statusMsg=''; statusTone=''; syncSave(); }
 
 function kmCfg(){ return S.kmHeffing || {vanafMiddelId: 9, perGebied: {}, uitzonderingen: []}; }
+/* Standaard DOT-maand = de huidige maand, mits die (ingevuld) in de DOT-maandtabel staat; anders de actuele DOT. */
+function standaardMaand(){
+  var nu = new Date(), hm = nu.getFullYear() + '-' + ('0' + (nu.getMonth() + 1)).slice(-2);
+  for(var i=0;i<(S.dotMaanden||[]).length;i++){
+    var m = S.dotMaanden[i];
+    if(m.maand === hm && (m.koerier != null || m.vracht != null)) return hm;
+  }
+  return '';
+}
 function bandMeta(i){ return (S.banden && S.banden[i]) || null; }
 var MAANDEN = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
 function maandLabel(m){ var d = String(m||'').split('-'); return d.length===2 && MAANDEN[parseInt(d[1],10)-1] ? MAANDEN[parseInt(d[1],10)-1]+' '+d[0] : String(m||''); }
@@ -471,8 +480,10 @@ function viewCalc(){
         '<input class="control pc-input mono" id="f-pc" inputmode="numeric" maxlength="4" value="'+esc(ui.postcode)+'" placeholder="0000">' +
         '<span class="hint">Vier cijfers, 1000 t/m 9999.</span></div>' +
       '<div class="field"><label for="f-periode">Uitvoeringsperiode</label><select class="control" id="f-periode">'+perOpt+'</select></div>' +
-      '<div class="field"><label for="f-maand">Dieseltoeslag (maand van uitvoering)</label><select class="control" id="f-maand">'+maandOpt+'</select>' +
-        '<span class="hint">Standaard de actuele DOT uit de instellingen; kies een maand om met de DOT van die maand te rekenen.</span></div>' +
+      (magBeheren()
+        ? '<div class="field"><label for="f-maand">Dieseltoeslag (maand van uitvoering)</label><select class="control" id="f-maand">'+maandOpt+'</select>' +
+          '<span class="hint">Staat standaard op de huidige maand. Alleen beheerders (planner/admin) kunnen een andere maand kiezen; medewerkers zien deze keuze niet.</span></div>'
+        : '') +
     '</div></section>' +
     '<section class="panel"><div class="panel-head"><h2>Prijsopbouw</h2><span class="eyebrow">inkoop → verkoop</span></div><div class="panel-body">'+right+'</div></section>' +
   '</div>' + onder;
@@ -725,7 +736,7 @@ function bind(){
     var fper = document.getElementById('f-periode');
     fper.addEventListener('change', function(){ ui.periode = parseInt(fper.value,10); render(); });
     var fmd = document.getElementById('f-maand');
-    fmd.addEventListener('change', function(){ ui.maand = fmd.value; render(); });
+    if(fmd) fmd.addEventListener('change', function(){ ui.maand = fmd.value; render(); });
   }
 
   if(ui.tab === 'tarieven'){
@@ -940,6 +951,7 @@ window.addEventListener('beforeunload', function(e){ if(dirty){ e.preventDefault
 /* Tarieven komen server-side uit #app-state (ingespoten door CORE). Opslaan gaat naar de
    server (alleen planner/admin/superadmin). Geen localStorage/artifact meer. */
 canWrite = !!(window.TC_SERVER && window.TC_SERVER.canEdit);
+ui.maand = standaardMaand();
 render();
 })();
 </script>

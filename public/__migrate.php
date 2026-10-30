@@ -50,6 +50,20 @@ try {
     echo $buf->fetch();
     echo "exit code: $exit\n\n";
 
+    // Status: welke migratiebestanden staan op de server en welke zijn (nog niet) gedraaid.
+    // Handig als "Nothing to migrate" onverwacht is: dan zie je direct of het bestand ontbreekt.
+    echo "    migrate:status (laatste 8 + alles wat pending is)\n";
+    $kernel->call('migrate:status', [], $buf);
+    $status = array_values(array_filter(array_map('rtrim', explode("\n", $buf->fetch())), fn ($r) => trim($r) !== ''));
+    $laatste = array_slice($status, -8);
+    foreach ($status as $r) {
+        if (stripos($r, 'Pending') !== false && ! in_array($r, $laatste, true)) echo "    $r\n";
+    }
+    foreach ($laatste as $r) echo "    $r\n";
+    $mapje = $root . '/database/migrations';
+    $bestanden = glob($mapje . '/*.php') ?: [];
+    echo "    bestanden in database/migrations: " . count($bestanden) . ", nieuwste: " . ($bestanden ? basename(end($bestanden)) : '-') . "\n\n";
+
     echo "[2/3] cache clearen\n";
     $kernel->call('config:clear', [], $buf);   echo $buf->fetch();
     $kernel->call('view:clear', [], $buf);     echo $buf->fetch();
