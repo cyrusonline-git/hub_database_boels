@@ -215,7 +215,8 @@ var ui = {
   weergave: 'inkoop',
   kolomFilter: 'alle',
   zoek: '',
-  pagina: 0
+  pagina: 0,
+  maand: ''         // '' = actuele DOT (instellingen), anders 'YYYY-MM' uit de DOT-maandtabel
 };
 
 /* ---------------- beheerslot ---------------- */
@@ -268,18 +269,62 @@ function actiefJaar(){ return S.jaren[S.actiefJaar] ? S.actiefJaar : jaren()[jar
 function middelById(id){ for(var i=0;i<S.middelen.length;i++){ if(S.middelen[i].id===id) return S.middelen[i]; } return null; }
 function markDirty(){ dirty = true; statusMsg=''; statusTone=''; syncSave(); }
 
-/* Zoekt de rij zoals Excel dat doet: benaderende match op PC_VAN (laatste band <= postcode). */
-function vindBand(jaar, postcode){
+function kmCfg(){ return S.kmHeffing || {vanafMiddelId: 9, perGebied: {}, uitzonderingen: []}; }
+function bandMeta(i){ return (S.banden && S.banden[i]) || null; }
+var MAANDEN = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+function maandLabel(m){ var d = String(m||'').split('-'); return d.length===2 && MAANDEN[parseInt(d[1],10)-1] ? MAANDEN[parseInt(d[1],10)-1]+' '+d[0] : String(m||''); }
+function uren(u){ if(u==null || isNaN(u)) return ''; return u < 1 ? Math.round(u*60)+' min' : nl(u, (u % 1) ? 2 : 0).replace(',00','').replace(/,50$/,',5')+' uur'; }
+
+/* Zoekt de rij zoals Excel dat doet: benaderende match op PC_VAN (laatste band <= postcode). Geeft de index. */
+function vindBandIndex(jaar, postcode){
   var rows = S.jaren[jaar].rows, hit = null;
-  for(var i=0;i<rows.length;i++){ if(rows[i][0] <= postcode) hit = rows[i]; else break; }
+  for(var i=0;i<rows.length;i++){ if(rows[i][0] <= postcode) hit = i; else break; }
   return hit;
 }
+function vindBand(jaar, postcode){ var i = vindBandIndex(jaar, postcode); return i==null ? null : S.jaren[jaar].rows[i]; }
 
-function bereken(jaar, middelId, postcode, periodeIdx){
+/* Dieseltoeslag (tab Brandstoftoeslag): koerier/busje = id t/m dotDrempelId, anders vrachtwagen.
+   Optioneel uit de maand-tabel; staat de maand niet (volledig) ingevuld, dan de actuele DOT. */
+function dotVoor(middelId, maand){
+  var isKoerier = middelId <= S.dotDrempelId;
+  var dot = isKoerier ? S.dotKoerier : S.dotVracht, bron = 'actueel';
+  if(maand){
+    for(var i=0;i<S.dotMaanden.length;i++){
+      if(S.dotMaanden[i].maand === maand){
+        var v = isKoerier ? S.dotMaanden[i].koerier : S.dotMaanden[i].vracht;
+        if(v != null && !isNaN(v)){ dot = v; bron = maand; }
+        break;
+      }
+    }
+  }
+  return {dot: dot, isKoerier: isKoerier, bron: bron};
+}
+
+/* KM-heffing (tab KM-heffing): alleen vanaf middel-id kmHeffing.vanafMiddelId. Bedrag heen en weer per
+   2-cijferig postcodegebied van de band; het havengebied (postcodegebied 31) heeft een vast bedrag per band. */
+function kmHeffingVoor(middelId, bandIndex){
+  var kh = kmCfg(), meta = bandMeta(bandIndex);
+  var out = {bedrag: 0, geldt: false, gebied: meta ? meta.gebied : null, plaats: meta ? meta.plaats : null, bron: null};
+  if(!meta || middelId < (kh.vanafMiddelId || 9)) return out;
+  out.geldt = true;
+  var u = kh.uitzonderingen || [];
+  for(var i=0;i<u.length;i++){
+    if(u[i].van === meta.van && u[i].tot === meta.tot){ out.bedrag = +u[i].bedrag || 0; out.bron = 'uitzondering'; return out; }
+  }
+  var g = (kh.perGebied || {})[String(meta.gebied)];
+  if(g && g.retour != null && !isNaN(g.retour)){ out.bedrag = +g.retour; out.bron = 'gebied'; }
+  return out;
+}
+
+/* Excel tab "Calculator Europoort":
+   excl. DOT = basis × (1+toeslag); incl. DOT = × (1+DOT); ALL-IN (inkoop) = incl. DOT + KM-heffing;
+   verkoop = inkoop × (1+marge) [Boels-marge, niet in Excel]; uurtarief = middel.uurtarief × (1+toeslag) [× (1+DOT)]. */
+function bereken(jaar, middelId, postcode, periodeIdx, maand){
   var out = {ok:false};
-  var band = vindBand(jaar, postcode);
-  if(!band){ out.fout = 'Postcode ' + postcode + ' ligt onder de laagste postcodeband (' + S.jaren[jaar].rows[0][0] + ').'; return out; }
-  out.band = band;
+  var bi = vindBandIndex(jaar, postcode);
+  if(bi == null){ out.fout = 'Postcode ' + postcode + ' ligt onder de laagste postcodeband (' + S.jaren[jaar].rows[0][0] + ').'; return out; }
+  var band = S.jaren[jaar].rows[bi];
+  out.band = band; out.bandIndex = bi; out.meta = bandMeta(bi);
   out.buitenBand = postcode > band[1];
   var basis = band[1 + middelId];
   if(basis == null || basis === '' || isNaN(basis)){
@@ -287,15 +332,21 @@ function bereken(jaar, middelId, postcode, periodeIdx){
     return out;
   }
   var per = S.periodes[periodeIdx] || S.periodes[0];
-  var dotIsKoerier = middelId <= S.dotDrempelId;
-  var dot = dotIsKoerier ? S.dotKoerier : S.dotVracht;
-  var naToeslag = basis * (1 + per.toeslag);
-  var inkoop = naToeslag * (1 + dot);
+  var d = dotVoor(middelId, maand);
+  var exclDot = basis * (1 + per.toeslag);
+  var inclDot = exclDot * (1 + d.dot);
+  var km = kmHeffingVoor(middelId, bi);
+  var inkoop = inclDot + km.bedrag;
   var verkoop = inkoop * (1 + S.marge);
+  var m = middelById(middelId);
+  var uur = (m && m.uurtarief != null && !isNaN(m.uurtarief)) ? m.uurtarief * (1 + per.toeslag) : null;
   out.ok = true;
-  out.basis = basis; out.periode = per; out.toeslagBedrag = naToeslag - basis;
-  out.dot = dot; out.dotSoort = dotIsKoerier ? 'koerier' : 'vrachtwagen'; out.dotBedrag = inkoop - naToeslag;
+  out.basis = basis; out.periode = per; out.toeslagBedrag = exclDot - basis;
+  out.dot = d.dot; out.dotSoort = d.isKoerier ? 'koerier' : 'vrachtwagen'; out.dotBron = d.bron; out.dotBedrag = inclDot - exclDot;
+  out.exclDot = exclDot; out.inclDot = inclDot; out.km = km;
   out.inkoop = inkoop; out.margeBedrag = verkoop - inkoop; out.verkoop = verkoop;
+  out.uurtarief = uur; out.uurtariefInclDot = uur==null ? null : uur * (1 + d.dot); out.wachtKwartier = uur==null ? null : uur / 4;
+  out.laadLosUur = m ? m.laadLosUur : null; out.aanAfrijUur = m ? m.aanAfrijUur : null;
   return out;
 }
 
@@ -359,32 +410,58 @@ function viewCalc(){
   for(var p=0;p<S.periodes.length;p++){
     perOpt += '<option value="'+p+'"'+(p===ui.periode?' selected':'')+'>'+esc(S.periodes[p].naam)+(S.periodes[p].toeslag?'  (+'+pct(S.periodes[p].toeslag)+')':'')+'</option>';
   }
+  var maandOpt = '<option value=""'+(ui.maand===''?' selected':'')+'>Actuele DOT — koerier '+pct(S.dotKoerier)+' · vrachtwagen '+pct(S.dotVracht)+'</option>';
+  for(var d=0;d<S.dotMaanden.length;d++){
+    var dm = S.dotMaanden[d];
+    if(dm.koerier == null && dm.vracht == null) continue;
+    maandOpt += '<option value="'+esc(dm.maand)+'"'+(dm.maand===ui.maand?' selected':'')+'>'+maandLabel(dm.maand)+' — koerier '+(dm.koerier==null?'?':pct(dm.koerier))+' · vrachtwagen '+(dm.vracht==null?'?':pct(dm.vracht))+'</option>';
+  }
   var pcNum = parseInt(ui.postcode,10);
-  var res = (ui.postcode.length===4 && !isNaN(pcNum)) ? bereken(jaar, ui.middelId, pcNum, ui.periode) : {ok:false, fout:null};
+  var res = (ui.postcode.length===4 && !isNaN(pcNum)) ? bereken(jaar, ui.middelId, pcNum, ui.periode, ui.maand) : {ok:false, fout:null};
 
-  var right = '';
+  var right = '', onder = '';
   if(!res.ok && !res.fout){
     right = '<div class="notice notice-info"><span class="ico">→</span><span>Vul een postcode van vier cijfers in om de prijs te berekenen.</span></div>';
   } else if(!res.ok){
     right = '<div class="notice notice-danger"><span class="ico">!</span><span>'+esc(res.fout)+'</span></div>' +
             '<p style="font-size:13.5px;color:var(--ink-2)">Vul het ontbrekende tarief aan op het tabblad <b>Tarieven</b>, of kies een ander transportmiddel.</p>';
   } else {
-    var b = res.band;
+    var b = res.band, meta = res.meta;
     var waarschuwing = res.buitenBand
       ? '<div class="notice notice-warn"><span class="ico">!</span><span>Postcode '+pcNum+' valt in een gat in de postcodetabel. Net als in Excel wordt het tarief van de laatste band daarvóór gebruikt ('+b[0]+'–'+b[1]+').</span></div>'
       : '';
+    var chip = '<span class="band-chip">postcodeband '+b[0]+'–'+b[1]+(meta&&meta.plaats?' · '+esc(meta.plaats):'')+(meta&&meta.km!=null?' · '+meta.km+' km':'')+' · tarieven '+esc(jaar)+'</span>';
+    var kmRung = res.km.geldt
+      ? rung('KM-heffing (vrachtwagenheffing) heen en weer<br><span class="band-chip">postcodegebied '+esc(res.km.gebied)+(res.km.bron==='uitzondering'?' · havengebied, vast bedrag per band':'')+(res.km.bron?'':' · geen bedrag bekend')+'</span>', money(res.km.bedrag))
+      : rung('KM-heffing — niet van toepassing op dit transportmiddel <span class="hint">(geldt vanaf id '+(kmCfg().vanafMiddelId||9)+')</span>', money(0));
     right =
       waarschuwing +
       '<div class="ladder">' +
-        rung('Basistarief <b>'+esc(middelById(ui.middelId).naam)+'</b><br><span class="band-chip">postcodeband '+b[0]+'–'+b[1]+' · tarieven '+esc(jaar)+'</span>', money(res.basis)) +
+        rung('Basistarief <b>'+esc(middelById(ui.middelId).naam)+'</b><br>'+chip, money(res.basis)) +
         rung('Uitvoeringstoeslag — '+esc(res.periode.naam)+' <b>'+(res.periode.toeslag?'+'+pct(res.periode.toeslag):'0%')+'</b>', money(res.toeslagBedrag)) +
-        rung('Dieseltoeslag DOT '+res.dotSoort+' <b>+'+pct(res.dot)+'</b>', money(res.dotBedrag)) +
-        rung('Inkoopprijs', money(res.inkoop), 'sum') +
+        rung('Dieseltoeslag DOT '+res.dotSoort+' <b>+'+pct(res.dot)+'</b>'+(res.dotBron!=='actueel'?' <span class="band-chip">'+maandLabel(res.dotBron)+'</span>':''), money(res.dotBedrag)) +
+        kmRung +
+        rung('Inkoopprijs all-in <span class="hint">(incl. DOT en KM-heffing)</span>', money(res.inkoop), 'sum') +
         rung('Marge <b>+'+pct(S.marge)+'</b>', money(res.margeBedrag)) +
       '</div>' +
       '<div class="headline"><div><div class="k">Verkoopprijs excl. btw</div></div><div class="v">'+money(res.verkoop)+'</div></div>' +
       '<a class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none" target="_blank" href="'+aanvraagUrl(res, pcNum)+'">→ Transport aanvragen in de planner</a>' +
       '<div class="footnotes">' + S.notities.map(function(n){ return '<span>'+esc(n)+'</span>'; }).join('') + '</div>';
+
+    var uurBlok = res.uurtarief == null
+      ? '<div class="notice notice-info" style="margin:0"><span class="ico">i</span><span>Voor dit transportmiddel staat geen uurtarief in de tarieventabel.</span></div>'
+      : '<div class="ladder">' +
+          rung('Uurtarief excl. DOT'+(res.periode.toeslag?' <span class="hint">(incl. toeslag '+pct(res.periode.toeslag)+')</span>':''), money(res.uurtarief)+' / uur') +
+          rung('Uurtarief incl. DOT '+res.dotSoort+' <b>+'+pct(res.dot)+'</b>', money(res.uurtariefInclDot)+' / uur') +
+          rung('Wachtkosten per kwartier <span class="hint">(excl. DOT)</span>', money(res.wachtKwartier)) +
+        '</div>';
+    onder = '<section class="panel" style="margin-top:22px"><div class="panel-head"><h2>Uurtarief en tijden</h2><span class="eyebrow">wachturen · Z-Air / Hacon</span></div><div class="panel-body">' +
+      uurBlok +
+      '<div class="footnotes">' +
+        (res.laadLosUur!=null ? '<span>Laad- en lostijd inclusief: <b>'+uren(res.laadLosUur)+'</b> per rit — duurt het langer, dan wachtkosten à uurtarief per kwartier.</span>' : '') +
+        (res.aanAfrijUur!=null ? '<span>Aan- en afrijtijd: '+uren(res.aanAfrijUur)+'.</span>' : '') +
+        '<span>Via Z-Air / Hacon: à uurtarief. Indicatie 1 uur per rit, indien langer dan reden vermelden.</span>' +
+      '</div></div></section>';
   }
 
   return '<div class="grid-calc">' +
@@ -394,9 +471,11 @@ function viewCalc(){
         '<input class="control pc-input mono" id="f-pc" inputmode="numeric" maxlength="4" value="'+esc(ui.postcode)+'" placeholder="0000">' +
         '<span class="hint">Vier cijfers, 1000 t/m 9999.</span></div>' +
       '<div class="field"><label for="f-periode">Uitvoeringsperiode</label><select class="control" id="f-periode">'+perOpt+'</select></div>' +
+      '<div class="field"><label for="f-maand">Dieseltoeslag (maand van uitvoering)</label><select class="control" id="f-maand">'+maandOpt+'</select>' +
+        '<span class="hint">Standaard de actuele DOT uit de instellingen; kies een maand om met de DOT van die maand te rekenen.</span></div>' +
     '</div></section>' +
     '<section class="panel"><div class="panel-head"><h2>Prijsopbouw</h2><span class="eyebrow">inkoop → verkoop</span></div><div class="panel-body">'+right+'</div></section>' +
-  '</div>';
+  '</div>' + onder;
 }
 function rung(lbl, amt, cls){
   return '<div class="rung'+(cls?' '+cls:'')+'"><div class="lbl">'+lbl+'</div><div class="amt">'+amt+'</div></div>';
@@ -457,7 +536,8 @@ function viewTarieven(){
   var tbody = '';
   for(var s=0;s<slice.length;s++){
     var r = slice[s].r, ri = slice[s].idx;
-    tbody += '<tr><td class="pc">'+r[0]+' – '+r[1]+'</td>';
+    var bm = bandMeta(ri);
+    tbody += '<tr><td class="pc">'+r[0]+' – '+r[1]+(bm&&bm.plaats?' <span style="color:var(--ink-3);font-family:inherit;font-size:12px">'+esc(bm.plaats)+'</span>':'')+'</td>';
     for(var c=0;c<kolommen.length;c++){
       var mid = kolommen[c].id;
       var v = r[1+mid];
@@ -473,7 +553,7 @@ function viewTarieven(){
   }
 
   var uitleg = isVerkoop
-    ? '<div class="notice notice-info"><span class="ico">i</span><span>Verkooptarieven zijn berekend, niet ingevoerd: inkooptarief × (1 + DOT vrachtwagen '+pct(S.dotVracht)+') × (1 + marge '+pct(S.marge)+'). Dit volgt de prijslijst uit Excel, die voor élk middel de vrachtwagen-DOT hanteert — de calculator gebruikt wel de juiste DOT per middel.</span></div>'
+    ? '<div class="notice notice-info"><span class="ico">i</span><span>Verkooptarieven zijn berekend, niet ingevoerd: inkooptarief × (1 + DOT vrachtwagen '+pct(S.dotVracht)+') × (1 + marge '+pct(S.marge)+'). Dit volgt de prijslijst uit Excel, die voor élk middel de vrachtwagen-DOT hanteert — de calculator gebruikt wel de juiste DOT per middel en telt daar de KM-heffing bij op (hier niet meegenomen).</span></div>'
     : '<div class="notice notice-info"><span class="ico">i</span><span>Dit zijn de kale inkooptarieven per postcodeband. Toeslagen, DOT en marge komen er in de calculator bovenop. Wijzig een bedrag en sla op; iedereen met de link ziet daarna hetzelfde tarief.</span></div>';
 
   return '<section class="panel">' +
@@ -518,10 +598,26 @@ function viewInstellingen(){
       '<input class="control" style="max-width:90px;text-align:right" data-per="'+i+'" data-veld="toeslag" value="'+nl(p.toeslag*100,1)+'"><span style="color:var(--ink-3)">%</span></div>';
   }).join('');
 
-  var midRijen = S.middelen.map(function(m,i){
+  var midRijen = '<div class="rowline" style="color:var(--ink-3);font-size:12px;margin-bottom:4px"><span style="width:26px"></span><span style="flex:1">Naam</span><span style="width:88px;text-align:right">Uurtarief €</span><span style="width:72px;text-align:right">La/lo uur</span></div>' +
+    S.middelen.map(function(m,i){
     return '<div class="rowline"><span class="mono" style="width:26px;color:var(--ink-3)">'+m.id+'</span>' +
-      '<input class="control" data-mid="'+i+'" value="'+esc(m.naam)+'"></div>';
+      '<input class="control" data-mid="'+i+'" data-veld="naam" value="'+esc(m.naam)+'">' +
+      '<input class="control mono" style="max-width:88px;flex:0 0 88px;text-align:right" data-mid="'+i+'" data-veld="uurtarief" value="'+(m.uurtarief==null?'':nl(m.uurtarief))+'" placeholder="—">' +
+      '<input class="control mono" style="max-width:72px;flex:0 0 72px;text-align:right" data-mid="'+i+'" data-veld="laadLosUur" value="'+(m.laadLosUur==null?'':nl(m.laadLosUur,2))+'" placeholder="—"></div>';
   }).join('');
+
+  var kh = kmCfg();
+  var kmUitz = '<table class="small-table"><thead><tr><th>Postcodeband</th><th>Plaats</th><th>Per rit €</th></tr></thead><tbody>' +
+    (kh.uitzonderingen||[]).map(function(u,i){
+      return '<tr><td class="mono">'+u.van+' – '+u.tot+'</td><td>'+esc(u.plaats||'')+'</td><td><input class="control" data-kmu="'+i+'" value="'+nl(u.bedrag)+'"></td></tr>';
+    }).join('') + '</tbody></table>';
+  var kmRijen = '<table class="small-table"><thead><tr><th>Gebied</th><th>Referentieplaats</th><th>Enkele reis €</th><th>Heen en weer €</th></tr></thead><tbody>';
+  Object.keys(kh.perGebied||{}).sort(function(a,b){ return a-b; }).forEach(function(g){
+    var r = kh.perGebied[g];
+    kmRijen += '<tr><td class="mono">'+esc(g)+'</td><td>'+esc(r.plaats||'')+'</td><td class="mono" style="text-align:right;color:var(--ink-3)">'+(r.enkel==null?'':nl(r.enkel))+'</td>' +
+      '<td><input class="control" data-kmg="'+esc(g)+'" value="'+(r.retour==null?'':nl(r.retour))+'" placeholder="—"></td></tr>';
+  });
+  kmRijen += '</tbody></table>';
 
   var jaarOpt = jaren().map(function(j){ return '<option value="'+j+'"'+(j===actiefJaar()?' selected':'')+'>'+j+'</option>'; }).join('');
 
@@ -532,10 +628,12 @@ function viewInstellingen(){
         '<label for="s-marge">Marge op inkoopprijs</label><input class="control" id="s-marge" value="'+nl(S.marge*100,1)+'">' +
         '<label for="s-dotk">DOT koerier (id t/m '+S.dotDrempelId+')</label><input class="control" id="s-dotk" value="'+nl(S.dotKoerier*100,1)+'">' +
         '<label for="s-dotv">DOT vrachtwagen (id vanaf '+(S.dotDrempelId+1)+')</label><input class="control" id="s-dotv" value="'+nl(S.dotVracht*100,1)+'">' +
+        '<label for="s-dotgrens">DOT-grens: koerier/busje t/m middel-id</label><input class="control" id="s-dotgrens" value="'+S.dotDrempelId+'">' +
+        '<label for="s-kmvanaf">KM-heffing geldt vanaf middel-id</label><input class="control" id="s-kmvanaf" value="'+(kmCfg().vanafMiddelId||9)+'">' +
         '<label for="s-jaar">Actief tariefjaar in de calculator</label><select class="control" id="s-jaar">'+jaarOpt+'</select>' +
         '<label for="s-vest">Vestiging</label><input class="control" id="s-vest" style="text-align:left;font-family:inherit" value="'+esc(S.vestiging)+'">' +
       '</div>' +
-      '<p class="hint" style="margin:14px 0 0;font-size:12.5px;color:var(--ink-3)">Percentages invullen als getal, bijvoorbeeld 26,1 voor 26,1%.</p>' +
+      '<p class="hint" style="margin:14px 0 0;font-size:12.5px;color:var(--ink-3)">Percentages invullen als getal, bijvoorbeeld 27,5 voor 27,5%. Volgens de Excel 2026: busjes t/m id 6 (Caddy t/m Pick Up XXL + aanhanger), vrachtwagen vanaf id 7; KM-heffing vanaf id 9 (kraanwagens, trekkers, side-loader).</p>' +
     '</div></section>' +
 
     '<section class="panel"><div class="panel-head"><h2>Uitvoeringsperiodes</h2></div><div class="panel-body">'+perRijen+
@@ -544,7 +642,14 @@ function viewInstellingen(){
     '<section class="panel"><div class="panel-head"><h2>DOT per maand</h2><span class="eyebrow">naslag</span></div><div class="panel-body" style="max-height:420px;overflow:auto">'+dotTabel+'</div></section>' +
 
     '<section class="panel"><div class="panel-head"><h2>Transportmiddelen</h2></div><div class="panel-body" style="max-height:420px;overflow:auto">'+midRijen+
-      '<p class="hint" style="margin:10px 0 0;font-size:12.5px;color:var(--ink-3)">Het id bepaalt welke kolom in de tarieventabel hoort en of de koerier- of vrachtwagen-DOT geldt.</p></div></section>' +
+      '<p class="hint" style="margin:10px 0 0;font-size:12.5px;color:var(--ink-3)">Het id bepaalt welke kolom in de tarieventabel hoort, of de koerier- of vrachtwagen-DOT geldt en of de KM-heffing meetelt. Uurtarief (excl. toeslag en DOT) en laad-/lostijd komen uit de autotypen-tabel van de Excel.</p></div></section>' +
+
+    '<section class="panel"><div class="panel-head"><h2>KM-heffing (vrachtwagenheffing)</h2><span class="eyebrow">per rit heen en weer</span></div><div class="panel-body">' +
+      '<p style="margin:0 0 10px;font-size:13.5px;color:var(--ink-2)">Geldt alleen voor transportmiddelen vanaf id '+(kh.vanafMiddelId||9)+'. Het bedrag hangt af van het 2-cijferige postcodegebied van het afleveradres (heen en weer af Europoort). Voor het havengebied (postcodegebied 31) geldt een vast bedrag per postcodeband:</p>' +
+      kmUitz +
+      '<p style="margin:14px 0 6px;font-size:13.5px;color:var(--ink-2)">Overige postcodegebieden:</p>' +
+      '<div style="max-height:360px;overflow:auto">'+kmRijen+'</div>' +
+    '</div></section>' +
 
     '<section class="panel"><div class="panel-head"><h2>Tariefjaar toevoegen</h2></div><div class="panel-body">' +
       '<p style="margin:0 0 12px;font-size:13.5px;color:var(--ink-2)">Een nieuw jaar afleiden uit een bestaand jaar met één indexatiepercentage — zoals 2023 in Excel uit 2022 werd afgeleid (× 1,102).</p>' +
@@ -619,6 +724,8 @@ function bind(){
     });
     var fper = document.getElementById('f-periode');
     fper.addEventListener('change', function(){ ui.periode = parseInt(fper.value,10); render(); });
+    var fmd = document.getElementById('f-maand');
+    fmd.addEventListener('change', function(){ ui.maand = fmd.value; render(); });
   }
 
   if(ui.tab === 'tarieven'){
@@ -649,6 +756,22 @@ function bind(){
     numField('s-marge', function(v){ S.marge = v/100; });
     numField('s-dotk', function(v){ S.dotKoerier = v/100; });
     numField('s-dotv', function(v){ S.dotVracht = v/100; });
+    numField('s-dotgrens', function(v){ S.dotDrempelId = Math.max(0, Math.round(v)); });
+    numField('s-kmvanaf', function(v){ if(!S.kmHeffing) S.kmHeffing = kmCfg(); S.kmHeffing.vanafMiddelId = Math.max(1, Math.round(v)); });
+    root.querySelectorAll('[data-kmg]').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        if(!S.kmHeffing) S.kmHeffing = kmCfg();
+        var g = inp.dataset.kmg, v = parseNL(inp.value);
+        if(!S.kmHeffing.perGebied[g]) S.kmHeffing.perGebied[g] = {plaats:'', enkel:null, retour:null};
+        S.kmHeffing.perGebied[g].retour = v; inp.value = v==null?'':nl(v); markDirty();
+      });
+    });
+    root.querySelectorAll('[data-kmu]').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        var i = parseInt(inp.dataset.kmu,10), v = parseNL(inp.value);
+        S.kmHeffing.uitzonderingen[i].bedrag = v==null?0:v; inp.value = nl(S.kmHeffing.uitzonderingen[i].bedrag); markDirty();
+      });
+    });
     var sj = document.getElementById('s-jaar');
     sj.addEventListener('change', function(){ S.actiefJaar = sj.value; markDirty(); render(); });
     var sv = document.getElementById('s-vest');
@@ -671,7 +794,12 @@ function bind(){
       });
     });
     root.querySelectorAll('[data-mid]').forEach(function(inp){
-      inp.addEventListener('change', function(){ S.middelen[parseInt(inp.dataset.mid,10)].naam = inp.value; markDirty(); });
+      inp.addEventListener('change', function(){
+        var m = S.middelen[parseInt(inp.dataset.mid,10)], veld = inp.dataset.veld || 'naam';
+        if(veld === 'naam'){ m.naam = inp.value; }
+        else { var v = parseNL(inp.value); m[veld] = v; inp.value = v==null?'':nl(v, veld==='laadLosUur'?2:2); }
+        markDirty();
+      });
     });
     root.querySelectorAll('[data-not]').forEach(function(inp){
       inp.addEventListener('change', function(){ S.notities[parseInt(inp.dataset.not,10)] = inp.value; markDirty(); });
@@ -684,9 +812,8 @@ function bind(){
         markDirty();
       });
     });
-    document.getElementById('pw-wijzig').addEventListener('click', function(){
-      ui.dialoog = 'wijzig'; ui.dialoogFout = ''; render();
-    });
+    var pwW = document.getElementById('pw-wijzig');
+    if(pwW) pwW.addEventListener('click', function(){ ui.dialoog = 'wijzig'; ui.dialoogFout = ''; render(); });
     document.getElementById('n-maak').addEventListener('click', function(){
       var bron = document.getElementById('n-bron').value;
       var jr = document.getElementById('n-jaar').value.trim();
