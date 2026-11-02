@@ -13741,6 +13741,7 @@
  "notities": [
   "Prijzen op basis van postcodetabel 2026 (De Jong) en actuele dieseltoeslag (DOT).",
   "KM-heffing (vrachtwagenheffing) per rit heen en weer, alleen voor kraanwagens, trekkers en side-loader (id 9 t/m 16).",
+  "Vrachtwagenheffing: vast bedrag per rit voor vrachtwagens (id 9 t/m 16), bovenop de KM-heffing.",
   "Laad- en lostijd zit tot de aangegeven tijd in het tarief; langer = wachtkosten à uurtarief per kwartier.",
   "Via Z-Air / Hacon: à uurtarief. Indicatie 1 uur per rit, indien langer dan reden vermelden.",
   "Tarieven zijn excl. tol-, pont-, veer- en weegkosten en excl. btw."
@@ -15423,5 +15424,10 @@
    }
   ]
  },
- "bron": "Boels Industrial Abird prijzen incl KM-heffing 2026 (09-10-2026)"
+ "bron": "Boels Industrial Abird prijzen incl KM-heffing 2026 (09-10-2026)",
+ "vrachtwagenheffing": {
+  "bedrag": 18.0,
+  "vanafMiddelId": 9,
+  "omschrijving": "Vaste vrachtwagenheffing per rit (Boels), alleen voor echte vrachtwagens: kraanwagens, trekkers en side-loader (id vanaf 9). Komt bovenop de KM-heffing per postcodegebied."
+ }
 }

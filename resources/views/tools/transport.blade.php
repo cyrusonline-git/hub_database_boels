@@ -270,6 +270,13 @@ function middelById(id){ for(var i=0;i<S.middelen.length;i++){ if(S.middelen[i].
 function markDirty(){ dirty = true; statusMsg=''; statusTone=''; syncSave(); }
 
 function kmCfg(){ return S.kmHeffing || {vanafMiddelId: 9, perGebied: {}, uitzonderingen: []}; }
+function vwhCfg(){ return S.vrachtwagenheffing || {bedrag: 0, vanafMiddelId: 9}; }
+/* Vaste vrachtwagenheffing per rit (Boels): alleen echte vrachtwagens (id vanaf vanafMiddelId), bovenop de KM-heffing. */
+function vrachtwagenheffingVoor(middelId){
+  var v = vwhCfg(), bedrag = +v.bedrag || 0, vanaf = +v.vanafMiddelId || 9;
+  var geldt = bedrag > 0 && middelId >= vanaf;
+  return {bedrag: geldt ? bedrag : 0, geldt: geldt, vanafMiddelId: vanaf};
+}
 /* Standaard DOT-maand = de huidige maand, mits die (ingevuld) in de DOT-maandtabel staat; anders de actuele DOT. */
 function standaardMaand(){
   var nu = new Date(), hm = nu.getFullYear() + '-' + ('0' + (nu.getMonth() + 1)).slice(-2);
@@ -345,14 +352,15 @@ function bereken(jaar, middelId, postcode, periodeIdx, maand){
   var exclDot = basis * (1 + per.toeslag);
   var inclDot = exclDot * (1 + d.dot);
   var km = kmHeffingVoor(middelId, bi);
-  var inkoop = inclDot + km.bedrag;
+  var vwh = vrachtwagenheffingVoor(middelId);
+  var inkoop = inclDot + km.bedrag + vwh.bedrag;
   var verkoop = inkoop * (1 + S.marge);
   var m = middelById(middelId);
   var uur = (m && m.uurtarief != null && !isNaN(m.uurtarief)) ? m.uurtarief * (1 + per.toeslag) : null;
   out.ok = true;
   out.basis = basis; out.periode = per; out.toeslagBedrag = exclDot - basis;
   out.dot = d.dot; out.dotSoort = d.isKoerier ? 'koerier' : 'vrachtwagen'; out.dotBron = d.bron; out.dotBedrag = inclDot - exclDot;
-  out.exclDot = exclDot; out.inclDot = inclDot; out.km = km;
+  out.exclDot = exclDot; out.inclDot = inclDot; out.km = km; out.vwh = vwh;
   out.inkoop = inkoop; out.margeBedrag = verkoop - inkoop; out.verkoop = verkoop;
   out.uurtarief = uur; out.uurtariefInclDot = uur==null ? null : uur * (1 + d.dot); out.wachtKwartier = uur==null ? null : uur / 4;
   out.laadLosUur = m ? m.laadLosUur : null; out.aanAfrijUur = m ? m.aanAfrijUur : null;
@@ -450,7 +458,10 @@ function viewCalc(){
         rung('Uitvoeringstoeslag — '+esc(res.periode.naam)+' <b>'+(res.periode.toeslag?'+'+pct(res.periode.toeslag):'0%')+'</b>', money(res.toeslagBedrag)) +
         rung('Dieseltoeslag DOT '+res.dotSoort+' <b>+'+pct(res.dot)+'</b>'+(res.dotBron!=='actueel'?' <span class="band-chip">'+maandLabel(res.dotBron)+'</span>':''), money(res.dotBedrag)) +
         kmRung +
-        rung('Inkoopprijs all-in <span class="hint">(incl. DOT en KM-heffing)</span>', money(res.inkoop), 'sum') +
+        (res.vwh.geldt
+          ? rung('<b>Vrachtwagenheffing</b> — vast bedrag per rit voor vrachtwagens <span class="hint">(bovenop de KM-heffing)</span>', money(res.vwh.bedrag))
+          : (vwhCfg().bedrag > 0 ? rung('Vrachtwagenheffing — niet van toepassing op dit transportmiddel <span class="hint">(alleen vrachtwagens, id vanaf '+res.vwh.vanafMiddelId+')</span>', money(0)) : '')) +
+        rung('Inkoopprijs all-in <span class="hint">(incl. DOT, KM-heffing'+(res.vwh.geldt?' en vrachtwagenheffing':'')+')</span>', money(res.inkoop), 'sum') +
         rung('Marge <b>+'+pct(S.marge)+'</b>', money(res.margeBedrag)) +
       '</div>' +
       '<div class="headline"><div><div class="k">Verkoopprijs excl. btw</div></div><div class="v">'+money(res.verkoop)+'</div></div>' +
@@ -564,7 +575,7 @@ function viewTarieven(){
   }
 
   var uitleg = isVerkoop
-    ? '<div class="notice notice-info"><span class="ico">i</span><span>Verkooptarieven zijn berekend, niet ingevoerd: inkooptarief × (1 + DOT vrachtwagen '+pct(S.dotVracht)+') × (1 + marge '+pct(S.marge)+'). Dit volgt de prijslijst uit Excel, die voor élk middel de vrachtwagen-DOT hanteert — de calculator gebruikt wel de juiste DOT per middel en telt daar de KM-heffing bij op (hier niet meegenomen).</span></div>'
+    ? '<div class="notice notice-info"><span class="ico">i</span><span>Verkooptarieven zijn berekend, niet ingevoerd: inkooptarief × (1 + DOT vrachtwagen '+pct(S.dotVracht)+') × (1 + marge '+pct(S.marge)+'). Dit volgt de prijslijst uit Excel, die voor élk middel de vrachtwagen-DOT hanteert — de calculator gebruikt wel de juiste DOT per middel en telt daar de KM-heffing en de vaste vrachtwagenheffing bij op (hier niet meegenomen).</span></div>'
     : '<div class="notice notice-info"><span class="ico">i</span><span>Dit zijn de kale inkooptarieven per postcodeband. Toeslagen, DOT en marge komen er in de calculator bovenop. Wijzig een bedrag en sla op; iedereen met de link ziet daarna hetzelfde tarief.</span></div>';
 
   return '<section class="panel">' +
@@ -641,10 +652,12 @@ function viewInstellingen(){
         '<label for="s-dotv">DOT vrachtwagen (id vanaf '+(S.dotDrempelId+1)+')</label><input class="control" id="s-dotv" value="'+nl(S.dotVracht*100,1)+'">' +
         '<label for="s-dotgrens">DOT-grens: koerier/busje t/m middel-id</label><input class="control" id="s-dotgrens" value="'+S.dotDrempelId+'">' +
         '<label for="s-kmvanaf">KM-heffing geldt vanaf middel-id</label><input class="control" id="s-kmvanaf" value="'+(kmCfg().vanafMiddelId||9)+'">' +
+        '<label for="s-vwh">Vrachtwagenheffing per rit (€, vast)</label><input class="control" id="s-vwh" value="'+nl(vwhCfg().bedrag||0)+'">' +
+        '<label for="s-vwhvanaf">Vrachtwagenheffing geldt vanaf middel-id</label><input class="control" id="s-vwhvanaf" value="'+(vwhCfg().vanafMiddelId||9)+'">' +
         '<label for="s-jaar">Actief tariefjaar in de calculator</label><select class="control" id="s-jaar">'+jaarOpt+'</select>' +
         '<label for="s-vest">Vestiging</label><input class="control" id="s-vest" style="text-align:left;font-family:inherit" value="'+esc(S.vestiging)+'">' +
       '</div>' +
-      '<p class="hint" style="margin:14px 0 0;font-size:12.5px;color:var(--ink-3)">Percentages invullen als getal, bijvoorbeeld 27,5 voor 27,5%. Volgens de Excel 2026: busjes t/m id 6 (Caddy t/m Pick Up XXL + aanhanger), vrachtwagen vanaf id 7; KM-heffing vanaf id 9 (kraanwagens, trekkers, side-loader).</p>' +
+      '<p class="hint" style="margin:14px 0 0;font-size:12.5px;color:var(--ink-3)">Percentages invullen als getal, bijvoorbeeld 27,5 voor 27,5%. Volgens de Excel 2026: busjes t/m id 6 (Caddy t/m Pick Up XXL + aanhanger), vrachtwagen vanaf id 7; KM-heffing vanaf id 9 (kraanwagens, trekkers, side-loader). De vaste vrachtwagenheffing (Boels, standaard € 18,00 per rit) komt daar bovenop, ook alleen vanaf id 9.</p>' +
     '</div></section>' +
 
     '<section class="panel"><div class="panel-head"><h2>Uitvoeringsperiodes</h2></div><div class="panel-body">'+perRijen+
@@ -769,6 +782,8 @@ function bind(){
     numField('s-dotv', function(v){ S.dotVracht = v/100; });
     numField('s-dotgrens', function(v){ S.dotDrempelId = Math.max(0, Math.round(v)); });
     numField('s-kmvanaf', function(v){ if(!S.kmHeffing) S.kmHeffing = kmCfg(); S.kmHeffing.vanafMiddelId = Math.max(1, Math.round(v)); });
+    numField('s-vwh', function(v){ if(!S.vrachtwagenheffing) S.vrachtwagenheffing = vwhCfg(); S.vrachtwagenheffing.bedrag = Math.max(0, v); });
+    numField('s-vwhvanaf', function(v){ if(!S.vrachtwagenheffing) S.vrachtwagenheffing = vwhCfg(); S.vrachtwagenheffing.vanafMiddelId = Math.max(1, Math.round(v)); });
     root.querySelectorAll('[data-kmg]').forEach(function(inp){
       inp.addEventListener('change', function(){
         if(!S.kmHeffing) S.kmHeffing = kmCfg();

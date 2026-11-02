@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\DB;
  *   kmHeffing    = alleen middel-id >= kmHeffing.vanafMiddelId:  (tab KM-heffing, heen en weer per 2-cijferig
  *                  bedrag per postcodegebied van de band,         postcodegebied; gebied 31 = vast bedrag per band)
  *                  of de uitzondering voor de band
- *   inkoop       = inclDot + kmHeffing                           ("ALL-IN" in Excel)  -> KOSTEN
+ *   vrachtwagenheffing = vast bedrag per rit (Boels, € 18) voor middel-id >= vrachtwagenheffing.vanafMiddelId
+ *   inkoop       = inclDot + kmHeffing + vrachtwagenheffing      ("ALL-IN" in Excel + Boels-heffing)  -> KOSTEN
  *   verkoop      = inkoop * (1 + marge)                          (eigen Boels-marge, niet in Excel) -> OMZET
  *   uurtarief    = middel.uurtarief * (1 + toeslag) [* (1 + dot)] (wachturen / Z-Air / Hacon)
  */
@@ -126,6 +127,16 @@ class TransportTarief
         return $uit;
     }
 
+    /** Vaste vrachtwagenheffing per rit (alleen echte vrachtwagens: id vanaf vanafMiddelId). */
+    public static function vrachtwagenheffing(array $p, int $middelId): array
+    {
+        $v = $p['vrachtwagenheffing'] ?? null;
+        $bedrag = (float) ($v['bedrag'] ?? 0);
+        $vanaf = (int) ($v['vanafMiddelId'] ?? 9);
+        $geldt = $v !== null && $bedrag > 0 && $middelId >= $vanaf;
+        return ['bedrag' => $geldt ? $bedrag : 0.0, 'geldt' => $geldt, 'vanafMiddelId' => $vanaf];
+    }
+
     /**
      * Bereken kosten (inkoop) + verkoop (omzet) voor een postcode + wagentype + periode.
      *
@@ -177,7 +188,8 @@ class TransportTarief
         $exclDot = $basis * (1 + $toeslag);
         $inclDot = $exclDot * (1 + $dot);
         $km = self::kmHeffing($p, $middelId, $bandIndex);
-        $inkoop = $inclDot + $km['bedrag'];          // ALL-IN (Excel E12)
+        $vwh = self::vrachtwagenheffing($p, $middelId);
+        $inkoop = $inclDot + $km['bedrag'] + $vwh['bedrag'];   // ALL-IN (Excel E12) + vaste vrachtwagenheffing
         $verkoop = $inkoop * (1 + $marge);
 
         // Uurtarief + tijden van het middel (tab Tarieven, autotypen-tabel)
@@ -212,6 +224,8 @@ class TransportTarief
             'tarief_incl_dot' => round($inclDot, 2),
             'km_heffing' => round($km['bedrag'], 2),
             'km_heffing_geldt' => $km['geldt'],
+            'vrachtwagenheffing' => round($vwh['bedrag'], 2),
+            'vrachtwagenheffing_geldt' => $vwh['geldt'],
             'inkoop' => round($inkoop, 2),   // KOSTEN (all-in: incl. DOT + KM-heffing)
             'verkoop' => round($verkoop, 2), // OMZET / klant-tarief
             'uurtarief' => $uur === null ? null : round($uur, 2),
@@ -232,6 +246,8 @@ class TransportTarief
             'actiefJaar' => $p['actiefJaar'] ?? null,
             'jaren' => array_keys($p['jaren'] ?? []),
             'kmHeffingVanafId' => (int) ($p['kmHeffing']['vanafMiddelId'] ?? 9),
+            'vrachtwagenheffing' => (float) ($p['vrachtwagenheffing']['bedrag'] ?? 0),
+            'vrachtwagenheffingVanafId' => (int) ($p['vrachtwagenheffing']['vanafMiddelId'] ?? 9),
             'dotDrempelId' => (int) ($p['dotDrempelId'] ?? 6),
         ];
     }
