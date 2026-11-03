@@ -14,11 +14,65 @@ use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles')->orderBy('name')->paginate(25);
+        // Dynamisch filter (zelfde opzet als Medewerkers): zoeken op naam/e-mail,
+        // rol, status, depot en area (allowed_depots/allowed_areas van het account).
+        $query = User::with('roles');
+
+        if ($request->filled('q')) {
+            $q = trim((string) $request->input('q'));
+            $query->where(function ($w) use ($q) {
+                $w->where('name', 'like', "%{$q}%")
+                  ->orWhere('email', 'like', "%{$q}%");
+            });
+        }
+        if ($request->filled('role')) {
+            $roleId = (int) $request->input('role');
+            $query->whereHas('roles', fn ($w) => $w->where('roles.id', $roleId));
+        }
+        if ($request->filled('status')) {
+            switch ($request->input('status')) {
+                case 'actief':
+                    $query->where('active', true)->where('status', '!=', User::STATUS_PENDING);
+                    break;
+                case 'wacht':
+                    $query->where('status', User::STATUS_PENDING);
+                    break;
+                case 'inactief':
+                    $query->where(fn ($w) => $w->where('active', false)->orWhere('status', User::STATUS_DISABLED));
+                    break;
+                case 'nooit':
+                    $query->whereNull('last_login_at')->where('status', '!=', User::STATUS_PENDING);
+                    break;
+                case 'super':
+                    $query->where('is_super_admin', true);
+                    break;
+            }
+        }
+        // allowed_depots / allowed_areas zijn JSON-arrays: op MySQL via JSON_CONTAINS,
+        // anders (sqlite/test) via de JSON-tekst.
+        foreach (['depot' => 'allowed_depots', 'area' => 'allowed_areas'] as $param => $kolom) {
+            if ($request->filled($param)) {
+                $waarde = (string) $request->input($param);
+                if ($query->getConnection()->getDriverName() === 'mysql') {
+                    $query->whereJsonContains($kolom, $waarde);
+                } else {
+                    $query->where($kolom, 'like', '%' . json_encode($waarde) . '%');
+                }
+            }
+        }
+
+        $users = $query->orderBy('name')->paginate(25)->withQueryString();
         $pendingCount = User::where('status', User::STATUS_PENDING)->count();
-        return view('admin.users.index', compact('users', 'pendingCount'));
+        $filters = [
+            'roles'  => Role::orderBy('name')->get(['id', 'name']),
+            'depots' => Employee::distinct()->whereNotNull('depot')->orderBy('depot')->pluck('depot'),
+            'areas'  => Employee::distinct()->whereNotNull('area')->orderBy('area')->pluck('area'),
+        ];
+        $hasFilter = $request->hasAny(['q', 'role', 'status', 'depot', 'area']);
+
+        return view('admin.users.index', compact('users', 'pendingCount', 'filters', 'hasFilter'));
     }
 
     /**
