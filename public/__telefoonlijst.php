@@ -38,6 +38,18 @@ require $root . '/vendor/autoload.php';
 $app = require_once $root . '/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
+// &verwijder=<id>: een per ongeluk (dubbel) aangemaakte kaart uit de telefoonlijst weer weghalen.
+// Alleen kaarten met source_system 'telefoonlijst' zonder gekoppeld account; definitief.
+if (($_GET['verwijder'] ?? '') !== '') {
+    $id = (int) $_GET['verwijder'];
+    $e = \App\Models\Employee::withTrashed()->find($id);
+    if (! $e) exit("Kaart #$id niet gevonden.\n");
+    if ($e->source_system !== 'telefoonlijst') exit("Kaart #$id ({$e->name}) komt niet uit de telefoonlijst (bron: " . ($e->source_system ?: '-') . ") — niet verwijderd.\n");
+    if (\App\Models\User::withTrashed()->where('employee_id', $id)->exists()) exit("Kaart #$id ({$e->name}) heeft een gekoppeld account — niet verwijderd.\n");
+    $naam = $e->name;
+    $e->forceDelete();
+    exit("Kaart #$id ($naam) definitief verwijderd.\n");
+}
 $apply = (($_GET['apply'] ?? '') === '1');
 $maak  = (($_GET['maak'] ?? '') === '1');
 $maakNieuw = (($_GET['maak_nieuw'] ?? '') === '1');
