@@ -20,8 +20,20 @@ class InfrastructureController extends Controller
             ->selectRaw('area, count(*) as c')->groupBy('area')->pluck('c', 'area');
         $employeesPerDepot = Employee::whereNull('deleted_at')->whereNotNull('depot')
             ->selectRaw('depot, count(*) as c')->groupBy('depot')->pluck('c', 'depot');
+        // Medewerkerkaarten per business unit + nog niet toegewezen (business_unit_id NULL)
+        $employeesPerUnit = Employee::whereNull('deleted_at')->whereNotNull('business_unit_id')
+            ->selectRaw('business_unit_id, count(*) as c')->groupBy('business_unit_id')->pluck('c', 'business_unit_id');
+        $employeesZonderUnit = Employee::whereNull('deleted_at')->whereNull('business_unit_id')->count();
 
-        return view('admin.infrastructure.index', compact('units', 'employeesPerArea', 'employeesPerDepot'));
+        return view('admin.infrastructure.index', compact('units', 'employeesPerArea', 'employeesPerDepot', 'employeesPerUnit', 'employeesZonderUnit'));
+    }
+
+    /** Business unit hernoemen (de koppeling met medewerkers en import-jobs loopt via id, dus niets anders hoeft mee). */
+    public function updateUnit(Request $request, BusinessUnit $unit)
+    {
+        $data = $request->validate(['name' => ['required', 'string', 'max:100', 'unique:business_units,name,' . $unit->id]]);
+        $unit->update($data);
+        return back()->with('status', 'Business unit hernoemd.');
     }
 
     public function storeUnit(Request $request)

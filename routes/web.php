@@ -111,6 +111,8 @@ Route::middleware('auth')->group(function () {
 
         // Employees beheer
         Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('employees/nieuw', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
         Route::post('employees/bulk-grant-login', [EmployeeController::class, 'bulkGrantLogin'])->name('employees.bulk-grant-login');
         Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
@@ -121,6 +123,7 @@ Route::middleware('auth')->group(function () {
         Route::get('infrastructuur', [InfrastructureController::class, 'index'])->name('infrastructure.index');
         Route::post('infrastructuur/sync', [InfrastructureController::class, 'syncFromEmployees'])->name('infrastructure.sync');
         Route::post('infrastructuur/units', [InfrastructureController::class, 'storeUnit'])->name('infrastructure.units.store');
+        Route::put('infrastructuur/units/{unit}', [InfrastructureController::class, 'updateUnit'])->name('infrastructure.units.update');
         Route::delete('infrastructuur/units/{unit}', [InfrastructureController::class, 'destroyUnit'])->name('infrastructure.units.destroy');
         Route::post('infrastructuur/areas', [InfrastructureController::class, 'storeArea'])->name('infrastructure.areas.store');
         Route::put('infrastructuur/areas/{area}', [InfrastructureController::class, 'updateArea'])->name('infrastructure.areas.update');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\AccountActivationMail;
+use App\Models\BusinessUnit;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Role;
@@ -25,22 +26,45 @@ class EmployeeController extends Controller
         $candidates = $this->countLoginCandidates($request);
 
         $filters = [
+            'units'     => BusinessUnit::opties(),
             'depots'    => Employee::distinct()->whereNotNull('depot')->orderBy('depot')->pluck('depot'),
             'areas'     => Employee::distinct()->whereNotNull('area')->orderBy('area')->pluck('area'),
             'countries' => Employee::distinct()->whereNotNull('country')->orderBy('country')->pluck('country'),
             'functions' => Employee::distinct()->whereNotNull('function')->orderBy('function')->pluck('function'),
         ];
 
-        $employees = $query->orderBy('name')->paginate(50)->withQueryString();
+        $employees = $query->with('businessUnit')->orderBy('name')->paginate(50)->withQueryString();
 
         // Per medewerker: id van zijn login-account (voor de "Maak login"-knop).
         // Zacht-verwijderde accounts tellen niet mee — anders linkt de knop naar een 404.
         $loginByEmployee = User::whereNotNull('employee_id')
             ->pluck('id', 'employee_id');
 
-        $hasFilter = $request->hasAny(['q', 'depot', 'area', 'country', 'function', 'status']);
+        $hasFilter = $request->hasAny(['q', 'depot', 'area', 'country', 'function', 'status', 'bu']);
+        $zonderUnit = Employee::whereNull('business_unit_id')->count();
 
-        return view('admin.employees.index', compact('employees', 'filters', 'candidates', 'hasFilter', 'loginByEmployee'));
+        return view('admin.employees.index', compact('employees', 'filters', 'candidates', 'hasFilter', 'loginByEmployee', 'zonderUnit'));
+    }
+
+    /** Nieuwe medewerkerkaart (handmatig, bijv. collega van een andere business unit). */
+    public function create(Request $request)
+    {
+        $employee = new Employee(['active' => true, 'business_unit_id' => $request->integer('bu') ?: null]);
+        return view('admin.employees.form', [
+            'employee' => $employee,
+            'departments' => Department::orderBy('name')->get(),
+            'units' => BusinessUnit::opties(),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $data = $this->validateEmployee($request);
+        $data['source_system'] = 'handmatig';   // nooit door een sync-import gedeactiveerd
+        $data['active'] = $request->boolean('active', true);
+        $employee = Employee::create($data);
+        return redirect()->route('admin.employees.index', ['q' => $employee->name])
+            ->with('status', "Medewerkerkaart voor {$employee->name} aangemaakt.");
     }
 
     public function edit(Employee $employee)
@@ -48,13 +72,15 @@ class EmployeeController extends Controller
         return view('admin.employees.form', [
             'employee' => $employee,
             'departments' => Department::orderBy('name')->get(),
+            'units' => BusinessUnit::opties(),
         ]);
     }
 
-    public function update(Request $request, Employee $employee)
+    private function validateEmployee(Request $request, ?Employee $employee = null): array
     {
-        $data = $request->validate([
-            'employee_number' => ['required','string','max:50'],
+        return $request->validate([
+            'employee_number' => ['required','string','max:50', 'unique:employees,employee_number' . ($employee ? ',' . $employee->id : '')],
+            'business_unit_id'=> ['nullable','integer','exists:business_units,id'],
             'name'            => ['required','string','max:200'],
             'email'           => ['nullable','email','max:190'],
             'phone'           => ['nullable','string','max:50'],
@@ -69,6 +95,11 @@ class EmployeeController extends Controller
             'cost_center'     => ['nullable','string','max:50'],
             'active'          => ['sometimes','boolean'],
         ]);
+    }
+
+    public function update(Request $request, Employee $employee)
+    {
+        $data = $this->validateEmployee($request, $employee);
         $oudDepot = $employee->depot;
         $oudArea = $employee->area;
         $employee->update($data);
@@ -201,6 +232,12 @@ class EmployeeController extends Controller
             if ($request->filled($f)) {
                 $query->where($f, $request->input($f));
             }
+        }
+        // Business unit: id, of 'geen' = nog niet toegewezen
+        if ($request->filled('bu')) {
+            $request->input('bu') === 'geen'
+                ? $query->whereNull('business_unit_id')
+                : $query->where('business_unit_id', (int) $request->input('bu'));
         }
 
         if ($request->filled('status')) {

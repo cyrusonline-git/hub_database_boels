@@ -53,6 +53,8 @@ if (($_GET['verwijder'] ?? '') !== '') {
 $apply = (($_GET['apply'] ?? '') === '1');
 $maak  = (($_GET['maak'] ?? '') === '1');
 $maakNieuw = (($_GET['maak_nieuw'] ?? '') === '1');
+// &bu=<id>: business unit voor kaarten die met &maak=1 / &maak_nieuw=1 worden aangemaakt (anders: niet toegewezen)
+$buId = isset($_GET['bu']) && ctype_digit((string) $_GET['bu']) ? (int) $_GET['bu'] : null;
 echo "Boels CORE — telefoonlijst aanvullen (" . ($apply ? 'WEGSCHRIJVEN' : 'PROEFDRAAIEN, niets wordt gewijzigd') . ")\n" . str_repeat('=', 70) . "\n\n";
 
 if (empty($_FILES['csv']['tmp_name'])) {
@@ -123,7 +125,7 @@ foreach ($rijen as $rij) {
                 'phone' => $rij['tel'] !== '' ? $rij['tel'] : null,
                 'function' => $rij['functie'] !== '' ? $rij['functie'] : null,
                 'depot' => $u->allowed_depots[0] ?? null, 'area' => $u->allowed_areas[0] ?? null, 'country' => $u->allowed_countries[0] ?? null,
-                'active' => true, 'source_system' => 'telefoonlijst',
+                'active' => true, 'source_system' => 'telefoonlijst', 'business_unit_id' => $buId,
             ];
             if ($apply) {
                 $e = \App\Models\Employee::create($velden);
@@ -145,7 +147,7 @@ foreach ($rijen as $rij) {
                 'phone' => $rij['tel'] !== '' ? $rij['tel'] : null,
                 'function' => $rij['functie'] !== '' ? $rij['functie'] : null,
                 'depot' => $rij['depot'] !== '' ? $rij['depot'] : null, 'area' => $rij['area'] !== '' ? $rij['area'] : null,
-                'active' => true, 'source_system' => 'telefoonlijst',
+                'active' => true, 'source_system' => 'telefoonlijst', 'business_unit_id' => $buId,
             ];
             if ($apply) { \App\Models\Employee::create($velden); }
             $stat['kaart_gemaakt']++; $gemaakt[] = $rij['naam'];

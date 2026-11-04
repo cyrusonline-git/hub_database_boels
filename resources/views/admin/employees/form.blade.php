@@ -1,20 +1,41 @@
 @extends('layouts.app')
-@section('title','Medewerker bewerken')
+@php $nieuw = ! $employee->exists; @endphp
+@section('title', $nieuw ? 'Nieuwe medewerker' : 'Medewerker bewerken')
 
 @section('content')
-<h3 class="mb-3"><i class="bi bi-person-badge text-boels"></i> {{ $employee->name }}</h3>
+<h3 class="mb-3"><i class="bi bi-person-badge text-boels"></i> {{ $nieuw ? 'Nieuwe medewerkerkaart' : $employee->name }}</h3>
 
-<form action="{{ route('admin.employees.update', $employee) }}" method="POST" class="card p-4">
-    @csrf @method('PUT')
+@if($errors->any())
+    <div class="alert alert-danger">{{ $errors->first() }}</div>
+@endif
+@if($nieuw)
+    <div class="alert alert-info">
+        Handmatige kaart, bijvoorbeeld voor een collega van een andere business unit die niet in de Industrial-Excel staat.
+        Zo'n kaart wordt door een sync-import <strong>niet</strong> gedeactiveerd. Een login-account maak je daarna via de knop "Maak login" (e-mail nodig).
+    </div>
+@endif
+
+<form action="{{ $nieuw ? route('admin.employees.store') : route('admin.employees.update', $employee) }}" method="POST" class="card p-4">
+    @csrf @if(! $nieuw) @method('PUT') @endif
 
     <div class="row g-3">
         <div class="col-md-4">
             <label class="form-label">Personeelsnummer *</label>
-            <input type="text" name="employee_number" value="{{ old('employee_number', $employee->employee_number) }}" class="form-control" required>
+            <input type="text" name="employee_number" value="{{ old('employee_number', $employee->employee_number) }}" class="form-control" required placeholder="Boels ID, bijv. 017321">
         </div>
-        <div class="col-md-8">
+        <div class="col-md-4">
             <label class="form-label">Naam *</label>
             <input type="text" name="name" value="{{ old('name', $employee->name) }}" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Business unit</label>
+            <select name="business_unit_id" class="form-select">
+                <option value="">— nog niet toegewezen —</option>
+                @foreach($units as $u)
+                    <option value="{{ $u->id }}" @selected(old('business_unit_id', $employee->business_unit_id) == $u->id)>{{ $u->name }}</option>
+                @endforeach
+            </select>
+            <div class="form-text">Nieuwe BU's: Beheer → Infrastructuur.</div>
         </div>
 
         <div class="col-md-6">
@@ -79,7 +100,7 @@
     </div>
 
     <div class="mt-4">
-        <button class="btn btn-boels">Opslaan</button>
+        <button class="btn btn-boels">{{ $nieuw ? 'Kaart aanmaken' : 'Opslaan' }}</button>
         <a href="{{ route('admin.employees.index') }}" class="btn btn-outline-secondary">Annuleren</a>
     </div>
 </form>

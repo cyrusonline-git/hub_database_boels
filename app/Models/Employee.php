@@ -25,7 +25,7 @@ class Employee extends Model
     use HasFactory, SoftDeletes, HasAuditLog;
 
     protected $fillable = [
-        'employee_number', 'name', 'email', 'phone',
+        'employee_number', 'business_unit_id', 'name', 'email', 'phone',
         'department_id', 'function', 'active',
         'area', 'country', 'city', 'region', 'depot',
         'start_date', 'end_date', 'manager', 'cost_center',
@@ -41,6 +41,12 @@ class Employee extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** Business unit (Industrial, …); NULL = nog niet toegewezen. */
+    public function businessUnit(): BelongsTo
+    {
+        return $this->belongsTo(BusinessUnit::class);
     }
 
     public function user(): HasOne

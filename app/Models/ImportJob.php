@@ -15,7 +15,7 @@ class ImportJob extends Model
         'profile_id', 'user_id', 'original_filename', 'file_path',
         'status', 'mapping', 'sync_mode', 'total_rows', 'imported_rows',
         'failed_rows', 'deactivated_rows', 'reactivated_rows',
-        'error_log', 'started_at', 'finished_at',
+        'error_log', 'started_at', 'finished_at', 'business_unit_id',
     ];
 
     protected $casts = [
@@ -26,6 +26,8 @@ class ImportJob extends Model
     ];
 
     public function profile(): BelongsTo { return $this->belongsTo(ImportProfile::class, 'profile_id'); }
+    /** Business unit waar deze (medewerker-)import bij hoort; sync-modus blijft binnen die BU. */
+    public function businessUnit(): BelongsTo { return $this->belongsTo(BusinessUnit::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function rows(): HasMany { return $this->hasMany(ImportJobRow::class); }
 }

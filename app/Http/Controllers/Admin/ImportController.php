@@ -63,6 +63,8 @@ class ImportController extends Controller
             'preview' => $info['preview'],
             'total_rows' => $info['total_rows'],
             'suggested' => $suggested,
+            'units' => \App\Models\BusinessUnit::opties(),
+            'industrialId' => \App\Models\BusinessUnit::industrial()?->id,
         ]);
     }
 
@@ -73,12 +75,21 @@ class ImportController extends Controller
 
         $this->service->rememberMapping($entity, $fields, $request->user()->id);
 
+        // Medewerker-import: altijd voor één business unit (sync-modus blijft daarbinnen)
+        $businessUnitId = null;
+        if ($entity === 'employee') {
+            $businessUnitId = (int) $request->validate([
+                'business_unit_id' => ['required', 'integer', 'exists:business_units,id'],
+            ])['business_unit_id'];
+        }
+
         $importJob->update([
             'mapping' => [
                 '__entity' => $entity,
                 'fields' => $fields,
             ],
             'sync_mode' => $request->boolean('sync_mode'),
+            'business_unit_id' => $businessUnitId,
             'status' => 'ready',
         ]);
 

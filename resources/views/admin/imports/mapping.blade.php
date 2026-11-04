@@ -35,6 +35,22 @@
         </tbody>
     </table>
 
+    @if($entity === 'employee')
+    <div class="border rounded p-3 mt-4">
+        <label class="form-label fw-bold" for="business_unit_id">Business unit van dit bestand *</label>
+        <select name="business_unit_id" id="business_unit_id" class="form-select" style="max-width:360px;" required>
+            @foreach($units as $u)
+                <option value="{{ $u->id }}" @selected(old('business_unit_id', $job->business_unit_id ?? $industrialId) == $u->id)>{{ $u->name }}</option>
+            @endforeach
+        </select>
+        <div class="form-text">
+            Alle medewerkers in dit bestand worden aan deze business unit gekoppeld. De sync-modus
+            hieronder werkt alleen binnen deze BU: medewerkers van andere business units en handmatig
+            aangemaakte kaarten blijven ongemoeid. Nieuwe BU's beheer je onder Beheer → Infrastructuur.
+        </div>
+    </div>
+    @endif
+
     <div class="border rounded p-3 mt-4 bg-light">
         <div class="form-check">
             <input type="hidden" name="sync_mode" value="0">
@@ -42,7 +58,7 @@
             <label for="sync_mode" class="form-check-label">
                 <strong>Sync-modus aan</strong> &mdash;
                 {{ $config['label'] }} die NIET in dit bestand staan worden op
-                <em>inactief</em> gezet (active = 0 + soft-delete).
+                <em>inactief</em> gezet (active = 0 + soft-delete)@if($entity === 'employee') — alleen binnen de gekozen business unit@endif.
             </label>
             <div class="form-text">
                 Bij volgende import waar ze wel weer in staan, worden ze automatisch

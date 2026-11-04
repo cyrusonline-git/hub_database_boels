@@ -50,6 +50,15 @@ class UserController extends Controller
                     break;
             }
         }
+        // Business unit van de gekoppelde medewerkerkaart ('geen' = account zonder kaart of kaart zonder BU)
+        if ($request->filled('bu')) {
+            if ($request->input('bu') === 'geen') {
+                $query->where(fn ($w) => $w->whereDoesntHave('employee')->orWhereHas('employee', fn ($e) => $e->whereNull('business_unit_id')));
+            } else {
+                $buId = (int) $request->input('bu');
+                $query->whereHas('employee', fn ($e) => $e->where('business_unit_id', $buId));
+            }
+        }
         // allowed_depots / allowed_areas zijn JSON-arrays: op MySQL via JSON_CONTAINS,
         // anders (sqlite/test) via de JSON-tekst.
         foreach (['depot' => 'allowed_depots', 'area' => 'allowed_areas'] as $param => $kolom) {
@@ -66,11 +75,12 @@ class UserController extends Controller
         $users = $query->orderBy('name')->paginate(25)->withQueryString();
         $pendingCount = User::where('status', User::STATUS_PENDING)->count();
         $filters = [
+            'units'  => \App\Models\BusinessUnit::opties(),
             'roles'  => Role::orderBy('name')->get(['id', 'name']),
             'depots' => Employee::distinct()->whereNotNull('depot')->orderBy('depot')->pluck('depot'),
             'areas'  => Employee::distinct()->whereNotNull('area')->orderBy('area')->pluck('area'),
         ];
-        $hasFilter = $request->hasAny(['q', 'role', 'status', 'depot', 'area']);
+        $hasFilter = $request->hasAny(['q', 'role', 'status', 'depot', 'area', 'bu']);
 
         return view('admin.users.index', compact('users', 'pendingCount', 'filters', 'hasFilter'));
     }

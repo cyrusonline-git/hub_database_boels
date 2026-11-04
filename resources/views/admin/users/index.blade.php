@@ -23,7 +23,7 @@
 {{-- Dynamisch filter: dropdowns filteren direct, het zoekveld filtert tijdens het typen --}}
 <form method="GET" class="card p-3 mb-3" id="userFilter">
     <div class="row g-2">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <input type="text" name="q" value="{{ request('q') }}" class="form-control" id="userFilterQ"
                    placeholder="Zoek op naam of e-mail" autocomplete="off">
         </div>
@@ -33,6 +33,13 @@
                 @foreach($filters['roles'] as $r)
                     <option value="{{ $r->id }}" @selected((string) request('role') === (string) $r->id)>{{ $r->name }}</option>
                 @endforeach
+            </select>
+        </div>
+        <div class="col-md-1">
+            <select name="bu" class="form-select auto-filter" title="Business unit (via de medewerkerkaart)">
+                <option value="">— BU —</option>
+                @foreach($filters['units'] as $u)<option value="{{ $u->id }}" @selected((string) request('bu') === (string) $u->id)>{{ $u->name }}</option>@endforeach
+                <option value="geen" @selected(request('bu') === 'geen')>Zonder BU/kaart</option>
             </select>
         </div>
         <div class="col-md-2">

@@ -117,6 +117,11 @@ class ImportService
                 $assoc['employee_number'] = 'AUTO-' . substr(md5($assoc[$autoGenerateFrom]), 0, 12);
             }
 
+            // Medewerker-import hoort bij één business unit (gekozen op het mapping-scherm)
+            if ($entity === 'employee' && ! empty($job->business_unit_id)) {
+                $assoc['business_unit_id'] = (int) $job->business_unit_id;
+            }
+
             // Skip helemaal lege rijen
             if (empty(array_filter($assoc, fn($v) => $v !== null && $v !== ''))) {
                 continue;
@@ -183,6 +188,13 @@ class ImportService
             if (in_array('source_system', (new $model)->getFillable())) {
                 $query->where(fn ($w) => $w->whereNull('source_system')->orWhereNotIn('source_system', $beschermd));
             }
+            // Medewerker-import met business unit: alleen kaarten van díe BU synchroniseren.
+            // Kaarten zonder BU (nog niet toegewezen) en van andere BU's blijven staan.
+            $buScope = ($entity === 'employee' && ! empty($job->business_unit_id) && in_array('business_unit_id', (new $model)->getFillable()))
+                ? (int) $job->business_unit_id : null;
+            if ($buScope) {
+                $query->where('business_unit_id', $buScope);
+            }
 
             // Alleen records die nog actief zijn worden gedeactiveerd
             if (in_array('active', (new $model)->getFillable())) {
@@ -197,6 +209,7 @@ class ImportService
                 ->whereNull('deleted_at')
                 ->when(in_array('source_system', (new $model)->getFillable()),
                     fn ($q) => $q->where(fn ($w) => $w->whereNull('source_system')->orWhereNotIn('source_system', $beschermd)))
+                ->when($buScope, fn ($q) => $q->where('business_unit_id', $buScope))
                 ->get();
             foreach ($toDelete as $rec) {
                 $rec->delete();

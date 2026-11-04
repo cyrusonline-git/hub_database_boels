@@ -6,15 +6,32 @@
     <h3><i class="bi bi-person-badge text-boels"></i> Medewerkers
         <small class="text-muted">({{ $employees->total() }})</small>
     </h3>
-    <a href="{{ url('/admin/imports/create') }}" class="btn btn-outline-secondary">
-        <i class="bi bi-upload"></i> Importeer Excel
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.employees.create') }}" class="btn btn-boels"><i class="bi bi-person-plus"></i> Nieuwe medewerker</a>
+        <a href="{{ url('/admin/imports/create') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-upload"></i> Importeer Excel
+        </a>
+    </div>
 </div>
+
+@if(($zonderUnit ?? 0) > 0 && request('bu') !== 'geen')
+    <div class="alert alert-warning py-2">
+        <i class="bi bi-person-exclamation"></i> <strong>{{ $zonderUnit }}</strong> medewerkerkaart(en) zonder business unit.
+        <a href="{{ route('admin.employees.index', ['bu' => 'geen']) }}" class="alert-link">Toon ze</a> en wijs per kaart de BU toe via bewerken.
+    </div>
+@endif
 
 <form method="GET" class="card p-3 mb-3">
     <div class="row g-2">
         <div class="col-md-3">
             <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Zoek op naam / email / nummer">
+        </div>
+        <div class="col-md-2">
+            <select name="bu" class="form-select">
+                <option value="">— Business unit —</option>
+                @foreach($filters['units'] as $u)<option value="{{ $u->id }}" @selected((string) request('bu') === (string) $u->id)>{{ $u->name }}</option>@endforeach
+                <option value="geen" @selected(request('bu') === 'geen')>Nog niet toegewezen</option>
+            </select>
         </div>
         <div class="col-md-2">
             <select name="depot" class="form-select">
@@ -28,13 +45,13 @@
                 @foreach($filters['areas'] as $v)<option @selected(request('area')===$v)>{{ $v }}</option>@endforeach
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
             <select name="country" class="form-select">
                 <option value="">— Land —</option>
                 @foreach($filters['countries'] as $v)<option @selected(request('country')===$v)>{{ $v }}</option>@endforeach
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
             <select name="function" class="form-select">
                 <option value="">— Functie —</option>
                 @foreach($filters['functions'] as $v)<option @selected(request('function')===$v)>{{ $v }}</option>@endforeach
@@ -71,7 +88,7 @@
     <div class="modal-dialog">
         <form method="POST" action="{{ route('admin.employees.bulk-grant-login') }}?{{ http_build_query(request()->query()) }}" class="modal-content">
             @csrf
-            @foreach(['q','depot','area','country','function','status'] as $f)
+            @foreach(['q','depot','area','country','function','status','bu'] as $f)
                 @if(request($f))<input type="hidden" name="{{ $f }}" value="{{ request($f) }}">@endif
             @endforeach
             <div class="modal-header">
@@ -108,7 +125,7 @@
     <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
             <tr>
-                <th>Naam</th><th>Functie</th><th>Depot</th><th>Area</th><th>Land</th>
+                <th>Naam</th><th>BU</th><th>Functie</th><th>Depot</th><th>Area</th><th>Land</th>
                 <th>E-mail</th><th>Status</th><th></th>
             </tr>
         </thead>
@@ -118,6 +135,13 @@
                 <td>
                     <strong>{{ $e->name }}</strong>
                     @if($e->manager)<br><small class="text-muted">manager: {{ $e->manager }}</small>@endif
+                </td>
+                <td>
+                    @if($e->business_unit_id)
+                        <span class="badge bg-boels">{{ $e->businessUnit?->name ?? '?' }}</span>
+                    @else
+                        <a href="{{ route('admin.employees.edit', $e) }}" class="badge bg-warning text-dark text-decoration-none" title="Nog geen business unit — klik om toe te wijzen">geen BU</a>
+                    @endif
                 </td>
                 <td>{{ $e->function }}</td>
                 <td>{{ $e->depot }}</td>

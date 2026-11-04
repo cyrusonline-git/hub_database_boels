@@ -26,13 +26,25 @@
     <div class="alert alert-danger">{{ $errors->first() }}</div>
 @endif
 
+@if(($employeesZonderUnit ?? 0) > 0)
+    <div class="alert alert-warning d-flex justify-content-between align-items-center">
+        <div><i class="bi bi-person-exclamation"></i> <strong>{{ $employeesZonderUnit }}</strong> medewerkerkaart(en) zijn nog aan <strong>geen</strong> business unit toegewezen (handmatig of via de telefoonlijst aangemaakt).</div>
+        <a href="{{ route('admin.employees.index', ['bu' => 'geen']) }}" class="btn btn-sm btn-boels">Toewijzen</a>
+    </div>
+@endif
+
 @forelse($units as $unit)
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-building text-boels"></i> {{ $unit->name }}
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <form action="{{ route('admin.infrastructure.units.update', $unit) }}" method="POST" class="d-flex align-items-center gap-2 flex-wrap">
+                @csrf @method('PUT')
+                <i class="bi bi-building text-boels fs-5"></i>
+                <input type="text" name="name" value="{{ $unit->name }}" class="form-control form-control-sm fw-bold" style="max-width:220px;" title="Naam van de business unit (opslaan om te hernoemen)">
+                <button class="btn btn-sm btn-outline-secondary">Opslaan</button>
                 <small class="text-muted">({{ $unit->areas->count() }} area's,
-                {{ $unit->areas->sum(fn($a) => $a->depots->count()) }} depots)</small>
-            </h5>
+                {{ $unit->areas->sum(fn($a) => $a->depots->count()) }} depots,
+                <a href="{{ route('admin.employees.index', ['bu' => $unit->id]) }}" class="text-decoration-none">{{ $employeesPerUnit[$unit->id] ?? 0 }} medewerkers</a>)</small>
+            </form>
             <form action="{{ route('admin.infrastructure.units.destroy', $unit) }}" method="POST"
                   onsubmit="return confirm('{{ $unit->name }} en alle onderliggende area\'s/depots verwijderen?');">
                 @csrf @method('DELETE')

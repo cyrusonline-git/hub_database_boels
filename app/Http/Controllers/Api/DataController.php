@@ -75,9 +75,14 @@ class DataController extends Controller
 
     public function employees(Request $request)
     {
+        // ?bu=<id|naam> filtert op business unit; zonder filter komen alle BU's mee (bijv. Spoedverhuur).
         return Employee::query()
-            ->select(['id', 'employee_number', 'name', 'email', 'phone', 'function',
+            ->with('businessUnit:id,name')
+            ->select(['id', 'employee_number', 'business_unit_id', 'name', 'email', 'phone', 'function',
                       'department_id', 'depot', 'area', 'country', 'city', 'active'])
+            ->when($request->filled('bu'), fn ($w) => is_numeric($request->input('bu'))
+                ? $w->where('business_unit_id', (int) $request->input('bu'))
+                : $w->whereHas('businessUnit', fn ($b) => $b->where('name', $request->input('bu'))))
             ->when($request->filled('q'), fn ($w) => $w->where(fn ($m) => $m
                 ->where('name', 'like', '%'.$request->input('q').'%')
                 ->orWhere('email', 'like', '%'.$request->input('q').'%')
