@@ -15,7 +15,12 @@
  *  - met &maak=1: voor een naam ZONDER medewerkerkaart maar MET precies één
  *    gebruikersaccount (zelfde naam, nog niet gekoppeld) wordt een kaart aangemaakt
  *    (naam/e-mail van het account, depot/area/land uit allowed_*, optionele 4e
- *    CSV-kolom "functie") en aan het account gekoppeld (users.employee_id).
+ *    CSV-kolom "functie") en aan het account gekoppeld (users.employee_id);
+ *  - met &maak_nieuw=1: voor een naam zonder kaart én zonder account wordt een kaart
+ *    aangemaakt met alleen naam, nummer, telefoon en de optionele kolommen
+ *    functie;depot;area (kolom 4-6). Bedoeld voor collega's van een andere business
+ *    unit (bijv. voor de Spoedverhuur-app). Deze kaarten krijgen source_system
+ *    'telefoonlijst' en worden door de Industrial-import (sync-modus) met rust gelaten.
  * Wijzigingen lopen via het Employee-model (audit-log).
  */
 $secret = null;
@@ -35,6 +40,7 @@ $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $apply = (($_GET['apply'] ?? '') === '1');
 $maak  = (($_GET['maak'] ?? '') === '1');
+$maakNieuw = (($_GET['maak_nieuw'] ?? '') === '1');
 echo "Boels CORE — telefoonlijst aanvullen (" . ($apply ? 'WEGSCHRIJVEN' : 'PROEFDRAAIEN, niets wordt gewijzigd') . ")\n" . str_repeat('=', 70) . "\n\n";
 
 if (empty($_FILES['csv']['tmp_name'])) {
@@ -45,7 +51,8 @@ $kop = fgetcsv($fh, 0, ';');
 $rijen = [];
 while (($r = fgetcsv($fh, 0, ';')) !== false) {
     if (count($r) < 2 || trim((string) $r[0]) === '') continue;
-    $rijen[] = ['naam' => trim((string) $r[0]), 'nr' => trim((string) ($r[1] ?? '')), 'tel' => trim((string) ($r[2] ?? '')), 'functie' => trim((string) ($r[3] ?? ''))];
+    $rijen[] = ['naam' => trim((string) $r[0]), 'nr' => trim((string) ($r[1] ?? '')), 'tel' => trim((string) ($r[2] ?? '')),
+                'functie' => trim((string) ($r[3] ?? '')), 'depot' => trim((string) ($r[4] ?? '')), 'area' => trim((string) ($r[5] ?? ''))];
 }
 fclose($fh);
 echo "Regels in lijst: " . count($rijen) . "\n\n";
@@ -115,6 +122,25 @@ foreach ($rijen as $rij) {
                 $apply ? 'KAART AANGEMAAKT + gekoppeld' : 'zou kaart aanmaken + koppelen', $rij['nr'], $rij['tel'] ?: '-', $velden['depot'] ?: '-', $velden['area'] ?: '-', $velden['function'] ?: '-');
             continue;
         }
+        if ($maakNieuw && count($accs) === 0 && $rij['nr'] !== '') {
+            if ($nrInGebruik->has($rij['nr'])) {
+                $conflicten[] = [$rij['naam'], "CONFLICT nr {$rij['nr']} is al in gebruik; geen kaart gemaakt"];
+                printf("%-28s → %s\n", $rij['naam'], end($conflicten)[1]);
+                continue;
+            }
+            $velden = [
+                'employee_number' => $rij['nr'], 'name' => $rij['naam'], 'email' => null,
+                'phone' => $rij['tel'] !== '' ? $rij['tel'] : null,
+                'function' => $rij['functie'] !== '' ? $rij['functie'] : null,
+                'depot' => $rij['depot'] !== '' ? $rij['depot'] : null, 'area' => $rij['area'] !== '' ? $rij['area'] : null,
+                'active' => true, 'source_system' => 'telefoonlijst',
+            ];
+            if ($apply) { \App\Models\Employee::create($velden); }
+            $stat['kaart_gemaakt']++; $gemaakt[] = $rij['naam'];
+            printf("%-28s → %s nieuwe kaart (geen account): nr %s, tel %s, functie %s, depot %s, area %s\n", $rij['naam'],
+                $apply ? 'KAART AANGEMAAKT' : 'zou kaart aanmaken', $rij['nr'], $rij['tel'] ?: '-', $velden['function'] ?: '-', $velden['depot'] ?: '-', $velden['area'] ?: '-');
+            continue;
+        }
         $stat['niet_gevonden']++; $nietGevonden[] = $rij;
         if (count($accs) > 0) { $nietGevonden[count($nietGevonden) - 1]['opm'] = count($accs) === 1 ? 'wel een gebruikersaccount (#' . $accs[0]->id . ') — gebruik &maak=1' : 'meerdere gebruikersaccounts'; }
         continue;
@@ -164,7 +190,7 @@ echo "  al volledig goed:         {$stat['al_goed']}\n";
 echo "  conflicten (ongewijzigd): {$stat['conflict']}\n";
 echo "  niet gevonden:            {$stat['niet_gevonden']}\n";
 echo "  meerdere kandidaten:      {$stat['meerdere']}\n";
-if ($maak) echo "  kaart " . ($apply ? 'aangemaakt' : 'aan te maken') . " vanuit account: {$stat['kaart_gemaakt']}" . ($gemaakt ? ' (' . implode(', ', $gemaakt) . ')' : '') . "\n";
+if ($maak || $maakNieuw) echo "  kaart " . ($apply ? 'aangemaakt' : 'aan te maken') . ": {$stat['kaart_gemaakt']}" . ($gemaakt ? ' (' . implode(', ', $gemaakt) . ')' : '') . "\n";
 if ($conflicten) { echo "\nCONFLICTEN (handmatig beoordelen):\n"; foreach ($conflicten as [$n, $a]) echo "  - $n: $a\n"; }
 if ($meerdere) { echo "\nMEERDERE KANDIDATEN (overgeslagen):\n"; foreach ($meerdere as [$rij, $k]) echo "  - {$rij['naam']} ({$rij['nr']}): " . implode(' / ', $k) . "\n"; }
 if ($nietGevonden) { echo "\nNIET GEVONDEN in de medewerkerkaarten (overgeslagen):\n"; foreach ($nietGevonden as $rij) echo "  - {$rij['naam']} ({$rij['nr']}, {$rij['tel']})" . (isset($rij['opm']) ? " — {$rij['opm']}" : '') . "\n"; }

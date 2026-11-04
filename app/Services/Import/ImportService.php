@@ -11,6 +11,9 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ImportService
 {
+    /** Bronsystemen die een sync-import nooit mag deactiveren/verwijderen (niet uit de Excel). */
+    public const BESCHERMDE_BRONNEN = ['handmatig', 'telefoonlijst'];
+
     /**
      * Lees headers en preview-rows uit een geüpload bestand.
      */
@@ -171,7 +174,15 @@ class ImportService
         // ============ SYNC MODE: deactiveer wat niet in deze import zat ============
         $deactivated = 0;
         if ($job->sync_mode && ! empty($processedIds)) {
+            // Kaarten die niet uit deze (Industrial-)import komen maar handmatig of via de
+            // telefoonlijst zijn aangemaakt (bijv. collega's van een andere business unit
+            // voor de Spoedverhuur-app) horen niet in de bron-Excel en mogen dus NIET worden
+            // gedeactiveerd of verwijderd door de sync.
+            $beschermd = self::BESCHERMDE_BRONNEN;
             $query = $model::query()->whereNotIn('id', $processedIds);
+            if (in_array('source_system', (new $model)->getFillable())) {
+                $query->where(fn ($w) => $w->whereNull('source_system')->orWhereNotIn('source_system', $beschermd));
+            }
 
             // Alleen records die nog actief zijn worden gedeactiveerd
             if (in_array('active', (new $model)->getFillable())) {
@@ -184,6 +195,8 @@ class ImportService
             $toDelete = $model::query()
                 ->whereNotIn('id', $processedIds)
                 ->whereNull('deleted_at')
+                ->when(in_array('source_system', (new $model)->getFillable()),
+                    fn ($q) => $q->where(fn ($w) => $w->whereNull('source_system')->orWhereNotIn('source_system', $beschermd)))
                 ->get();
             foreach ($toDelete as $rec) {
                 $rec->delete();
