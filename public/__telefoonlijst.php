@@ -50,7 +50,8 @@ $norm = function (string $s): array {
     $s = strtolower(preg_replace('/[^a-zA-Z ]+/', ' ', $s));
     return array_values(array_filter(explode(' ', $s)));
 };
-$cijfers = fn (?string $t) => preg_replace('/\D+/', '', (string) $t);
+// Alleen cijfers, en een internationaal voorvoegsel 00… en +… gelijk behandelen (0032 = +32)
+$cijfers = fn (?string $t) => preg_replace('/^00/', '', preg_replace('/\D+/', '', (string) $t));
 
 $medewerkers = \App\Models\Employee::query()->orderBy('name')->get();
 $opVolledig = []; $opSet = []; $opAchter = [];
@@ -111,7 +112,7 @@ foreach ($rijen as $rij) {
         }
     }
     if ($apply && $e->isDirty()) { $e->save(); }
-    if (! preg_grep('/^(nr |tel )/', $acties) && ! preg_grep('/CONFLICT/', $acties)) { $stat['al_goed']++; }
+    if ($acties && ! preg_grep('/→|CONFLICT/u', $acties)) { $stat['al_goed']++; }
     printf("%-28s → #%-4d %-30s %s\n", $rij['naam'], $e->id, mb_substr($e->name, 0, 30), implode(' | ', $acties));
 }
 $stat['conflict'] = count($conflicten);
