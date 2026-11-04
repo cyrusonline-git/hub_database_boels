@@ -11,7 +11,11 @@
  *    gegenereerd ("AUTO-…"); een ander bestaand nummer blijft staan (CONFLICT in het rapport);
  *  - telefoon: alleen gezet als leeg; een ander bestaand nummer blijft staan (CONFLICT);
  *  - koppeling op naam (genormaliseerd: hoofdletters/accenten/volgorde onbelangrijk);
- *    niet of niet-eenduidig gevonden namen worden gemeld en overgeslagen.
+ *    niet of niet-eenduidig gevonden namen worden gemeld en overgeslagen;
+ *  - met &maak=1: voor een naam ZONDER medewerkerkaart maar MET precies één
+ *    gebruikersaccount (zelfde naam, nog niet gekoppeld) wordt een kaart aangemaakt
+ *    (naam/e-mail van het account, depot/area/land uit allowed_*, optionele 4e
+ *    CSV-kolom "functie") en aan het account gekoppeld (users.employee_id).
  * Wijzigingen lopen via het Employee-model (audit-log).
  */
 $secret = null;
@@ -30,6 +34,7 @@ $app = require_once $root . '/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $apply = (($_GET['apply'] ?? '') === '1');
+$maak  = (($_GET['maak'] ?? '') === '1');
 echo "Boels CORE — telefoonlijst aanvullen (" . ($apply ? 'WEGSCHRIJVEN' : 'PROEFDRAAIEN, niets wordt gewijzigd') . ")\n" . str_repeat('=', 70) . "\n\n";
 
 if (empty($_FILES['csv']['tmp_name'])) {
@@ -40,7 +45,7 @@ $kop = fgetcsv($fh, 0, ';');
 $rijen = [];
 while (($r = fgetcsv($fh, 0, ';')) !== false) {
     if (count($r) < 2 || trim((string) $r[0]) === '') continue;
-    $rijen[] = ['naam' => trim((string) $r[0]), 'nr' => trim((string) ($r[1] ?? '')), 'tel' => trim((string) ($r[2] ?? ''))];
+    $rijen[] = ['naam' => trim((string) $r[0]), 'nr' => trim((string) ($r[1] ?? '')), 'tel' => trim((string) ($r[2] ?? '')), 'functie' => trim((string) ($r[3] ?? ''))];
 }
 fclose($fh);
 echo "Regels in lijst: " . count($rijen) . "\n\n";
@@ -64,8 +69,15 @@ foreach ($medewerkers as $e) {
 }
 $nrInGebruik = $medewerkers->keyBy(fn ($e) => (string) $e->employee_number);
 
-$stat = ['nr_gezet' => 0, 'tel_gezet' => 0, 'al_goed' => 0, 'conflict' => 0, 'niet_gevonden' => 0, 'meerdere' => 0];
-$nietGevonden = []; $meerdere = []; $conflicten = [];
+$stat = ['nr_gezet' => 0, 'tel_gezet' => 0, 'al_goed' => 0, 'conflict' => 0, 'niet_gevonden' => 0, 'meerdere' => 0, 'kaart_gemaakt' => 0];
+$nietGevonden = []; $meerdere = []; $conflicten = []; $gemaakt = [];
+// Gebruikersaccounts zonder medewerkerkaart, op genormaliseerde naam (voor &maak=1)
+$accountsZonderKaart = [];
+if ($maak) {
+    foreach (\App\Models\User::whereNull('employee_id')->get() as $u) {
+        $t = $norm($u->name); if ($t) $accountsZonderKaart[implode(' ', $t)][] = $u;
+    }
+}
 foreach ($rijen as $rij) {
     $t = $norm($rij['naam']);
     $kand = $opVolledig[implode(' ', $t)] ?? [];
@@ -78,7 +90,35 @@ foreach ($rijen as $rij) {
         }
     }
     $kand = array_values(array_unique($kand, SORT_REGULAR));
-    if (count($kand) === 0) { $stat['niet_gevonden']++; $nietGevonden[] = $rij; continue; }
+    if (count($kand) === 0) {
+        $accs = $accountsZonderKaart[implode(' ', $t)] ?? [];
+        if ($maak && count($accs) === 1 && $rij['nr'] !== '') {
+            $u = $accs[0];
+            if ($nrInGebruik->has($rij['nr'])) {
+                $conflicten[] = [$rij['naam'], "CONFLICT nr {$rij['nr']} is al in gebruik; geen kaart gemaakt"];
+                printf("%-28s → account #%-4d %-26s CONFLICT nr al in gebruik\n", $rij['naam'], $u->id, mb_substr($u->name, 0, 26));
+                continue;
+            }
+            $velden = [
+                'employee_number' => $rij['nr'], 'name' => $u->name, 'email' => $u->email,
+                'phone' => $rij['tel'] !== '' ? $rij['tel'] : null,
+                'function' => $rij['functie'] !== '' ? $rij['functie'] : null,
+                'depot' => $u->allowed_depots[0] ?? null, 'area' => $u->allowed_areas[0] ?? null, 'country' => $u->allowed_countries[0] ?? null,
+                'active' => true, 'source_system' => 'telefoonlijst',
+            ];
+            if ($apply) {
+                $e = \App\Models\Employee::create($velden);
+                $u->employee_id = $e->id; $u->save();
+            }
+            $stat['kaart_gemaakt']++; $gemaakt[] = $rij['naam'];
+            printf("%-28s → account #%-4d %-26s %s kaart: nr %s, tel %s, depot %s, area %s, functie %s\n", $rij['naam'], $u->id, mb_substr($u->name, 0, 26),
+                $apply ? 'KAART AANGEMAAKT + gekoppeld' : 'zou kaart aanmaken + koppelen', $rij['nr'], $rij['tel'] ?: '-', $velden['depot'] ?: '-', $velden['area'] ?: '-', $velden['function'] ?: '-');
+            continue;
+        }
+        $stat['niet_gevonden']++; $nietGevonden[] = $rij;
+        if (count($accs) > 0) { $nietGevonden[count($nietGevonden) - 1]['opm'] = count($accs) === 1 ? 'wel een gebruikersaccount (#' . $accs[0]->id . ') — gebruik &maak=1' : 'meerdere gebruikersaccounts'; }
+        continue;
+    }
     if (count($kand) > 1) { $stat['meerdere']++; $meerdere[] = [$rij, array_map(fn ($e) => "#{$e->id} {$e->name}", $kand)]; continue; }
     $e = $kand[0];
     $acties = [];
@@ -124,7 +164,8 @@ echo "  al volledig goed:         {$stat['al_goed']}\n";
 echo "  conflicten (ongewijzigd): {$stat['conflict']}\n";
 echo "  niet gevonden:            {$stat['niet_gevonden']}\n";
 echo "  meerdere kandidaten:      {$stat['meerdere']}\n";
+if ($maak) echo "  kaart " . ($apply ? 'aangemaakt' : 'aan te maken') . " vanuit account: {$stat['kaart_gemaakt']}" . ($gemaakt ? ' (' . implode(', ', $gemaakt) . ')' : '') . "\n";
 if ($conflicten) { echo "\nCONFLICTEN (handmatig beoordelen):\n"; foreach ($conflicten as [$n, $a]) echo "  - $n: $a\n"; }
 if ($meerdere) { echo "\nMEERDERE KANDIDATEN (overgeslagen):\n"; foreach ($meerdere as [$rij, $k]) echo "  - {$rij['naam']} ({$rij['nr']}): " . implode(' / ', $k) . "\n"; }
-if ($nietGevonden) { echo "\nNIET GEVONDEN in de medewerkerkaarten (overgeslagen):\n"; foreach ($nietGevonden as $rij) echo "  - {$rij['naam']} ({$rij['nr']}, {$rij['tel']})\n"; }
+if ($nietGevonden) { echo "\nNIET GEVONDEN in de medewerkerkaarten (overgeslagen):\n"; foreach ($nietGevonden as $rij) echo "  - {$rij['naam']} ({$rij['nr']}, {$rij['tel']})" . (isset($rij['opm']) ? " — {$rij['opm']}" : '') . "\n"; }
 echo "\n" . ($apply ? "✓ Klaar." : "Proef klaar — voeg &apply=1 toe om weg te schrijven.") . "\n";
