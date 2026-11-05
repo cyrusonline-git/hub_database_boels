@@ -352,8 +352,8 @@ function bereken(jaar, middelId, postcode, periodeIdx, maand){
   var exclDot = basis * (1 + per.toeslag);
   var inclDot = exclDot * (1 + d.dot);
   var km = kmHeffingVoor(middelId, bi);
-  var vwh = vrachtwagenheffingVoor(middelId);
-  var inkoop = inclDot + km.bedrag + vwh.bedrag;
+  var vwh = vrachtwagenheffingVoor(middelId);   // los van inkoop/verkoop (geen marge), apart getoond
+  var inkoop = inclDot + km.bedrag;
   var verkoop = inkoop * (1 + S.marge);
   var m = middelById(middelId);
   var uur = (m && m.uurtarief != null && !isNaN(m.uurtarief)) ? m.uurtarief * (1 + per.toeslag) : null;
@@ -361,7 +361,7 @@ function bereken(jaar, middelId, postcode, periodeIdx, maand){
   out.basis = basis; out.periode = per; out.toeslagBedrag = exclDot - basis;
   out.dot = d.dot; out.dotSoort = d.isKoerier ? 'koerier' : 'vrachtwagen'; out.dotBron = d.bron; out.dotBedrag = inclDot - exclDot;
   out.exclDot = exclDot; out.inclDot = inclDot; out.km = km; out.vwh = vwh;
-  out.inkoop = inkoop; out.margeBedrag = verkoop - inkoop; out.verkoop = verkoop;
+  out.inkoop = inkoop; out.margeBedrag = verkoop - inkoop; out.verkoop = verkoop; out.totaalInclHeffing = verkoop + vwh.bedrag;
   out.uurtarief = uur; out.uurtariefInclDot = uur==null ? null : uur * (1 + d.dot); out.wachtKwartier = uur==null ? null : uur / 4;
   out.laadLosUur = m ? m.laadLosUur : null; out.aanAfrijUur = m ? m.aanAfrijUur : null;
   return out;
@@ -458,13 +458,16 @@ function viewCalc(){
         rung('Uitvoeringstoeslag — '+esc(res.periode.naam)+' <b>'+(res.periode.toeslag?'+'+pct(res.periode.toeslag):'0%')+'</b>', money(res.toeslagBedrag)) +
         rung('Dieseltoeslag DOT '+res.dotSoort+' <b>+'+pct(res.dot)+'</b>'+(res.dotBron!=='actueel'?' <span class="band-chip">'+maandLabel(res.dotBron)+'</span>':''), money(res.dotBedrag)) +
         kmRung +
-        (res.vwh.geldt
-          ? rung('<b>Vrachtwagenheffing</b> — vast bedrag per rit voor vrachtwagens <span class="hint">(bovenop de KM-heffing)</span>', money(res.vwh.bedrag))
-          : (vwhCfg().bedrag > 0 ? rung('Vrachtwagenheffing — niet van toepassing op dit transportmiddel <span class="hint">(alleen vrachtwagens, id vanaf '+res.vwh.vanafMiddelId+')</span>', money(0)) : '')) +
-        rung('Inkoopprijs all-in <span class="hint">(incl. DOT, KM-heffing'+(res.vwh.geldt?' en vrachtwagenheffing':'')+')</span>', money(res.inkoop), 'sum') +
+        rung('Inkoopprijs all-in <span class="hint">(incl. DOT en KM-heffing)</span>', money(res.inkoop), 'sum') +
         rung('Marge <b>+'+pct(S.marge)+'</b>', money(res.margeBedrag)) +
       '</div>' +
-      '<div class="headline"><div><div class="k">Verkoopprijs excl. btw</div></div><div class="v">'+money(res.verkoop)+'</div></div>' +
+      '<div class="headline"><div><div class="k">Transporttarief excl. btw</div></div><div class="v">'+money(res.verkoop)+'</div></div>' +
+      (res.vwh.geldt
+        ? '<div class="ladder" style="margin-top:10px">' +
+            rung('<b>Vrachtwagenheffing</b> — vast bedrag per rit, los van het transporttarief <span class="hint">(geen marge)</span>', money(res.vwh.bedrag)) +
+            rung('Totaal excl. btw <span class="hint">(transporttarief + vrachtwagenheffing)</span>', money(res.totaalInclHeffing), 'sum') +
+          '</div>'
+        : (vwhCfg().bedrag > 0 ? '<div class="footnotes" style="margin-top:10px"><span>Vrachtwagenheffing niet van toepassing op dit transportmiddel (alleen vrachtwagens, id vanaf '+res.vwh.vanafMiddelId+').</span></div>' : '')) +
       '<a class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none" target="_blank" href="'+aanvraagUrl(res, pcNum)+'">→ Transport aanvragen in de planner</a>' +
       '<div class="footnotes">' + S.notities.map(function(n){ return '<span>'+esc(n)+'</span>'; }).join('') + '</div>';
 
@@ -512,6 +515,7 @@ function aanvraagUrl(res, postcode){
     'periode=' + encodeURIComponent(ui.periode),
     'kosten=' + encodeURIComponent(res.inkoop.toFixed(2)),
     'verkoop=' + encodeURIComponent(res.verkoop.toFixed(2)),
+    'vrachtwagenheffing=' + encodeURIComponent((res.vwh.bedrag || 0).toFixed(2)),
     'bron=calculator'
   ];
   return base + '?' + q.join('&');
@@ -652,7 +656,7 @@ function viewInstellingen(){
         '<label for="s-dotv">DOT vrachtwagen (id vanaf '+(S.dotDrempelId+1)+')</label><input class="control" id="s-dotv" value="'+nl(S.dotVracht*100,1)+'">' +
         '<label for="s-dotgrens">DOT-grens: koerier/busje t/m middel-id</label><input class="control" id="s-dotgrens" value="'+S.dotDrempelId+'">' +
         '<label for="s-kmvanaf">KM-heffing geldt vanaf middel-id</label><input class="control" id="s-kmvanaf" value="'+(kmCfg().vanafMiddelId||9)+'">' +
-        '<label for="s-vwh">Vrachtwagenheffing per rit (€, vast)</label><input class="control" id="s-vwh" value="'+nl(vwhCfg().bedrag||0)+'">' +
+        '<label for="s-vwh">Vrachtwagenheffing per rit (€, vast; los van tarief, geen marge)</label><input class="control" id="s-vwh" value="'+nl(vwhCfg().bedrag||0)+'">' +
         '<label for="s-vwhvanaf">Vrachtwagenheffing geldt vanaf middel-id</label><input class="control" id="s-vwhvanaf" value="'+(vwhCfg().vanafMiddelId||9)+'">' +
         '<label for="s-jaar">Actief tariefjaar in de calculator</label><select class="control" id="s-jaar">'+jaarOpt+'</select>' +
         '<label for="s-vest">Vestiging</label><input class="control" id="s-vest" style="text-align:left;font-family:inherit" value="'+esc(S.vestiging)+'">' +
