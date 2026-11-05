@@ -463,10 +463,7 @@ function viewCalc(){
       '</div>' +
       '<div class="headline"><div><div class="k">Transporttarief excl. btw</div></div><div class="v">'+money(res.verkoop)+'</div></div>' +
       (res.vwh.geldt
-        ? '<div class="ladder" style="margin-top:10px">' +
-            rung('<b>Vrachtwagenheffing</b> — vast bedrag per rit, los van het transporttarief <span class="hint">(geen marge)</span>', money(res.vwh.bedrag)) +
-            rung('Totaal excl. btw <span class="hint">(transporttarief + vrachtwagenheffing)</span>', money(res.totaalInclHeffing), 'sum') +
-          '</div>'
+        ? '<div class="headline" style="margin-top:10px;background:var(--panel-2);border-left-color:var(--harbour)"><div><div class="k">Vrachtwagenheffing excl. btw</div><div class="hint" style="font-size:12.5px;color:var(--ink-3)">vast bedrag per rit, apart op de bon — niet in het transporttarief, geen marge</div></div><div class="v" style="font-size:22px">'+money(res.vwh.bedrag)+'</div></div>'
         : (vwhCfg().bedrag > 0 ? '<div class="footnotes" style="margin-top:10px"><span>Vrachtwagenheffing niet van toepassing op dit transportmiddel (alleen vrachtwagens, id vanaf '+res.vwh.vanafMiddelId+').</span></div>' : '')) +
       '<a class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none" target="_blank" href="'+aanvraagUrl(res, pcNum)+'">→ Transport aanvragen in de planner</a>' +
       '<div class="footnotes">' + S.notities.map(function(n){ return '<span>'+esc(n)+'</span>'; }).join('') + '</div>';
