@@ -219,4 +219,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/machines/{number}', [\App\Http\Controllers\Api\DataController::class, 'machine']);
     Route::get('/subgroups/{number}', [\App\Http\Controllers\Api\DataController::class, 'subgroup']);
     Route::get('/employees', [\App\Http\Controllers\Api\DataController::class, 'employees']);
+
+    // ---- SAP-data (Beheer → Uploads SAP): laatste snapshot per bestandssoort ----
+    Route::get('/sap/uploads', [\App\Http\Controllers\Api\SapController::class, 'uploads']);
+    Route::get('/hire/summary', [\App\Http\Controllers\Api\SapController::class, 'summary']);            // weekhuur/AVI per klant en project
+    Route::get('/hire/contracts', [\App\Http\Controllers\Api\SapController::class, 'contracts']);        // in huur, per contract
+    Route::get('/hire/contracts/{nr}', [\App\Http\Controllers\Api\SapController::class, 'contract']);
+    Route::get('/hire/to-collect', [\App\Http\Controllers\Api\SapController::class, 'toCollect']);       // ophaallijst
+    Route::get('/hire/machines/{nummer}', [\App\Http\Controllers\Api\SapController::class, 'machine']);  // waar staat deze machine
+    Route::get('/hire/invoice-run', [\App\Http\Controllers\Api\SapController::class, 'invoiceRun']);     // uit factuurrun + redenen
+    Route::get('/hire/invoice-run/{nr}', [\App\Http\Controllers\Api\SapController::class, 'invoiceRunContract']);
+    Route::post('/hire/invoice-run/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'invoiceRunNote']);
+    Route::get('/planning/orders', [\App\Http\Controllers\Api\SapController::class, 'planning']);        // 8.7 + 2.6 samengevoegd
+    Route::get('/planning/orders/{nr}', [\App\Http\Controllers\Api\SapController::class, 'planningOrder']);
+    Route::post('/planning/orders/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'planningNote']);
+
+    // ---- Acties per persoon: open werk uit alle apps + SAP-signalen ----
+    Route::get('/acties', [\App\Http\Controllers\Api\ActiesController::class, 'mijn']);
+    Route::get('/acties/alle', [\App\Http\Controllers\Api\ActiesController::class, 'alle']);
 });

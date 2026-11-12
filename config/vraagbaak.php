@@ -23,6 +23,9 @@ return [
         'scanner' => ['type' => 'sqlite', 'pad' => 'scanner.sorai.nl/public_html/data/scanner.db', 'slug' => 'scanner', 'naam' => 'Scanner', 'url' => 'https://scanner.sorai.nl'],
         'voorraad' => ['type' => 'sqlite', 'pad' => 'voorraad.sorai.nl/laravel_app/database/database.sqlite', 'slug' => 'voorraad', 'naam' => 'Voorraad tool', 'url' => 'https://voorraad.sorai.nl'],
         'spoedverhuur' => ['type' => 'sqlite', 'pad' => 'spoedverhuur.sorai.nl/laravel_app/database/database.sqlite', 'slug' => 'spoedverhuur', 'naam' => 'Spoedverhuur', 'url' => 'https://spoedverhuur.sorai.nl'],
+        'planner' => ['type' => 'sqlite', 'pad' => 'planning.sorai.nl/public_html/data/planner.sqlite', 'slug' => 'planner', 'naam' => 'Transportplanner', 'url' => 'https://planning.sorai.nl'],
+        'servicedesk' => ['type' => 'sqlite', 'pad' => 'servicedesk.sorai.nl/public_html/data/servicedesk.db', 'slug' => 'servicedesk', 'naam' => 'Servicedesk (onderdelen)', 'url' => 'https://servicedesk.sorai.nl'],
+        'offertes' => ['type' => 'sqlite', 'pad' => 'offertes.sorai.nl/public_html/database/boels.db', 'slug' => 'offertes', 'naam' => 'Offertes', 'url' => 'https://offertes.sorai.nl'],
         'shell' => ['type' => 'mysql_secrets', 'pad' => 'shell.sorai.nl/public_html/config/secrets.php', 'prefix' => 'shell_', 'slug' => 'shell', 'naam' => 'Shell-portaal', 'url' => 'https://shell.sorai.nl'],
     ],
 

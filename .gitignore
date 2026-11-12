@@ -26,3 +26,7 @@ yarn-error.log
 *.log
 composer.lock
 /bootstrap/cache/*.php
+
+# Lokale testdatabase
+/database/*.sqlite
+/database/*.sqlite-*

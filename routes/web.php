@@ -150,6 +150,12 @@ Route::middleware('auth')->group(function () {
         Route::post('material-imports/subgroups', [MaterialImportController::class, 'uploadSubgroups'])->name('material-imports.subgroups');
         Route::post('material-imports/machines', [MaterialImportController::class, 'uploadMachines'])->name('material-imports.machines');
 
+        // Uploads SAP (WOW, factuurrun, planning, reserveringen) + SAP-codes → medewerkers
+        Route::get('sap-uploads', [\App\Http\Controllers\Admin\SapUploadController::class, 'index'])->name('sap-uploads.index');
+        Route::post('sap-uploads', [\App\Http\Controllers\Admin\SapUploadController::class, 'upload'])->name('sap-uploads.upload');
+        Route::get('sap-uploads/codes', [\App\Http\Controllers\Admin\SapUploadController::class, 'codes'])->name('sap-uploads.codes');
+        Route::post('sap-uploads/codes/{code}', [\App\Http\Controllers\Admin\SapUploadController::class, 'koppel'])->name('sap-uploads.koppel');
+
         Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
         Route::get('imports/create', [ImportController::class, 'create'])->name('imports.create');
         Route::post('imports', [ImportController::class, 'store'])->name('imports.store');
