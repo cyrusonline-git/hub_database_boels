@@ -68,17 +68,7 @@ class LauncherController extends Controller
             ];
         }
 
-        // "Mijn dag": open werk uit alle apps + SAP-signalen (Dashboard-app levert de schermen)
-        $mijnDag = ['items' => [], 'totaal' => 0, 'url' => null];
-        try {
-            $items = app(\App\Services\Acties\ActiesService::class)->voorPersoon((string) $user->email, $user->employee_id);
-            $dash = \App\Models\Application::where('slug', 'dashboard')->first();
-            $mijnDag = ['items' => $items, 'totaal' => array_sum(array_column($items, 'aantal')), 'url' => $dash?->url];
-        } catch (\Throwable $e) {
-            report($e);
-        }
-
-        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges', 'mijnDag'));
+        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges'));
     }
 
     /** Actuele tellers voor de tegel-bolletjes — gepolld door het dashboard. */

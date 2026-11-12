@@ -95,19 +95,6 @@
     </p>
 </div>
 
-{{-- Mijn dag: wat moet ik vandaag doen (uit alle apps + SAP-data) --}}
-@if(!empty($mijnDag['items']))
-<div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid var(--boels-orange) !important;">
-    <div class="card-body py-3 d-flex flex-wrap align-items-center gap-2">
-        <strong class="me-2"><i class="bi bi-bell text-boels me-1"></i>Mijn dag: {{ $mijnDag['totaal'] }} open</strong>
-        @foreach($mijnDag['items'] as $a)
-            <a href="{{ $a['url'] ?? ($mijnDag['url'] ?? '#') }}" class="btn btn-sm btn-outline-secondary">{{ $a['label'] }} <span class="badge ms-1" style="background: var(--boels-orange)">{{ $a['aantal'] }}</span></a>
-        @endforeach
-        @if($mijnDag['url'])<a href="{{ $mijnDag['url'] }}" class="ms-auto small">naar het Dashboard <i class="bi bi-arrow-right"></i></a>@endif
-    </div>
-</div>
-@endif
-
 {{-- Snelzoeken: klanten, collega's, artikelen --}}
 <div class="dash-search mb-2">
     <i class="bi bi-search"></i>
