@@ -4,6 +4,7 @@ namespace App\Services\Sap;
 
 use App\Models\HireLine;
 use App\Models\InvoiceRunLine;
+use App\Models\PlanningLine;
 use App\Models\PlanningOrder;
 use App\Models\ReservationLine;
 use App\Models\SapUpload;
@@ -20,6 +21,7 @@ class SapImportService
         'factuurrun' => FactuurrunImporter::class,
         'planning' => PlanningImporter::class,
         'reserveringen' => ReserveringenImporter::class,
+        'planning_regels' => PlanningRegelsImporter::class,
     ];
 
     private const REGELS = [
@@ -27,6 +29,7 @@ class SapImportService
         'factuurrun' => InvoiceRunLine::class,
         'planning' => PlanningOrder::class,
         'reserveringen' => ReservationLine::class,
+        'planning_regels' => PlanningLine::class,
     ];
 
     /**

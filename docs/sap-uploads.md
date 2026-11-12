@@ -13,6 +13,7 @@ Alleen contracten die beginnen met `config('sap.depot')` (759) tellen mee.
 | `wow` | `boels_whatsoutwhere_incllimitedmode.xls` (binair .xls, kop rij 2) | dagelijks | `hire_lines` |
 | `factuurrun` | `0.07 Contracts and items not part of invoice run.xlsx` (gegroepeerd) | wekelijks | `invoice_run_lines` + `invoice_run_notes` |
 | `planning` | `8.7 INDUSTRIAL HOP, SOP and DT View.xlsx` — **platte lijst**, kop `PickUpDate … DelDate` | dagelijks | `planning_orders` + `planning_notes` |
+| `planning_regels` | `8.7 … View.xlsx` **gegroepeerde variant** (kop `COLLECTION DATE/TIME`) — optioneel, alleen artikelregels per order | dagelijks | `planning_lines` |
 | `reserveringen` | `2.6 Reservations with items (today and future).xlsx` (gegroepeerd) | dagelijks | `reservation_lines` |
 
 ## Regels per bestand (besluiten Wim, 12-11-2026)
@@ -24,8 +25,8 @@ Alleen contracten die beginnen met `config('sap.depot')` (759) tellen mee.
   kolom verschoven (klantnummer in C). `DATE LAST INVOICE` 30-12-1899 = nooit gefactureerd (NULL).
   `CREATED BY` = SAP-code van de aanmaker. Per contract een **reden** + status (`invoice_run_notes`),
   blijft staan over uploads; verdwijnt het contract → `verdwenen_op`, komt het terug → weer open.
-- **Planning (8.7)**: alleen de platte View; de gegroepeerde variant (kop `COLLECTION DATE/TIME`)
-  wordt geweigerd. Kolommen `PickUpInfo` en `DelMethod` negeren. `Items` = `gepickt/totaal`.
+- **Planning (8.7)**: de platte View is leidend (orders + pickstand); de gegroepeerde variant (kop
+  `COLLECTION DATE/TIME`) mag er optioneel naast voor artikelregels (`planning_regels`), kolom A/C negeren. Kolommen `PickUpInfo` en `DelMethod` negeren. `Items` = `gepickt/totaal`.
   `Type` → soort: huur / verkoop / transfer_in / transfer_uit / retour. Leverdatum < vandaag =
   **op te schonen**. `SalesPerson` staat voluit → medewerker via dezelfde codelogica.
 - **Reserveringen (2.6)**: kolom **H** `CONTRACT STATUS` bepaalt: `Ingegeven` = contract,

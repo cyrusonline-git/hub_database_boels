@@ -2,6 +2,7 @@
 
 namespace App\Services\Sap;
 
+use App\Models\PlanningLine;
 use App\Models\PlanningNote;
 use App\Models\PlanningOrder;
 use App\Models\ReservationLine;
@@ -31,9 +32,11 @@ class PlanningOverzicht
                 MAX(delivery_name) AS delivery_name, MAX(street) AS street, MAX(city) AS city, MAX(ordered_by) AS ordered_by, MAX(customer_reference) AS customer_reference, MAX(goods_value) AS goods_value, MAX(created_by_code) AS created_by_code')
             ->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
 
+        $pl = SapUpload::laatste('planning_regels');
+        $plRegels = $pl ? PlanningLine::where('upload_id', $pl->id)->selectRaw('contract_number, COUNT(*) AS n, SUM(qty) AS aantal')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
         $nummers = $orders->keys()->merge($res->keys())->unique();
         $empIds = collect();
-        $rijen = $nummers->map(function ($nr) use ($orders, $res, $codes, $notes, $vandaag, &$empIds) {
+        $rijen = $nummers->map(function ($nr) use ($orders, $res, $codes, $notes, $vandaag, $plRegels, &$empIds) {
             $o = $orders->get($nr);
             $v = $res->get($nr);
             $isOfferte = $o === null && $v && ! (bool) $v->is_contract;
@@ -63,8 +66,9 @@ class PlanningOverzicht
                 'contract_status' => $o?->contract_status ?? $v?->contract_status,
                 'offerte_status' => $v?->offerte_status,
                 'goods_value' => $v ? (float) $v->goods_value : null,
-                'regels' => $v ? (int) $v->regels : null,
-                'aantal' => $v ? (float) $v->aantal : null,
+                'regels' => $v ? (int) $v->regels : (isset($plRegels[$nr]) ? (int) $plRegels[$nr]->n : null),
+                'aantal' => $v ? (float) $v->aantal : (isset($plRegels[$nr]) ? (float) $plRegels[$nr]->aantal : null),
+                'regels_bron' => $v ? 'reserveringen' : (isset($plRegels[$nr]) ? 'planning_regels' : null),
                 'hire_start_date' => $v?->hire_start_date,
                 'hire_end_date' => $v?->hire_end_date,
                 'delivery_name' => $v?->delivery_name, 'street' => $v?->street, 'city' => $v?->city,
@@ -116,6 +120,12 @@ class PlanningOverzicht
         }
         $r = SapUpload::laatste('reserveringen');
         $regels = $r ? ReservationLine::where('upload_id', $r->id)->where('contract_number', $nr)->orderBy('item_description')->get() : collect();
+        if ($regels->isEmpty() && ($pl = SapUpload::laatste('planning_regels'))) {
+            // Terugvallen op de gegroepeerde 8.7-export, in dezelfde vorm als de 2.6-regels
+            $regels = PlanningLine::where('upload_id', $pl->id)->where('contract_number', $nr)->orderBy('item_description')->get()
+                ->map(fn ($l) => ['item_number' => $l->item_number, 'item_description' => $l->item_description, 'qty' => $l->qty, 'type' => $l->item_status, 'delivery_date' => $l->delivery_date?->toDateString(), 'hire_end_date' => null, 'hire_end_time' => $l->delivery_time, 'memo' => $l->memo])->values();
+            $rij->regels_bron = 'planning_regels';
+        }
 
         return ['order' => $rij, 'regels' => $regels];
     }

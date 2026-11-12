@@ -18,10 +18,6 @@ class Herkenning
                 return ['soort' => $soort, 'reden' => null, 'koprij' => $kop[0], 'kolommen' => $kop[1]];
             }
         }
-        // Bekende foute variant van 8.7: het gegroepeerde rapport met artikelregels
-        if (SapBestand::kop($rijen, ['COLLECTION DATE/TIME', 'CONTRACTS.CONTNO'])) {
-            return ['soort' => null, 'reden' => 'Dit is de gegroepeerde variant van 8.7 (kop "COLLECTION DATE/TIME"). Gebruik de platte "View" met de kop PickUpDate … DelDate.', 'koprij' => null, 'kolommen' => []];
-        }
         $eerste = [];
         foreach (array_slice($rijen, 0, 3) as $rij) {
             foreach ($rij as $v) {

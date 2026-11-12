@@ -42,6 +42,13 @@ return [
             'omschrijving' => 'Eén rij per order: huur, verkoop, transfers; met gepickt/totaal, leverdatum en verkoper. Let op: de platte "View" met kop PickUpDate … DelDate.',
             'kop' => ['PickUpDate', 'Items', 'contno', 'SalesPerson'],
         ],
+        'planning_regels' => [
+            'label' => 'Planning: artikelregels (8.7 gegroepeerd)',
+            'bestand' => '8.7 INDUSTRIAL HOP, SOP and DT View.xlsx (gegroepeerde variant met artikelregels)',
+            'frequentie_dagen' => 1,
+            'omschrijving' => 'Optioneel: de gegroepeerde 8.7-export met per order de artikelregels. Vult het orderdetail aan voor orders die niet in 2.6 staan.',
+            'kop' => ['COLLECTION DATE/TIME', 'ITEM NUMBER', 'CONTRACTS.CONTNO'],
+        ],
         'reserveringen' => [
             'label' => 'Reserveringen (offertes + toekomstige contracten)',
             'bestand' => '2.6 Reservations with items (today and future).xlsx',
