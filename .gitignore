@@ -30,3 +30,6 @@ composer.lock
 # Lokale testdatabase
 /database/*.sqlite
 /database/*.sqlite-*
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/cache/data/*
