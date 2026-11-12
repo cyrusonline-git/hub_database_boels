@@ -100,9 +100,14 @@ class User extends Authenticatable
 
     public function matchesAppRestrictions(Application $app): bool
     {
-        return $this->overlaps($app->restricted_to_areas, $this->allowed_areas)
-            && $this->overlaps($app->restricted_to_depots, $this->allowed_depots)
-            && $this->overlaps($app->restricted_to_countries, $this->allowed_countries);
+        // Lege toegangslijst op het account → terugvallen op de medewerkerkaart (zoals /api/me)
+        $areas = $this->allowed_areas ?: ($this->employee?->area ? [$this->employee->area] : null);
+        $depots = $this->allowed_depots ?: ($this->employee?->depot ? [$this->employee->depot] : null);
+        $countries = $this->allowed_countries ?: ($this->employee?->country ? [$this->employee->country] : null);
+
+        return $this->overlaps($app->restricted_to_areas, $areas)
+            && $this->overlaps($app->restricted_to_depots, $depots)
+            && $this->overlaps($app->restricted_to_countries, $countries);
     }
 
     /**
