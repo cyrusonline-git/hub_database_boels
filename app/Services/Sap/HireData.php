@@ -31,9 +31,16 @@ class HireData
         $perProject = (clone $basis)->whereNotNull('project_number')->selectRaw('project_number, MAX(project_description) AS project_description, MAX(customer_name) AS customer_name, COUNT(DISTINCT contract_number) AS contracten, COUNT(*) AS regels, ROUND(SUM(weekly_hire_rate*qty_out),2) AS weekhuur')
             ->groupBy('project_number')->orderByDesc('weekhuur')->get();
         $perStatus = (clone $basis)->selectRaw('status, COUNT(*) AS regels, COUNT(DISTINCT contract_number) AS contracten')->groupBy('status')->get();
-        $trend = SapUpload::where('soort', 'wow')->orderByDesc('id')->limit(60)->get(['id', 'created_at', 'rapportdatum', 'samenvatting', 'contracten'])
-            ->map(fn ($x) => ['datum' => $x->rapportdatum?->toDateString() ?? $x->created_at->toDateString(), 'weekhuur' => $x->samenvatting['weekhuur'] ?? null, 'contracten' => $x->contracten, 'to_collect' => $x->samenvatting['to_collect_regels'] ?? null])
+        // Trend: één punt per upload-dag (laatste upload van die dag telt), met top-klanten per punt
+        $trend = SapUpload::where('soort', 'wow')->orderByDesc('id')->limit(400)->get(['id', 'created_at', 'rapportdatum', 'samenvatting', 'contracten'])
+            ->unique(fn ($x) => $x->created_at->toDateString())
+            ->map(fn ($x) => ['datum' => $x->created_at->toDateString(), 'moment' => $x->created_at->toDateTimeString(), 'weekhuur' => $x->samenvatting['weekhuur'] ?? null, 'contracten' => $x->contracten, 'klanten' => $x->samenvatting['klanten'] ?? null, 'to_collect' => $x->samenvatting['to_collect_regels'] ?? null, 'top_klanten' => $x->samenvatting['top_klanten'] ?? []])
             ->reverse()->values();
+        // Weekhuur naar startmaand van de huur (hoe lang staat het al uit) en per status
+        $perMaand = (clone $basis)->whereNotNull('hire_date')->selectRaw('substr(hire_date, 1, 7) AS maand, COUNT(DISTINCT contract_number) AS contracten, COUNT(*) AS regels, ROUND(SUM(weekly_hire_rate*qty_out),2) AS weekhuur')
+            ->groupBy('maand')->orderBy('maand')->get();
+        $perStatusGeld = (clone $basis)->selectRaw('status, ROUND(SUM(weekly_hire_rate*qty_out),2) AS weekhuur')->groupBy('status')->get();
+        $projectGeld = (float) (clone $basis)->whereNotNull('project_number')->selectRaw('ROUND(SUM(weekly_hire_rate*qty_out),2) AS w')->value('w');
 
         return [
             'beschikbaar' => true,
@@ -46,6 +53,9 @@ class HireData
             'per_klant' => $perKlant,
             'per_project' => $perProject,
             'per_status' => $perStatus,
+            'per_status_weekhuur' => $perStatusGeld,
+            'per_maand' => $perMaand,
+            'weekhuur_projecten' => $projectGeld,
             'trend' => $trend,
         ];
     }
