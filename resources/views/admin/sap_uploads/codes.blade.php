@@ -4,13 +4,22 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3><i class="bi bi-person-badge text-boels"></i> SAP-codes → medewerkers</h3>
-    <a href="{{ route('admin.sap-uploads.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Uploads SAP</a>
+    <div class="d-flex gap-2">
+        @if($gebruikers->isNotEmpty())
+        <form method="POST" action="{{ route('admin.sap-uploads.maak-kaarten') }}" onsubmit="return confirm('Voor {{ $gebruikers->count() }} gebruiker(s) zonder medewerkerkaart een kaart aanmaken en het account koppelen?')">
+            @csrf
+            <button class="btn btn-boels btn-sm"><i class="bi bi-person-plus"></i> Kaarten aanmaken voor {{ $gebruikers->count() }} gebruiker(s) zonder medewerkerkaart</button>
+        </form>
+        @endif
+        <a href="{{ route('admin.sap-uploads.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Uploads SAP</a>
+    </div>
 </div>
 @if (session('ok'))<div class="alert alert-success">{{ session('ok') }}</div>@endif
 <p class="text-muted">
     SAP schrijft de aanmaker als code: de eerste vijf letters van de achternaam (zonder tussenvoegsel) plus de eerste letter
     van de voornaam — <em>Wouter Zwackhalen</em> = <code>ZWACKW</code>. CORE koppelt automatisch als precies één medewerker
-    past; de rest koppel je hier eenmalig. Namen die SAP voluit schrijft (planning) staan als <code>NAAM:…</code>.
+    past; de rest koppel je hier eenmalig. Staat iemand alleen als <strong>gebruiker</strong> in CORE (zonder medewerkerkaart), kies dan die gebruiker:
+    CORE maakt dan een medewerkerkaart aan en koppelt het account eraan. Namen die SAP voluit schrijft (planning) staan als <code>NAAM:…</code>.
 </p>
 <div class="card">
     <div class="table-responsive">
@@ -28,14 +37,20 @@
                             @csrf
                             <select name="employee_id" class="form-select form-select-sm">
                                 <option value="">— niet gekoppeld —</option>
-                                @if($c->kandidaten->isNotEmpty())
+                                @if($c->kandidaten->isNotEmpty() || $c->gebruikerKandidaten->isNotEmpty())
                                     <optgroup label="Suggesties">
                                         @foreach($c->kandidaten as $k)<option value="{{ $k['id'] }}">{{ $k['naam'] }} ({{ $k['code'] }})</option>@endforeach
+                                        @foreach($c->gebruikerKandidaten as $u)<option value="user:{{ $u['id'] }}">{{ $u['naam'] }} — gebruiker, kaart wordt aangemaakt</option>@endforeach
                                     </optgroup>
                                 @endif
-                                <optgroup label="Alle medewerkers">
+                                <optgroup label="Medewerkers">
                                     @foreach($medewerkers as $m)<option value="{{ $m->id }}" @selected($c->employee_id === $m->id)>{{ $m->name }}</option>@endforeach
                                 </optgroup>
+                                @if($gebruikers->isNotEmpty())
+                                <optgroup label="Gebruikers zonder medewerkerkaart (kaart wordt aangemaakt)">
+                                    @foreach($gebruikers as $u)<option value="user:{{ $u['id'] }}">{{ $u['naam'] }}</option>@endforeach
+                                </optgroup>
+                                @endif
                             </select>
                             <button class="btn btn-boels btn-sm">Opslaan</button>
                         </form>

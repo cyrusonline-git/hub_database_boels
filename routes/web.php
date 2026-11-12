@@ -154,6 +154,7 @@ Route::middleware('auth')->group(function () {
         Route::get('sap-uploads', [\App\Http\Controllers\Admin\SapUploadController::class, 'index'])->name('sap-uploads.index');
         Route::post('sap-uploads', [\App\Http\Controllers\Admin\SapUploadController::class, 'upload'])->name('sap-uploads.upload');
         Route::get('sap-uploads/codes', [\App\Http\Controllers\Admin\SapUploadController::class, 'codes'])->name('sap-uploads.codes');
+        Route::post('sap-uploads/codes-maak-kaarten', [\App\Http\Controllers\Admin\SapUploadController::class, 'maakKaarten'])->name('sap-uploads.maak-kaarten');
         Route::post('sap-uploads/codes/{code}', [\App\Http\Controllers\Admin\SapUploadController::class, 'koppel'])->name('sap-uploads.koppel');
 
         Route::get('imports', [ImportController::class, 'index'])->name('imports.index');

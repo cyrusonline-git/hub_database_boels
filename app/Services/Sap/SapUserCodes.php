@@ -4,6 +4,7 @@ namespace App\Services\Sap;
 
 use App\Models\Employee;
 use App\Models\SapUserCode;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
@@ -115,6 +116,52 @@ class SapUserCodes
         $ach = substr($prefix, 0, -1);
 
         return $this->lijst()->filter(fn ($m) => $ach !== '' && $m['code'] !== null && str_starts_with($m['code'], substr($ach, 0, 4)))->values();
+    }
+
+    /**
+     * Voor elke actieve gebruiker zonder medewerkerkaart een kaart aanmaken (naam, e-mail,
+     * depot/area uit het account) en het account eraan koppelen; daarna alle nog
+     * ongekoppelde SAP-codes opnieuw automatisch matchen. Geeft [aangemaakt => [...], gekoppeld => n].
+     */
+    public function maakKaartenVoorGebruikers(): array
+    {
+        $kaartEmails = Employee::whereNotNull('email')->get(['id', 'email'])->keyBy(fn ($e) => mb_strtolower($e->email));
+        $aangemaakt = [];
+        foreach (User::whereNull('employee_id')->where('status', '!=', User::STATUS_DISABLED)->orderBy('name')->get() as $u) {
+            $email = $u->email ? mb_strtolower($u->email) : null;
+            $e = $email && $kaartEmails->has($email) ? Employee::find($kaartEmails[$email]->id) : null;
+            if (! $e) {
+                if (trim((string) $u->name) === '') {
+                    continue;
+                }
+                $e = Employee::create([
+                    'employee_number' => 'AUTO-'.strtoupper(substr(md5($email ?: mb_strtolower($u->name)), 0, 8)),
+                    'name' => $u->name, 'email' => $u->email,
+                    'depot' => $u->allowed_depots[0] ?? null, 'area' => $u->allowed_areas[0] ?? null, 'country' => $u->allowed_countries[0] ?? null,
+                    'active' => true, 'source_system' => 'handmatig',
+                ]);
+                $aangemaakt[] = $u->name;
+                if ($email) {
+                    $kaartEmails[$email] = $e;
+                }
+            }
+            $u->employee_id = $e->id;
+            $u->save();
+        }
+        // Lijst verversen en ongekoppelde codes opnieuw proberen
+        $this->medewerkers = null;
+        $this->cache = [];
+        $gekoppeld = 0;
+        foreach (SapUserCode::whereNull('employee_id')->get() as $rij) {
+            $id = str_starts_with($rij->code, 'NAAM:') ? $this->zoekOpNaam((string) $rij->weergave) : $this->zoekOpCode($rij->code);
+            if ($id) {
+                $rij->update(['employee_id' => $id, 'bron' => 'auto']);
+                \App\Models\PlanningOrder::whereNull('employee_id')->where(fn ($q) => $q->where('sales_person', $rij->weergave)->orWhere('sales_person', $rij->code))->update(['employee_id' => $id]);
+                $gekoppeld++;
+            }
+        }
+
+        return ['aangemaakt' => $aangemaakt, 'gekoppeld' => $gekoppeld];
     }
 
     private function zoekOpCode(string $code): ?int

@@ -9,7 +9,8 @@
 <p class="text-muted">
     SAP schrijft de aanmaker als code: de eerste vijf letters van de achternaam (zonder tussenvoegsel) plus de eerste letter
     van de voornaam — <em>Wouter Zwackhalen</em> = <code>ZWACKW</code>. CORE koppelt automatisch als precies één medewerker
-    past; de rest koppel je hier eenmalig. Namen die SAP voluit schrijft (planning) staan als <code>NAAM:…</code>.
+    past; de rest koppel je hier eenmalig. Staat iemand alleen als <strong>gebruiker</strong> in CORE (zonder medewerkerkaart), kies dan die gebruiker:
+    CORE maakt dan een medewerkerkaart aan en koppelt het account eraan. Namen die SAP voluit schrijft (planning) staan als <code>NAAM:…</code>.
 </p>
 <div class="card">
     <div class="table-responsive">
@@ -27,14 +28,20 @@
                             <?php echo csrf_field(); ?>
                             <select name="employee_id" class="form-select form-select-sm">
                                 <option value="">— niet gekoppeld —</option>
-                                <?php if($c->kandidaten->isNotEmpty()): ?>
+                                <?php if($c->kandidaten->isNotEmpty() || $c->gebruikerKandidaten->isNotEmpty()): ?>
                                     <optgroup label="Suggesties">
                                         <?php $__currentLoopData = $c->kandidaten; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($k['id']); ?>"><?php echo e($k['naam']); ?> (<?php echo e($k['code']); ?>)</option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        <?php $__currentLoopData = $c->gebruikerKandidaten; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $u): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="user:<?php echo e($u['id']); ?>"><?php echo e($u['naam']); ?> — gebruiker, kaart wordt aangemaakt</option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </optgroup>
                                 <?php endif; ?>
-                                <optgroup label="Alle medewerkers">
+                                <optgroup label="Medewerkers">
                                     <?php $__currentLoopData = $medewerkers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $m): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($m->id); ?>" <?php if($c->employee_id === $m->id): echo 'selected'; endif; ?>><?php echo e($m->name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </optgroup>
+                                <?php if($gebruikers->isNotEmpty()): ?>
+                                <optgroup label="Gebruikers zonder medewerkerkaart (kaart wordt aangemaakt)">
+                                    <?php $__currentLoopData = $gebruikers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $u): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="user:<?php echo e($u['id']); ?>"><?php echo e($u['naam']); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </optgroup>
+                                <?php endif; ?>
                             </select>
                             <button class="btn btn-boels btn-sm">Opslaan</button>
                         </form>

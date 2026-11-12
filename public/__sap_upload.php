@@ -42,6 +42,18 @@ if (! empty($_GET['status'])) {
     }
     exit;
 }
+if (! empty($_GET['maak_kaarten'])) {
+    $res = app(\App\Services\Sap\SapUserCodes::class)->maakKaartenVoorGebruikers();
+    echo count($res['aangemaakt'])." medewerkerkaart(en) aangemaakt:\n";
+    foreach ($res['aangemaakt'] as $n) {
+        echo "  - $n\n";
+    }
+    echo $res['gekoppeld']." SAP-code(s) alsnog automatisch gekoppeld.\n";
+    foreach (\App\Models\SapUserCode::with('employee')->orderBy('code')->get() as $c) {
+        echo str_pad($c->code, 26).str_pad($c->bron, 10).($c->employee?->name ?? '—')."\n";
+    }
+    exit;
+}
 if (empty($_FILES['file']['tmp_name'])) {
     exit("Geen bestand (veld 'file').\n");
 }
