@@ -49,5 +49,5 @@ medewerker past; anders handmatig via Beheer → Uploads SAP → SAP-codes. Name
   `GET /api/hire/invoice-run/{nr}` · `POST /api/hire/invoice-run/{nr}/note {reden, status}`
 - `GET /api/planning/orders?van=&tm=&soort=&employee_id=&q=&verleden=1&alles=1` ·
   `GET /api/planning/orders/{nr}` · `POST /api/planning/orders/{nr}/note {expeditie_employee_id, opmerking, vlag}`
-- `GET /api/acties` (eigen open werk: badges + Spoedverhuur/Servicedesk/Planner/Inhuur via DataBrug +
-  SAP-signalen) · `GET /api/acties/alle` (super-admin of Dashboard-rol area-manager/bu-manager/admin).
+- `GET /api/acties` (eigen open werk dat op naam staat: Spoedverhuur/Servicedesk/Planner/Inhuur via DataBrug +
+  SAP-signalen; CORE-badges bewust niet, die zijn per depot/rol) · `GET /api/acties/alle` (super-admin of Dashboard-rol area-manager/bu-manager/admin).

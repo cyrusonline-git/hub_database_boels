@@ -2,14 +2,12 @@
 
 namespace App\Services\Acties;
 
-use App\Models\AppBadge;
 use App\Models\Application;
 use App\Models\InvoiceRunNote;
 use App\Models\PlanningOrder;
 use App\Models\ReservationLine;
 use App\Models\SapUpload;
 use App\Models\SapUserCode;
-use App\Models\User;
 use App\Vraagbaak\DataBrug;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -17,8 +15,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * "Acties per persoon": open werk uit de bestaande apps (via de alleen-lezen
- * DataBrug en de CORE-badges) plus de signalen uit de SAP-data. Elke bron is
+ * "Acties per persoon": ALLEEN werk dat echt op naam staat — uit de bestaande apps via de
+ * alleen-lezen DataBrug plus de signalen uit de SAP-data. De CORE-badges doen hier bewust
+ * NIET mee: Projectschade/Tankapp melden die per depot/rol, zodat iedereen van de binnendienst
+ * hetzelfde aantal zou krijgen (Wim 13-11-2026). Die tellers staan al op de CORE-tegels. Elke bron is
  * één methode die per e-mailadres (kleine letters) een lijst signalen geeft:
  *   ['bron' => 'spoedverhuur', 'label' => 'Ruilverzoek wacht op jouw antwoord', 'aantal' => 1, 'url' => …, 'soort' => 'app'|'sap']
  * Nieuwe signalen: één methode erbij in bronnen().
@@ -87,31 +87,11 @@ class ActiesService
     private function bronnen(): array
     {
         return [
-            'badges' => fn () => $this->badges(),
             'spoedverhuur' => fn () => $this->spoedverhuur(),
             'servicedesk' => fn () => $this->servicedesk(),
             'planner' => fn () => $this->planner(),
             'inhuur' => fn () => $this->inhuur(),
         ];
-    }
-
-    /** CORE-badges: Projectschade, Tankapp, Offertes melden al open aantallen per gebruiker. */
-    private function badges(): array
-    {
-        $uit = [];
-        $apps = Application::pluck('name', 'id');
-        $urls = Application::pluck('url', 'id');
-        $slugs = Application::pluck('slug', 'id');
-        $users = User::pluck('email', 'id');
-        foreach (AppBadge::where('count', '>', 0)->get() as $b) {
-            $email = $users[$b->user_id] ?? null;
-            if (! $email) {
-                continue;
-            }
-            $uit[$email][] = ['bron' => $slugs[$b->application_id] ?? 'app', 'label' => 'Open items in '.($apps[$b->application_id] ?? 'app'), 'aantal' => (int) $b->count, 'url' => $urls[$b->application_id] ?? null];
-        }
-
-        return $uit;
     }
 
     private function spoedverhuur(): array
