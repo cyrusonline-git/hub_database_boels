@@ -14,6 +14,7 @@
 $apps = [
     'voorraad' => ['domein' => 'voorraad.sorai.nl', 'repo' => 'cyrusonline-git/voorraad-tool', 'naam' => 'Voorraad tool'],
     'spoedverhuur' => ['domein' => 'spoedverhuur.sorai.nl', 'repo' => 'cyrusonline-git/spoedverhuur', 'naam' => 'Spoedverhuur'],
+    'dashboard' => ['domein' => 'dashboard.sorai.nl', 'repo' => 'cyrusonline-git/dashboard', 'naam' => 'Dashboard'],
 ];
 
 $coreEnv = null;
