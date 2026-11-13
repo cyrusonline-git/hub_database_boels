@@ -110,6 +110,11 @@ class PlanningOverzicht
                 && ($total <= 0 || $picked < $total) && ($datum === null || $datum >= $vandaag);
             // 8.7 kolom P (REF) leeg of 'volgt' / 'PO volgt' = klantreferentie/PO-nummer ontbreekt → factuur wordt niet betaald (Wim 13-11-2026)
             $refOntbreekt = $o && in_array($soort, ['huur', 'verkoop'], true) && ($datum === null || $datum >= $vandaag) && self::referentieOntbreekt($o->reference);
+            // Uitgeleverd (Wim 13-11-2026): het contract staat in de WOW (artikelen On-Hire/Delivered), er zijn geen nieuwe
+            // 3.4-regels meer te leveren, en de 8.7-order is volledig gepickt (of er is geen 8.7-order meer). De 8.7 blijft zo'n
+            // order tonen; in de planning hoort hij niet meer.
+            $geleverd = ! $isOfferte && isset($inHuur[$nr]) && $nieuweRegels === [] && ! $datumOnbekend
+                && ($o === null || ($total !== null && $total > 0 && $picked >= $total));
             $n = $notes->get($nr);
 
             return (object) [
@@ -148,6 +153,7 @@ class PlanningOverzicht
                 'memo' => $o?->del_memo,
                 'pick_up_info' => $o?->pick_up_info,
                 'niet_op_scanner' => $nietOpScanner,
+                'geleverd' => $geleverd,
                 'referentie_ontbreekt' => $refOntbreekt,
                 'hiring_depot' => $o?->hiring_depot,
                 'sales_person' => $o?->sales_person,
@@ -183,6 +189,9 @@ class PlanningOverzicht
         }
         if (! empty($f['referentie_ontbreekt'])) {
             $rijen = $rijen->where('referentie_ontbreekt', true);
+        }
+        if (isset($f['geleverd']) && $f['geleverd'] !== '' && $f['geleverd'] !== null) {
+            $rijen = $rijen->where('geleverd', (bool) (int) $f['geleverd']);
         }
         if (! empty($f['employee_id'])) {
             $rijen = $rijen->where('employee_id', (int) $f['employee_id']);

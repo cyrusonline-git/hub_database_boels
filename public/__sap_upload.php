@@ -69,6 +69,18 @@ if (! empty($_GET['contract'])) {
     echo "Overzicht: ".($rij ? json_encode(['bron' => $rij->bron, 'bijhuur' => $rij->bijhuur, 'in_huur_regels' => $rij->in_huur_regels, 'delivery_date' => $rij->delivery_date, 'pick_status' => $rij->pick_status, 'nog_te_picken' => $rij->nog_te_picken, 'te_laat' => $rij->te_laat]) : 'niet in planning')."\n";
     exit;
 }
+if (! empty($_GET['geleverd'])) {
+    $w = \App\Models\SapUpload::laatste('wow'); $r = \App\Models\SapUpload::laatste('reserveringen');
+    echo 'WOW ', $w?->created_at, ' | 3.4 ', $r?->created_at, ' | 8.7 ', \App\Models\SapUpload::laatste('planning')?->created_at, "\n";
+    $wow = $w ? \App\Models\HireLine::where('upload_id', $w->id)->selectRaw('contract_number, COUNT(*) n, SUM(qty_out) q, MIN(hire_date) hd, MAX(status) st')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
+    $r34 = $r ? \App\Models\ReservationLine::where('upload_id', $r->id)->selectRaw('contract_number, COUNT(*) n, SUM(qty) q, MAX(contract_status) cs')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
+    $van = now()->subDays((int) ($_GET['dagen'] ?? 3))->toDateString(); $tm = now()->addDay()->toDateString();
+    $rows = app(\App\Services\Sap\PlanningOverzicht::class)->rijen(['alles' => 1])->filter(fn ($x) => ! in_array($x->soort, ['transfer_in', 'transfer_uit']) && $x->delivery_date >= $van && $x->delivery_date <= $tm);
+    printf("%-11s %-8s %-10s %-11s %-9s %-9s %-16s %-9s %-10s %-6s %s\n", 'order', 'soort', 'lever', '8.7 status', 'pick', 'WOW n/q', 'WOW status', '3.4 n/q', '3.4 status', 'nieuw', 'GELEVERD');
+    foreach ($rows->sortBy('delivery_date') as $x) { $wv = $wow[$x->order_number] ?? null; $rv = $r34[$x->order_number] ?? null;
+        printf("%-11s %-8s %-10s %-11s %-9s %-9s %-16s %-9s %-10s %-6s %s\n", $x->order_number, $x->soort, $x->delivery_date, $x->contract_status ?? '-', $x->total === null ? '-' : (($x->picked + 0).'/'.($x->total + 0)), $wv ? ($wv->n.'/'.($wv->q + 0)) : '-', $wv ? mb_substr($wv->st, 0, 16) : '-', $rv ? ($rv->n.'/'.($rv->q + 0)) : '-', $rv?->cs ?? '-', count($x->nieuwe_regels).'/'.(int) $x->bijhuur, $x->geleverd ? 'JA' : '-'); }
+    exit;
+}
 if (! empty($_GET['po'])) {
     foreach (\App\Models\ReferenceRequest::orderByDesc('id')->take(10)->get() as $v) {
         echo $v->id, ' ', $v->contract_number, ' aan=', var_export($v->gevraagd_aan, true), ' raw=', var_export($v->getRawOriginal('gevraagd_op'), true), ' cast=', var_export($v->gevraagd_op?->toDateString(), true), ' user=', $v->user_id, ' created=', $v->created_at, "\n";
