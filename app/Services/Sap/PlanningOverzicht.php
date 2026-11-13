@@ -39,7 +39,7 @@ class PlanningOverzicht
         $plRegels = $pl ? PlanningLine::where('upload_id', $pl->id)->selectRaw('contract_number, COUNT(*) AS n, SUM(qty) AS aantal')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
         // Bijhuur: order op een contract dat volgens WOW al (deels) in huur is
         $wow = SapUpload::laatste('wow');
-        $inHuur = $wow ? HireLine::where('upload_id', $wow->id)->selectRaw('contract_number, COUNT(*) AS n, MAX(hire_date) AS laatste, MAX(customer_name) AS klant')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
+        $inHuur = $wow ? HireLine::where('upload_id', $wow->id)->selectRaw('contract_number, COUNT(*) AS n, MAX(hire_date) AS laatste, MIN(hire_date) AS eerste, MAX(customer_name) AS klant')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
         // Per bijhuur-contract: welke regels van de gegroepeerde 8.7 staan nog NIET in huur (= te leveren) en op welke datum
         $teLeveren = [];
         // 1) Uit 3.4 (reservation_lines met item_delivery_date): nieuwe regels op lopende contracten (bijhuur) minus wat al in huur staat
@@ -139,7 +139,8 @@ class PlanningOverzicht
                 'regels' => $v ? (int) $v->regels : (isset($plRegels[$nr]) ? (int) $plRegels[$nr]->n : null),
                 'aantal' => $v ? (float) $v->aantal : (isset($plRegels[$nr]) ? (float) $plRegels[$nr]->aantal : null),
                 'regels_bron' => $v ? 'reserveringen' : (isset($plRegels[$nr]) ? 'planning_regels' : null),
-                'hire_start_date' => $dag($v?->hire_start_date),
+                // Verhuurdatum (start huur) ≠ leverdatum: uit 3.4 HIRE START DATE, anders de eerste huurdatum in WOW
+                'hire_start_date' => $dag($v?->hire_start_date) ?? (isset($inHuur[$nr]) ? $dag($inHuur[$nr]->eerste) : null),
                 'hire_end_date' => $dag($v?->hire_end_date),
                 'delivery_name' => $v?->delivery_name, 'street' => $v?->street, 'city' => $v?->city,
                 'ordered_by' => $v?->ordered_by,
