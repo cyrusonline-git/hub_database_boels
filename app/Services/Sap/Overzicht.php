@@ -134,6 +134,7 @@ class Overzicht
             'factuurrun' => ['contracten' => $frAlle->count(), 'zonder_reden' => $frAlle->filter(fn ($r) => ! $r->reden)->count(), 'nooit' => $frAlle->where('nooit_gefactureerd', true)->count(), 'weekhuur' => round($frAlle->sum('weekhuur'), 2), 'ouderdom' => $buckets, 'ouderdom_n' => $bucketsN],
             'offertes' => ['open' => (int) ($offertes->n ?? 0), 'verlopen' => $verlopen],
             'trend' => $trend->map(fn ($t) => ['datum' => $t['datum'], 'weekhuur' => $t['weekhuur']])->values(),
+            'maand' => $s['maand'] ?? null,
         ];
     }
 

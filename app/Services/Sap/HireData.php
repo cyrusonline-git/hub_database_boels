@@ -67,8 +67,8 @@ class HireData
      * Omzetprognose lopende maand (Wim 13-11-2026): als alles wat nu in huur staat tot het einde van de maand blijft
      * staan, wat is dan de huuromzet van deze maand? Per regel: netto weekhuur × aantal × dagen in huur deze maand / 7,
      * gerekend vanaf de huurstart (of de 1e van de maand als de huur eerder begon) t/m de laatste dag van de maand.
-     * Daarnaast: het deel t/m vandaag, het deel dat nog komt, en een variant waarin afgemelde regels (To Collect) op
-     * hun ophaaldatum stoppen.
+     * Daarnaast: het deel t/m vandaag, het deel dat nog komt, en de prognose MET einddatum huur (regels met een bekende
+     * afmeld-/ophaaldatum stoppen op die datum) — die laatste staat op het managementoverzicht.
      */
     public function maandprognose(int $uploadId): array
     {
@@ -79,7 +79,7 @@ class HireData
         $tot = $totVandaag = $totRealistisch = 0.0;
         $perKlant = [];
         $dag = fn ($x) => $x ? \Carbon\Carbon::parse(substr((string) $x, 0, 10))->startOfDay() : null;
-        HireLine::where('upload_id', $uploadId)->select(['customer_number', 'customer_name', 'contract_number', 'hire_date', 'coll_date', 'status', 'weekly_hire_rate', 'qty_out'])
+        HireLine::where('upload_id', $uploadId)->select(['customer_number', 'customer_name', 'contract_number', 'hire_date', 'coll_date', 'est_return_date', 'status', 'weekly_hire_rate', 'qty_out'])
             ->orderBy('id')->chunk(2000, function ($regels) use (&$tot, &$totVandaag, &$totRealistisch, &$perKlant, $start, $eind, $vandaag, $dag) {
                 foreach ($regels as $l) {
                     $week = (float) $l->weekly_hire_rate * (float) $l->qty_out;
@@ -98,9 +98,10 @@ class HireData
                     $tot += $bedrag;
                     $dagenTot = $van->lte($vandaag) ? min($dagen, (int) $van->diffInDays($vandaag) + 1) : 0;
                     $totVandaag += $week * $dagenTot / 7;
-                    // Realistisch: afgemeld (To Collect) stopt op de ophaaldatum (minimaal vandaag)
+                    // Met einddatum huur: regels met een bekende afmeld-/ophaaldatum (WOW Coll. Date / EstRtDate, leeg =
+                    // onbekend) stoppen op die datum; ligt die al in het verleden maar staat de regel nog uit, dan t/m vandaag
                     $tot2 = $eind;
-                    if (str_contains((string) $l->status, 'To Collect') && ($c = $dag($l->coll_date)) && $c->lt($eind)) {
+                    if (($c = $dag($l->coll_date ?? $l->est_return_date)) && $c->lt($eind)) {
                         $tot2 = $c->lt($vandaag) ? $vandaag : $c;
                     }
                     $dagen2 = $tot2->lt($van) ? 0 : (int) $van->diffInDays($tot2) + 1;
@@ -123,7 +124,9 @@ class HireData
             'prognose' => round($tot, 2),
             'tot_vandaag' => round($totVandaag, 2),
             'nog_te_komen' => round($tot - $totVandaag, 2),
+            'prognose_met_einddatum' => round($totRealistisch, 2),
             'prognose_realistisch' => round($totRealistisch, 2),
+            'tot_vandaag_pct' => $dagenMaand > 0 ? round(((int) $start->diffInDays($vandaag) + 1) / $dagenMaand * 100) : 0,
             'per_klant' => $klanten->take(15)->values(),
             'klanten' => $klanten->count(),
         ];
