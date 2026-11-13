@@ -27,6 +27,8 @@ class PlanningOverzicht
         $notes = PlanningNote::all()->keyBy('order_number');
 
         $orders = $p ? PlanningOrder::where('upload_id', $p->id)->get()->keyBy('order_number') : collect();
+        // 8.7 kolom B (PickUpInfo) leeg = order staat niet op de scanner van de expeditie en wordt dus niet gepickt (Wim 13-11-2026)
+        $pickinfoBekend = $p && ! empty($p->samenvatting['pickinfo_bekend']);
         $res = $r ? ReservationLine::where('upload_id', $r->id)
             ->selectRaw('contract_number, MAX(customer_number) AS customer_number, MAX(customer_name) AS customer_name, MIN(is_contract) AS is_contract, MAX(is_bijhuur) AS is_bijhuur, MAX(offerte_status) AS offerte_status, MAX(contract_status) AS contract_status,
                 COUNT(*) AS regels, SUM(qty) AS aantal, COALESCE(MIN(item_delivery_date), MIN(delivery_date)) AS delivery_date, MIN(hire_start_date) AS hire_start_date, MAX(hire_end_date) AS hire_end_date, MAX(type) AS type,
@@ -74,7 +76,7 @@ class PlanningOverzicht
         }
         $nummers = $orders->keys()->merge($res->keys())->unique();
         $empIds = collect();
-        $rijen = $nummers->map(function ($nr) use ($r, $orders, $res, $codes, $notes, $vandaag, $plRegels, $inHuur, $teLeveren, &$empIds) {
+        $rijen = $nummers->map(function ($nr) use ($r, $orders, $res, $codes, $notes, $vandaag, $plRegels, $inHuur, $teLeveren, $pickinfoBekend, &$empIds) {
             $o = $orders->get($nr);
             $v = $res->get($nr);
             $isOfferte = $o === null && $v && ! (bool) $v->is_contract && ! (bool) $v->is_bijhuur;
@@ -104,6 +106,8 @@ class PlanningOverzicht
             }
             $total = $o ? (float) $o->total : null;
             $picked = $o ? (float) $o->picked : null;
+            $nietOpScanner = $pickinfoBekend && $o && trim((string) $o->pick_up_info) === '' && $soort !== 'retour'
+                && ($total <= 0 || $picked < $total) && ($datum === null || $datum >= $vandaag);
             $n = $notes->get($nr);
 
             return (object) [
@@ -139,6 +143,8 @@ class PlanningOverzicht
                 'ordered_by' => $v?->ordered_by,
                 'reference' => $o?->reference ?? $v?->customer_reference,
                 'memo' => $o?->del_memo,
+                'pick_up_info' => $o?->pick_up_info,
+                'niet_op_scanner' => $nietOpScanner,
                 'hiring_depot' => $o?->hiring_depot,
                 'sales_person' => $o?->sales_person,
                 'created_by_code' => $v?->created_by_code,
@@ -167,6 +173,9 @@ class PlanningOverzicht
         }
         if (! empty($f['bijhuur'])) {
             $rijen = $rijen->where('bijhuur', true);
+        }
+        if (! empty($f['niet_op_scanner'])) {
+            $rijen = $rijen->where('niet_op_scanner', true);
         }
         if (! empty($f['employee_id'])) {
             $rijen = $rijen->where('employee_id', (int) $f['employee_id']);

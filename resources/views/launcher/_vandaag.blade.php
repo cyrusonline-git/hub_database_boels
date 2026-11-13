@@ -4,7 +4,7 @@
 <div class="section-title text-center mt-2">Vandaag</div>
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3">
-        <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-truck text-boels me-1"></i>Te leveren vandaag</span><span class="badge bg-boels">{{ $vandaag['vandaag']['aantal'] }}</span></div>
+        <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-truck text-boels me-1"></i>Te leveren vandaag</span><span>@if(!empty($vandaag['vandaag']['niet_op_scanner'])) <a href="{{ $d }}/planning?niet_op_scanner=1" class="badge bg-danger text-decoration-none me-1" title="PickUpInfo leeg in Smartview: de expeditie ziet deze orders niet op de scanner">{{ $vandaag['vandaag']['niet_op_scanner'] }} niet op scanner</a>@endif <span class="badge bg-boels">{{ $vandaag['vandaag']['aantal'] }}</span></span></div>
             <ul class="list-group list-group-flush small">
                 @forelse($vandaag['vandaag']['orders'] as $o)
                     <li class="list-group-item d-flex justify-content-between align-items-center py-1"><a href="{{ $d }}/planning/{{ $o->order_number }}" class="text-truncate me-2 text-decoration-none text-dark" title="{{ $o->customer_name }}">{{ $o->customer_name }}</a><span class="badge rounded-pill {{ $o->pick_status === 'volledig' ? 'bg-success' : ($o->pick_status === 'deels' ? 'bg-warning text-dark' : 'bg-light text-muted border') }}">{{ $pick($o) }}</span></li>

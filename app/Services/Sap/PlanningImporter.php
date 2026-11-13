@@ -6,7 +6,7 @@ use App\Models\PlanningOrder;
 
 /**
  * 8.7 INDUSTRIAL HOP, SOP and DT View — platte lijst, één rij per order.
- * Kolommen: PickUpDate, PickUpInfo (negeren), Account, Type, ContractStatus,
+ * Kolommen: PickUpDate, PickUpInfo (leeg = niet op de scanner van de expeditie), Account, Type, ContractStatus,
  * Items ("gepickt/totaal"), Location, DelMemo, DelMethod (negeren), Depot,
  * HiringDepot, Modification, ModMemo, Number, contno, REF, SalesPerson, DelDate.
  */
@@ -34,13 +34,14 @@ class PlanningImporter
         $kol = [
             'account' => $c('Account'), 'type' => $c('Type'), 'status' => $c('ContractStatus'), 'items' => $c('Items'), 'loc' => $c('Location'),
             'memo' => $c('DelMemo'), 'depot' => $c('Depot'), 'hdepot' => $c('HiringDepot'), 'number' => $c('Number') ?? $c('contno'),
-            'ref' => $c('REF'), 'sales' => $c('SalesPerson'), 'deldate' => $c('DelDate') ?? $c('PickUpDate'),
+            'ref' => $c('REF'), 'sales' => $c('SalesPerson'), 'deldate' => $c('DelDate') ?? $c('PickUpDate'), 'pickinfo' => $c('PickUpInfo'),
         ];
         $v = fn (array $rij, string $naam) => $kol[$naam] === null ? null : ($rij[$kol[$naam]] ?? null);
         $codes = app(SapUserCodes::class);
         $buffer = [];
         $perSoort = [];
         $oud = 0;
+        $zonderPickinfo = 0;
         $vandaag = now()->toDateString();
         $gezien = [];
         foreach (array_slice($rijen, $koprij + 1) as $rij) {
@@ -59,6 +60,10 @@ class PlanningImporter
             $sales = SapBestand::tekst($v($rij, 'sales'));
             $datum = SapBestand::datum($v($rij, 'deldate'));
             $soort = self::soort(SapBestand::tekst($v($rij, 'type')));
+            $pickinfo = SapBestand::tekst($v($rij, 'pickinfo'));
+            if ($pickinfo === null && $soort !== 'retour' && ($total <= 0 || $picked < $total) && (! $datum || $datum->toDateString() >= $vandaag)) {
+                $zonderPickinfo++;
+            }
             $buffer[] = [
                 'upload_id' => $uploadId,
                 'order_number' => $nr,
@@ -70,6 +75,7 @@ class PlanningImporter
                 'total' => $total,
                 'location' => SapBestand::tekst($v($rij, 'loc')),
                 'del_memo' => SapBestand::tekst($v($rij, 'memo')),
+                'pick_up_info' => $pickinfo === null ? null : mb_substr($pickinfo, 0, 255),
                 'depot' => SapBestand::tekst($v($rij, 'depot')),
                 'hiring_depot' => SapBestand::tekst($v($rij, 'hdepot')),
                 'reference' => mb_substr((string) SapBestand::tekst($v($rij, 'ref')), 0, 255),
@@ -87,7 +93,8 @@ class PlanningImporter
             PlanningOrder::insert($buffer);
         }
         $r->contracten = count($gezien);
-        $r->samenvatting = ['per_soort' => $perSoort, 'op_te_schonen' => $oud];
+        // pickinfo_bekend: snapshots van vóór deze kolom tonen geen 'niet op scanner'-markering
+        $r->samenvatting = ['per_soort' => $perSoort, 'op_te_schonen' => $oud, 'niet_op_scanner' => $zonderPickinfo, 'pickinfo_bekend' => true];
 
         return $r;
     }
