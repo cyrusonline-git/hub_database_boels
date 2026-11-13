@@ -69,6 +69,13 @@ if (! empty($_GET['contract'])) {
     echo "Overzicht: ".($rij ? json_encode(['bron' => $rij->bron, 'bijhuur' => $rij->bijhuur, 'in_huur_regels' => $rij->in_huur_regels, 'delivery_date' => $rij->delivery_date, 'pick_status' => $rij->pick_status, 'nog_te_picken' => $rij->nog_te_picken, 'te_laat' => $rij->te_laat]) : 'niet in planning')."\n";
     exit;
 }
+if (! empty($_GET['po'])) {
+    foreach (\App\Models\ReferenceRequest::orderByDesc('id')->take(10)->get() as $v) {
+        echo $v->id, ' ', $v->contract_number, ' aan=', var_export($v->gevraagd_aan, true), ' raw=', var_export($v->getRawOriginal('gevraagd_op'), true), ' cast=', var_export($v->gevraagd_op?->toDateString(), true), ' user=', $v->user_id, ' created=', $v->created_at, "\n";
+    }
+    echo json_encode(app(\App\Services\Sap\ReferentieBewaking::class)->verzoeken(\App\Models\ReferenceRequest::pluck('contract_number')->unique()->values()->all()), JSON_UNESCAPED_UNICODE), "\n";
+    exit;
+}
 if (! empty($_GET['maak_kaarten'])) {
     $res = app(\App\Services\Sap\SapUserCodes::class)->maakKaartenVoorGebruikers();
     echo count($res['aangemaakt'])." medewerkerkaart(en) aangemaakt:\n";
