@@ -100,24 +100,12 @@
                 z-index:1; pointer-events:none;">
 @endif
 
-<div class="text-center mt-3 mb-4">
-    <h3 class="mb-1">Welkom, {{ explode(' ', $u->name)[0] }}</h3>
-    <p class="text-muted mb-0">{{ \Illuminate\Support\Str::ucfirst(now()->locale('nl')->translatedFormat('l j F Y')) }}
-        @if($u->last_login_at) · vorige login {{ $u->last_login_at->locale('nl')->diffForHumans() }} @endif
-    </p>
-</div>
-
-{{-- Snelzoeken: klanten, collega's, artikelen --}}
-<div class="dash-search mb-2">
-    <i class="bi bi-search"></i>
-    <input type="search" id="dashSearch" placeholder="Zoek een klant, collega of artikel…" autocomplete="off">
-    <div id="dashResults"></div>
-</div>
-<div class="text-center mb-5">
-    <a href="{{ route('articles.index') }}" class="btn btn-boels btn-sm px-3">
-        <i class="bi bi-box-seam"></i> Artikelen zoeken op naam of nummer
-    </a>
-</div>
+@php($metDash = ! empty($dashboardTegels))
+{{-- Zonder dashboardtoegang: welkomstkop en zoekbalk over de volle breedte (oude indeling). Met dashboard staan ze
+     in de middenkolom, zodat Handige links en Jouw applicaties vanaf de bovenkant meelopen (Wim 13-11-2026). --}}
+@unless($metDash)
+    @include('launcher._kop', ['u' => $u, 'compact' => false])
+@endunless
 
 {{-- Drie kolommen: links de tools (handige links), in het midden de
      applicatie-tegels (3 per rij), rechts de snelkoppelingen.
@@ -155,9 +143,9 @@
         </div>
     </div>
 
-    @php($metDash = ! empty($dashboardTegels))
     <div class="col-lg-6 order-1 order-lg-2">
         @if($metDash)
+        @include('launcher._kop', ['u' => $u, 'compact' => true])
         {{-- Dashboard centraal: de werkschermen van dashboard.sorai.nl --}}
         <div class="section-title text-center">Dashboard</div>
         <div class="row g-3">

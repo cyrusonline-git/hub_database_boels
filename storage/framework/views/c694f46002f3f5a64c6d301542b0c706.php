@@ -97,25 +97,11 @@
                 z-index:1; pointer-events:none;">
 <?php endif; ?>
 
-<div class="text-center mt-3 mb-4">
-    <h3 class="mb-1">Welkom, <?php echo e(explode(' ', $u->name)[0]); ?></h3>
-    <p class="text-muted mb-0"><?php echo e(\Illuminate\Support\Str::ucfirst(now()->locale('nl')->translatedFormat('l j F Y'))); ?>
+<?php ($metDash = ! empty($dashboardTegels)); ?>
 
-        <?php if($u->last_login_at): ?> · vorige login <?php echo e($u->last_login_at->locale('nl')->diffForHumans()); ?> <?php endif; ?>
-    </p>
-</div>
-
-
-<div class="dash-search mb-2">
-    <i class="bi bi-search"></i>
-    <input type="search" id="dashSearch" placeholder="Zoek een klant, collega of artikel…" autocomplete="off">
-    <div id="dashResults"></div>
-</div>
-<div class="text-center mb-5">
-    <a href="<?php echo e(route('articles.index')); ?>" class="btn btn-boels btn-sm px-3">
-        <i class="bi bi-box-seam"></i> Artikelen zoeken op naam of nummer
-    </a>
-</div>
+<?php if (! ($metDash)): ?>
+    <?php echo $__env->make('launcher._kop', ['u' => $u, 'compact' => false], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php endif; ?>
 
 
 <div class="row g-4 mb-4">
@@ -152,9 +138,9 @@
         </div>
     </div>
 
-    <?php ($metDash = ! empty($dashboardTegels)); ?>
     <div class="col-lg-6 order-1 order-lg-2">
         <?php if($metDash): ?>
+        <?php echo $__env->make('launcher._kop', ['u' => $u, 'compact' => true], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
         
         <div class="section-title text-center">Dashboard</div>
         <div class="row g-3">
