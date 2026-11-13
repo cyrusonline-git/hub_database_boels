@@ -64,7 +64,7 @@ class Overzicht
             $uit = [
                 'dashboard' => $dash,
                 'uploads' => $this->uploads(),
-                'vandaag' => ['orders' => $vandaagOrders->take(8)->values(), 'aantal' => $vandaagOrders->count(), 'morgen' => $orders->where('delivery_date', $morgen)->count(), 'volledig' => $vandaagOrders->where('pick_status', 'volledig')->count(), 'niet_op_scanner' => $orders->where('niet_op_scanner', true)->count()],
+                'vandaag' => ['orders' => $vandaagOrders->take(8)->values(), 'aantal' => $vandaagOrders->count(), 'morgen' => $orders->where('delivery_date', $morgen)->count(), 'volledig' => $vandaagOrders->where('pick_status', 'volledig')->count(), 'niet_op_scanner' => $orders->where('niet_op_scanner', true)->count(), 'referentie_ontbreekt' => $orders->where('referentie_ontbreekt', true)->count()],
                 'ophalen' => ['lijst' => $ophalen->take(8)->values(), 'aantal' => $ophalen->count(), 'te_laat' => $ophalen->where('te_laat', true)->count()],
                 'factuurrun' => $factuurrun,
                 'signalen' => $this->acties->voorPersoon((string) $user->email, $employeeId),
@@ -126,6 +126,7 @@ class Overzicht
             'orders_week' => $orders->count(),
             'orders_week_volledig' => $orders->where('pick_status', 'volledig')->count(),
             'niet_op_scanner' => $this->planning->rijen(['niet_op_scanner' => 1])->count(),
+            'referentie_ontbreekt' => $this->planning->rijen(['referentie_ontbreekt' => 1])->count(),
             'op_te_schonen' => $opTeSchonen,
             'transfers_in' => (int) ($transfers['transfer_in'] ?? 0),
             'transfers_uit' => (int) ($transfers['transfer_uit'] ?? 0),

@@ -108,6 +108,8 @@ class PlanningOverzicht
             $picked = $o ? (float) $o->picked : null;
             $nietOpScanner = $pickinfoBekend && $o && trim((string) $o->pick_up_info) === '' && $soort !== 'retour'
                 && ($total <= 0 || $picked < $total) && ($datum === null || $datum >= $vandaag);
+            // 8.7 kolom P (REF) leeg of 'volgt' / 'PO volgt' = klantreferentie/PO-nummer ontbreekt → factuur wordt niet betaald (Wim 13-11-2026)
+            $refOntbreekt = $o && in_array($soort, ['huur', 'verkoop'], true) && ($datum === null || $datum >= $vandaag) && self::referentieOntbreekt($o->reference);
             $n = $notes->get($nr);
 
             return (object) [
@@ -145,6 +147,7 @@ class PlanningOverzicht
                 'memo' => $o?->del_memo,
                 'pick_up_info' => $o?->pick_up_info,
                 'niet_op_scanner' => $nietOpScanner,
+                'referentie_ontbreekt' => $refOntbreekt,
                 'hiring_depot' => $o?->hiring_depot,
                 'sales_person' => $o?->sales_person,
                 'created_by_code' => $v?->created_by_code,
@@ -177,6 +180,9 @@ class PlanningOverzicht
         if (! empty($f['niet_op_scanner'])) {
             $rijen = $rijen->where('niet_op_scanner', true);
         }
+        if (! empty($f['referentie_ontbreekt'])) {
+            $rijen = $rijen->where('referentie_ontbreekt', true);
+        }
         if (! empty($f['employee_id'])) {
             $rijen = $rijen->where('employee_id', (int) $f['employee_id']);
         }
@@ -186,6 +192,17 @@ class PlanningOverzicht
         }
 
         return $rijen->sortBy([fn ($a, $b) => strcmp((string) ($a->delivery_date ?? '9999'), (string) ($b->delivery_date ?? '9999')) ?: strcmp($a->customer_name ?? '', $b->customer_name ?? '')])->values();
+    }
+
+    /** Leeg, alleen leestekens, of 'volgt' / 'PO volgt' / 'referentie volgt' / 'nvt' = er is nog geen klantreferentie of PO-nummer. */
+    public static function referentieOntbreekt(?string $ref): bool
+    {
+        $r = mb_strtolower(trim((string) $ref));
+        if ($r === '' || preg_match('/^[\s\-\?\.\_]*$/u', $r)) {
+            return true;
+        }
+
+        return (bool) preg_match('/\bvolgt\b|^(n\.?v\.?t\.?|geen|onbekend|nog niet bekend|tbd|nnb)$/u', $r);
     }
 
     public function order(string $nr): ?array

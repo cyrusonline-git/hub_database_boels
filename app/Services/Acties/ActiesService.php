@@ -188,6 +188,10 @@ class ActiesService
             foreach (app(\App\Services\Sap\PlanningOverzicht::class)->rijen(['niet_op_scanner' => 1])->whereNotNull('employee_id')->countBy('employee_id') as $eid => $n) {
                 $uit[$eid][] = ['bron' => 'sap', 'label' => 'Profielen niet ingevuld (PickUpInfo leeg, expeditie ziet de order niet)', 'aantal' => (int) $n, 'url' => $dash.'/planning?niet_op_scanner=1', 'soort' => 'sap'];
             }
+            // Klantreferentie/PO-nummer ontbreekt (8.7 REF leeg of 'volgt') per verkoper — zonder referentie wordt de factuur niet betaald
+            foreach (app(\App\Services\Sap\PlanningOverzicht::class)->rijen(['referentie_ontbreekt' => 1])->whereNotNull('employee_id')->countBy('employee_id') as $eid => $n) {
+                $uit[$eid][] = ['bron' => 'sap', 'label' => 'Referentie / PO-nummer ontbreekt (factuur wordt niet betaald)', 'aantal' => (int) $n, 'url' => $dash.'/planning?referentie_ontbreekt=1', 'soort' => 'sap'];
+            }
             // Offerte verlopen (2.6, H = Offerte, leverdatum < vandaag) per aanmaker
             if ($u = SapUpload::laatste('reserveringen')) {
                 foreach (ReservationLine::where('upload_id', $u->id)->where('is_contract', false)->whereDate('delivery_date', '<', $vandaag)->whereNotNull('created_by_code')->selectRaw('created_by_code, COUNT(DISTINCT contract_number) AS n')->groupBy('created_by_code')->get() as $r) {
