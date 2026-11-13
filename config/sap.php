@@ -43,13 +43,12 @@ return [
             'kop' => ['PickUpDate', 'Items', 'contno', 'SalesPerson'],
         ],
         'planning_regels' => [
-            'label' => '8.7 artikelregels (gegroepeerd, met COLLECTION DATE/TIME)',
-            'bestand' => '8.7 INDUSTRIAL HOP, SOP and DT View.xlsx — gegroepeerde variant',
+            'label' => 'Artikelregels planning (8.A Schedule Hire logistic)',
+            'bestand' => '8.A INDUSTRIAL Schedule Hire logistic.xlsx',
             'frequentie_dagen' => 1,
-            'omschrijving' => 'De 8.7-export met per order de artikelregels en per regel de leverdatum. Nodig om bijhuur op een lopend contract op de juiste dag te zetten en de nieuwe artikelen te tonen.',
+            'omschrijving' => 'Per order de toegekende artikelregels met leverdatum en -tijd per regel. Hiermee komt een bijhuur op een lopend contract op de juiste dag in de planning, met de nieuwe artikelen uitgelicht.',
             'kop' => ['COLLECTION DATE/TIME', 'ITEM NUMBER', 'CONTRACTS.CONTNO'],
             'alias_van' => 'planning',
-            'verborgen' => true,      // Wim (13-11-2026): dit bestand wordt niet meer geüpload; geen kaart
         ],
         'reserveringen' => [
             'label' => 'Reserveringen (offertes + toekomstige contracten)',
