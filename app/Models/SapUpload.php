@@ -27,9 +27,11 @@ class SapUpload extends Model
         return \Illuminate\Support\Facades\Cache::remember('sap:stand', 30, fn () => (string) (static::max('id') ?? 0));
     }
 
-    /** Laatste upload per soort (null als er nog nooit iets is geüpload). */
+    /** Laatste upload per soort (null als er nog nooit iets is geüpload). Kaart-soorten met 'opslaan_als' (3.4 → reserveringen) volgen die reeks. */
     public static function laatste(string $soort): ?self
     {
-        return static::where('soort', $soort)->orderByDesc('id')->first();
+        $opslag = config("sap.soorten.$soort.opslaan_als", $soort);
+
+        return static::where('soort', $opslag)->orderByDesc('id')->first();
     }
 }
