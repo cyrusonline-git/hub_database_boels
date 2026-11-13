@@ -56,6 +56,10 @@
     }
     .side-link:hover { background: #fff4ec; color: #212529; }
     .side-link > i:first-child { color: var(--boels-orange); font-size: 17px; flex: 0 0 auto; }
+    .dash-tegel { border: 1px solid #e6e8eb; border-radius: 12px; transition: transform .12s, box-shadow .12s; }
+    .dash-tegel:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.08); border-color: #FF6600; }
+    .dash-tegel i { font-size: 1.35rem; color: #FF6600; }
+    .dash-tegel .lbl { font-size: .78rem; font-weight: 600; color: #333; margin-top: 4px; line-height: 1.2; }
     .quick-link {
         display: flex; align-items: center; gap: 10px; padding: 10px 14px;
         border-radius: 12px; background: #fff; text-decoration: none; color: #212529;
@@ -167,12 +171,26 @@
     </div>
 
     <div class="col-lg-3 order-3">
+        <?php if(!empty($dashboardTegels)): ?>
+        <div class="section-title">Dashboard</div>
+        <div class="row g-2 mb-3">
+            <?php $__currentLoopData = $dashboardTegels; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="col-6">
+                <a href="<?php echo e($t['url']); ?>" class="text-decoration-none">
+                    <div class="card dash-tegel h-100 text-center p-2">
+                        <i class="<?php echo e($t['icoon']); ?>"></i>
+                        <div class="lbl"><?php echo e($t['label']); ?></div>
+                    </div>
+                </a>
+            </div>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
+        <?php endif; ?>
         <div class="section-title">Snelkoppelingen</div>
         <div class="d-flex flex-column gap-2 mb-3">
             <a href="#" class="quick-link" onclick="document.getElementById('chatFab')?.click(); return false;">
                 <i class="bi bi-chat-dots"></i> Chat met een collega
             </a>
-            <a href="<?php echo e(route('articles.index')); ?>" class="quick-link"><i class="bi bi-box-seam"></i> Artikelen zoeken</a>
             <a href="<?php echo e(route('password.change')); ?>" class="quick-link"><i class="bi bi-key"></i> Wachtwoord wijzigen</a>
             <?php if($isAdmin): ?>
                 <a href="<?php echo e(url('/admin/klanten')); ?>" class="quick-link"><i class="bi bi-building"></i> Klanten</a>

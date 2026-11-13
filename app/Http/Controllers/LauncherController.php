@@ -68,7 +68,31 @@ class LauncherController extends Controller
             ];
         }
 
-        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges'));
+        // Snelkoppelingen naar de onderdelen van het Dashboard (alleen als die app voor deze
+        // gebruiker zichtbaar is: depot Rotterdam + dashboard-rol). Per rol de passende tegels.
+        $dashboardTegels = [];
+        $dash = $apps->firstWhere('slug', 'dashboard');
+        if ($dash && $dash->url) {
+            $base = rtrim($dash->url, '/');
+            $rollen = $user->is_super_admin ? ['admin'] : $user->roles()->where('application_id', $dash->id)->pluck('slug')->map(fn ($s) => str_replace('-', '_', $s))->all();
+            $heeft = fn (array $toegestaan) => $user->is_super_admin || array_intersect($rollen, $toegestaan);
+            $tegels = [
+                ['Planning', 'bi-calendar-check', '/planning', null],
+                ['Planbord', 'bi-kanban', '/planbord', null],
+                ['Uit factuurrun', 'bi-receipt', '/factuurrun', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin']],
+                ['Ophaallijst', 'bi-arrow-return-left', '/in-huur/ophalen', null],
+                ['In huur', 'bi-box-seam', '/in-huur', null],
+                ['AVI', 'bi-cash-coin', '/in-huur/avi', ['binnendienst', 'area_manager', 'bu_manager', 'admin']],
+                ['Acties per persoon', 'bi-people', '/team', ['area_manager', 'bu_manager', 'admin']],
+            ];
+            foreach ($tegels as [$label, $icoon, $pad, $rolFilter]) {
+                if ($rolFilter === null || $heeft($rolFilter)) {
+                    $dashboardTegels[] = ['label' => $label, 'icoon' => $icoon, 'url' => $base.$pad];
+                }
+            }
+        }
+
+        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges', 'dashboardTegels'));
     }
 
     /** Actuele tellers voor de tegel-bolletjes — gepolld door het dashboard. */
