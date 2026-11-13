@@ -42,6 +42,14 @@ return [
             'omschrijving' => 'Eén rij per order: huur, verkoop, transfers; met gepickt/totaal, leverdatum en verkoper. Let op: de platte "View" met kop PickUpDate … DelDate.',
             'kop' => ['PickUpDate', 'Items', 'contno', 'SalesPerson'],
         ],
+        'contract_items' => [
+            'label' => 'Contractregels te leveren (3.4)',
+            'bestand' => '3.4 Contract Items due for delivery today and the future.xlsx',
+            'frequentie_dagen' => 1,
+            'omschrijving' => 'Per artikelregel de echte leverdatum: toekomstige contracten, offertes én nieuwe regels op lopende contracten (bijhuur). Vervangt 2.6.',
+            'kop' => ['ITEM DELIVERY DATE', 'CONTRACT NUMBER', 'ITEM STATUS', 'TOTAL GOODS VALUE'],
+            'opslaan_als' => 'reserveringen',   // zelfde tabel/snapshotreeks als 2.6
+        ],
         'planning_regels' => [
             'label' => 'Artikelregels planning (8.A Schedule Hire logistic)',
             'bestand' => '8.A INDUSTRIAL Schedule Hire logistic.xlsx',
@@ -49,6 +57,7 @@ return [
             'omschrijving' => 'Per order de toegekende artikelregels met leverdatum en -tijd per regel. Hiermee komt een bijhuur op een lopend contract op de juiste dag in de planning, met de nieuwe artikelen uitgelicht.',
             'kop' => ['COLLECTION DATE/TIME', 'ITEM NUMBER', 'CONTRACTS.CONTNO'],
             'alias_van' => 'planning',
+            'verborgen' => true,      // 3.4 vervangt dit (Wim 13-11-2026)
         ],
         'reserveringen' => [
             'label' => 'Reserveringen (offertes + toekomstige contracten)',
@@ -56,6 +65,7 @@ return [
             'frequentie_dagen' => 1,
             'omschrijving' => 'Offertes en contracten in de toekomst met artikelregels en orderwaarde; kolom H bepaalt contract (Ingegeven) of offerte.',
             'kop' => ['CONTRACT NUMBER', 'OFFERTE STATUS', 'TOTAL GOODS VALUE'],
+            'verborgen' => true,      // vervangen door 3.4; wordt nog wel herkend en verwerkt
         ],
     ],
 ];

@@ -22,6 +22,7 @@ class SapImportService
         'planning' => PlanningImporter::class,
         'reserveringen' => ReserveringenImporter::class,
         'planning_regels' => PlanningRegelsImporter::class,
+        'contract_items' => ContractItemsImporter::class,
     ];
 
     private const REGELS = [
@@ -30,6 +31,7 @@ class SapImportService
         'planning' => PlanningOrder::class,
         'reserveringen' => ReservationLine::class,
         'planning_regels' => PlanningLine::class,
+        'contract_items' => ReservationLine::class,
     ];
 
     /**
@@ -47,18 +49,19 @@ class SapImportService
         }
         $soort = $herkend['soort'];
         $label = config("sap.soorten.$soort.label", $soort);
-        if ($verwacht && $verwacht !== $soort && config("sap.soorten.$soort.alias_van") !== $verwacht) {
+        $opslag = config("sap.soorten.$soort.opslaan_als", $soort);   // bv. 3.4 → snapshotreeks 'reserveringen'
+        if ($verwacht && $verwacht !== $soort && config("sap.soorten.$soort.alias_van") !== $verwacht && $opslag !== $verwacht) {
             return ['ok' => false, 'melding' => "Dit bestand is herkend als \"$label\", maar je zette het bij \"".config("sap.soorten.$verwacht.label", $verwacht).'". Upload het op de juiste kaart.'];
         }
-        $dubbel = SapUpload::where('soort', $soort)->where('hash', $hash)->orderByDesc('id')->first();
+        $dubbel = SapUpload::where('soort', $opslag)->where('hash', $hash)->orderByDesc('id')->first();
         if ($dubbel) {
             return ['ok' => false, 'soort' => $soort, 'melding' => "Dit exacte bestand is al verwerkt op {$dubbel->created_at->format('d-m-Y H:i')} (upload #{$dubbel->id}). Niets gewijzigd."];
         }
 
         $importer = app(self::IMPORTERS[$soort]);
         $upload = null;
-        $res = DB::transaction(function () use ($importer, $rijen, $herkend, $soort, $bestandsnaam, $userId, $hash, &$upload) {
-            $upload = SapUpload::create(['soort' => $soort, 'bestandsnaam' => $bestandsnaam, 'user_id' => $userId, 'hash' => $hash]);
+        $res = DB::transaction(function () use ($importer, $rijen, $herkend, $opslag, $bestandsnaam, $userId, $hash, &$upload) {
+            $upload = SapUpload::create(['soort' => $opslag, 'bestandsnaam' => $bestandsnaam, 'user_id' => $userId, 'hash' => $hash]);
             /** @var ImportResultaat $res */
             $res = $importer->importeer($rijen, $upload->id, $herkend['koprij'], $herkend['kolommen']);
             $upload->update([
@@ -71,7 +74,7 @@ class SapImportService
 
             return $res;
         });
-        $this->ruimOp($soort);
+        $this->ruimOp($opslag);
         \Illuminate\Support\Facades\Cache::forget('sap:stand'); // alle afgeleide caches direct verversen
         if (class_exists(\App\Models\AuditLog::class)) {
             try {
@@ -98,7 +101,7 @@ class SapImportService
         if ($oud->isEmpty()) {
             return;
         }
-        (self::REGELS[$soort])::whereIn('upload_id', $oud)->delete();
+        (self::REGELS[$soort] ?? ReservationLine::class)::whereIn('upload_id', $oud)->delete();
         SapUpload::whereIn('id', $oud)->update(['regels_opgeruimd' => true]);
     }
 }

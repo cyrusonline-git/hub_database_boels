@@ -28,8 +28,8 @@ class PlanningOverzicht
 
         $orders = $p ? PlanningOrder::where('upload_id', $p->id)->get()->keyBy('order_number') : collect();
         $res = $r ? ReservationLine::where('upload_id', $r->id)
-            ->selectRaw('contract_number, MAX(customer_number) AS customer_number, MAX(customer_name) AS customer_name, MIN(is_contract) AS is_contract, MAX(offerte_status) AS offerte_status, MAX(contract_status) AS contract_status,
-                COUNT(*) AS regels, SUM(qty) AS aantal, MIN(delivery_date) AS delivery_date, MIN(hire_start_date) AS hire_start_date, MAX(hire_end_date) AS hire_end_date, MAX(type) AS type,
+            ->selectRaw('contract_number, MAX(customer_number) AS customer_number, MAX(customer_name) AS customer_name, MIN(is_contract) AS is_contract, MAX(is_bijhuur) AS is_bijhuur, MAX(offerte_status) AS offerte_status, MAX(contract_status) AS contract_status,
+                COUNT(*) AS regels, SUM(qty) AS aantal, COALESCE(MIN(item_delivery_date), MIN(delivery_date)) AS delivery_date, MIN(hire_start_date) AS hire_start_date, MAX(hire_end_date) AS hire_end_date, MAX(type) AS type,
                 MAX(delivery_name) AS delivery_name, MAX(street) AS street, MAX(city) AS city, MAX(ordered_by) AS ordered_by, MAX(customer_reference) AS customer_reference, MAX(goods_value) AS goods_value, MAX(created_by_code) AS created_by_code')
             ->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
 
@@ -40,8 +40,24 @@ class PlanningOverzicht
         $inHuur = $wow ? HireLine::where('upload_id', $wow->id)->selectRaw('contract_number, COUNT(*) AS n, MAX(hire_date) AS laatste, MAX(customer_name) AS klant')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
         // Per bijhuur-contract: welke regels van de gegroepeerde 8.7 staan nog NIET in huur (= te leveren) en op welke datum
         $teLeveren = [];
+        // 1) Uit 3.4 (reservation_lines met item_delivery_date): nieuwe regels op lopende contracten (bijhuur) minus wat al in huur staat
+        if ($wow && $r) {
+            $bijhuurNrs34 = $res->filter(fn ($x) => (bool) $x->is_bijhuur || isset($inHuur[$x->contract_number]))->keys()->values();
+            if ($bijhuurNrs34->isNotEmpty()) {
+                $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs34)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
+                    ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
+                foreach (ReservationLine::where('upload_id', $r->id)->whereIn('contract_number', $bijhuurNrs34)->get() as $l) {
+                    $al = (float) ($uitstaand[$l->contract_number][$l->item_number] ?? 0);
+                    $rest = (float) $l->qty - $al;
+                    if ($rest > 0) {
+                        $teLeveren[$l->contract_number][] = ['item_number' => $l->item_number, 'item_description' => $l->item_description, 'qty' => $rest, 'delivery_date' => $l->item_delivery_date?->toDateString() ?? $l->delivery_date?->toDateString(), 'delivery_time' => null, 'memo' => null];
+                    }
+                }
+            }
+        }
+        // 2) Terugval: gegroepeerde 8.7/8.A (planning_lines), alleen voor contracten zonder 3.4-regels
         if ($wow && ($pl = SapUpload::laatste('planning_regels'))) {
-            $bijhuurNrs = $orders->keys()->filter(fn ($nr) => isset($inHuur[$nr]))->values();
+            $bijhuurNrs = $orders->keys()->filter(fn ($nr) => isset($inHuur[$nr]) && empty($teLeveren[$nr]))->values();
             if ($bijhuurNrs->isNotEmpty()) {
                 $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
                     ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
@@ -59,7 +75,7 @@ class PlanningOverzicht
         $rijen = $nummers->map(function ($nr) use ($orders, $res, $codes, $notes, $vandaag, $plRegels, $inHuur, $teLeveren, &$empIds) {
             $o = $orders->get($nr);
             $v = $res->get($nr);
-            $isOfferte = $o === null && $v && ! (bool) $v->is_contract;
+            $isOfferte = $o === null && $v && ! (bool) $v->is_contract && ! (bool) $v->is_bijhuur;
             $soort = $o?->soort ?? ($v ? (str_starts_with(mb_strtolower((string) $v->type), 'verkoop') ? 'verkoop' : 'huur') : 'overig');
             $empId = $o?->employee_id ?: ($v && $v->created_by_code ? ($codes[$v->created_by_code] ?? null) : null);
             if ($empId) {
@@ -99,7 +115,7 @@ class PlanningOverzicht
                 'total' => $total,
                 'pick_status' => $total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets'))),
                 'nog_te_picken' => $total !== null && $total > 0 ? max(0, $total - $picked) : null,
-                'bijhuur' => isset($inHuur[$nr]),
+                'bijhuur' => isset($inHuur[$nr]) || (bool) ($v->is_bijhuur ?? false),
                 'delivery_date_contract' => $datumContract,
                 'datum_onbekend' => $datumOnbekend,
                 'nieuwe_regels' => array_values($nieuweRegels),
@@ -180,6 +196,9 @@ class PlanningOverzicht
             $al = (float) ($uitstaand[$r['item_number']] ?? 0);
             $r['al_in_huur'] = $al;
             $r['te_leveren'] = max(0, (float) $r['qty'] - $al);
+            if (! empty($r['item_delivery_date'])) {
+                $r['delivery_date'] = is_string($r['item_delivery_date']) ? substr($r['item_delivery_date'], 0, 10) : $r['item_delivery_date'];
+            }
 
             return $r;
         })->values();

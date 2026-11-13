@@ -14,7 +14,8 @@ Alleen contracten die beginnen met `config('sap.depot')` (759) tellen mee.
 | `factuurrun` | `0.07 Contracts and items not part of invoice run.xlsx` (gegroepeerd) | wekelijks | `invoice_run_lines` + `invoice_run_notes` |
 | `planning` | `8.7 INDUSTRIAL HOP, SOP and DT View.xlsx` — **platte lijst**, kop `PickUpDate … DelDate` | dagelijks | `planning_orders` + `planning_notes` |
 | `planning_regels` | `8.A INDUSTRIAL Schedule Hire logistic.xlsx` (gegroepeerd, kop `COLLECTION DATE/TIME`) — toegekende artikelregels per order met leverdatum per regel; bepaalt de datum van bijhuur op lopende contracten | dagelijks | `planning_lines` |
-| `reserveringen` | `2.6 Reservations with items (today and future).xlsx` (gegroepeerd) | dagelijks | `reservation_lines` |
+| `contract_items` (→ `reserveringen`) | `3.4 Contract Items due for delivery today and the future.xlsx` (gegroepeerd; kop `ITEM DELIVERY DATE`) — per regel de echte leverdatum; contractstatus `Inhuur` = **bijhuur** op lopend contract, `Offerte` = offerte, `Ingegeven` = toekomstig contract. **Vervangt 2.6.** | dagelijks | `reservation_lines` |
+| `reserveringen` (2.6, verborgen) | `2.6 Reservations with items (today and future).xlsx` (gegroepeerd) | dagelijks | `reservation_lines` |
 
 ## Regels per bestand (besluiten Wim, 12-11-2026)
 - **WOW**: kolom `lm` negeren. `EstRtDate`/`Coll. Date` gelijk aan de dominante datum (= rapportdatum)

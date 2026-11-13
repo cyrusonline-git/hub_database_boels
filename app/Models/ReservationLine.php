@@ -13,5 +13,5 @@ class ReservationLine extends Model
 
     protected $guarded = [];
 
-    protected $casts = ['qty'=>'float','goods_value'=>'float','is_contract'=>'boolean','transport'=>'boolean','unconfirmed_collection'=>'boolean','delivery_date'=>'date:Y-m-d','hire_start_date'=>'date:Y-m-d','hire_end_date'=>'date:Y-m-d'];
+    protected $casts = ['qty'=>'float','goods_value'=>'float','is_contract'=>'boolean','transport'=>'boolean','unconfirmed_collection'=>'boolean','delivery_date'=>'date:Y-m-d','item_delivery_date'=>'date:Y-m-d','is_bijhuur'=>'boolean','hire_start_date'=>'date:Y-m-d','hire_end_date'=>'date:Y-m-d'];
 }
