@@ -42,6 +42,13 @@ if (! empty($_GET['status'])) {
     }
     exit;
 }
+if (! empty($_GET['diagnose'])) {
+    // Welke app-databases kan CORE lezen (DataBrug)? Voor het managementoverzicht en acties.
+    foreach (app(\App\Vraagbaak\DataBrug::class)->diagnose() as $d) {
+        echo str_pad($d['bron'], 14).($d['leesbaar'] ? 'OK  ' : 'NEE ').str_pad((string) ($d['tabellen'] ?? '-'), 5).($d['fout'] ?: '').'  '.$d['pad']."\n";
+    }
+    exit;
+}
 if (! empty($_GET['maak_kaarten'])) {
     $res = app(\App\Services\Sap\SapUserCodes::class)->maakKaartenVoorGebruikers();
     echo count($res['aangemaakt'])." medewerkerkaart(en) aangemaakt:\n";
