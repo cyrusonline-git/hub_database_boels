@@ -31,7 +31,7 @@ class PlanningOverzicht
         $pickinfoBekend = $p && ! empty($p->samenvatting['pickinfo_bekend']);
         $res = $r ? ReservationLine::where('upload_id', $r->id)
             ->selectRaw('contract_number, MAX(customer_number) AS customer_number, MAX(customer_name) AS customer_name, MIN(is_contract) AS is_contract, MAX(is_bijhuur) AS is_bijhuur, MAX(offerte_status) AS offerte_status, MAX(contract_status) AS contract_status,
-                COUNT(*) AS regels, SUM(qty) AS aantal, COALESCE(MIN(item_delivery_date), MIN(delivery_date)) AS delivery_date, MIN(hire_start_date) AS hire_start_date, MAX(hire_end_date) AS hire_end_date, MAX(type) AS type,
+                COUNT(*) AS regels, SUM(qty) AS aantal, SUM(CASE WHEN item_number = \'44331\' OR LOWER(item_description) LIKE \'%per liter%\' OR LOWER(item_description) LIKE \'%per litre%\' OR LOWER(item_description) LIKE \'%retourname%\' OR LOWER(item_description) LIKE \'%on return%\' OR LOWER(item_description) LIKE \'%arbeid%\' OR LOWER(item_description) LIKE \'%per uur%\' OR LOWER(item_description) LIKE \'%heffing%\' OR LOWER(item_description) LIKE \'%toeslag%\' THEN 1 ELSE 0 END) AS niet_pickbaar, COALESCE(MIN(item_delivery_date), MIN(delivery_date)) AS delivery_date, MIN(hire_start_date) AS hire_start_date, MAX(hire_end_date) AS hire_end_date, MAX(type) AS type,
                 MAX(delivery_name) AS delivery_name, MAX(street) AS street, MAX(city) AS city, MAX(ordered_by) AS ordered_by, MAX(customer_reference) AS customer_reference, MAX(goods_value) AS goods_value, MAX(created_by_code) AS created_by_code')
             ->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
 
@@ -51,8 +51,8 @@ class PlanningOverzicht
                 $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs34)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
                     ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
                 foreach (ReservationLine::where('upload_id', $r->id)->whereIn('contract_number', $bijhuurNrs34)->get() as $l) {
-                    if (self::isBrandstof($l->item_description, $l->item_number, $l->type)) {
-                        continue;   // brandstof bijboeken = niets te picken
+                    if (self::isNietPickbaar($l->item_description, $l->item_number, $l->type)) {
+                        continue;   // brandstof, arbeid, heffing = niets te picken
                     }
                     $al = (float) ($uitstaand[$l->contract_number][$l->item_number] ?? 0);
                     $rest = (float) $l->qty - $al;
@@ -69,7 +69,7 @@ class PlanningOverzicht
                 $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
                     ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
                 foreach (PlanningLine::where('upload_id', $pl->id)->whereIn('contract_number', $bijhuurNrs)->get() as $l) {
-                    if (self::isBrandstof($l->item_description, $l->item_number)) {
+                    if (self::isNietPickbaar($l->item_description, $l->item_number)) {
                         continue;
                     }
                     $al = (float) ($uitstaand[$l->contract_number][$l->item_number] ?? 0);
@@ -121,6 +121,11 @@ class PlanningOverzicht
             // order tonen; in de planning hoort hij niet meer.
             $geleverd = ! $isOfferte && isset($inHuur[$nr]) && $nieuweRegels === [] && ! $datumOnbekend
                 && ($o === null || ($total !== null && $total > 0 && $picked >= $total));
+            // Order met uitsluitend brandstof/arbeid/heffingen (bv. gasolie bijboeken): niets te picken → niet in de planning
+            $alleenNietPickbaar = ! $isOfferte && $o === null && $v && (int) $v->regels > 0 && (int) $v->niet_pickbaar >= (int) $v->regels;
+            if ($alleenNietPickbaar) {
+                $geleverd = true;
+            }
             $n = $notes->get($nr);
 
             return (object) [
@@ -135,7 +140,8 @@ class PlanningOverzicht
                 'te_laat' => $datum !== null && $datum < $vandaag,
                 'picked' => $picked,
                 'total' => $total,
-                'pick_status' => $geleverd ? 'geleverd' : ($total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets')))),
+                'alleen_niet_pickbaar' => $alleenNietPickbaar,
+                'pick_status' => $alleenNietPickbaar ? 'niet_pickbaar' : ($geleverd ? 'geleverd' : ($total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets'))))),
                 'nog_te_picken' => $total !== null && $total > 0 ? max(0, $total - $picked) : null,
                 // Bijhuur (Wim 13-11-2026): contract staat al in huur (WOW) én 3.4 bevat aanvullende regels die nog niet uitstaan
                 'bijhuur' => isset($inHuur[$nr]) && ($nieuweRegels !== [] || $datumOnbekend),
@@ -232,6 +238,17 @@ class PlanningOverzicht
         return (bool) ($brandstof && $perLiter);
     }
 
+    /** Niet te picken door de expeditie: brandstof, arbeid/uren en heffingen/toeslagen (geen fysiek artikel). */
+    public static function isNietPickbaar(?string $omschrijving, ?string $itemNumber = null, ?string $type = null): bool
+    {
+        if (self::isBrandstof($omschrijving, $itemNumber, $type)) {
+            return true;
+        }
+        $d = mb_strtolower((string) $omschrijving);
+
+        return (bool) preg_match('/\barbeid\b|monteur.*per uur|\bper uur\b|uurtarief|milieuheffing|\bheffing\b|\btoeslag\b|verzekering|waiver|administratiekosten/u', $d);
+    }
+
     /** Leeg, alleen leestekens, of 'volgt' / 'PO volgt' / 'referentie volgt' / 'nvt' = er is nog geen klantreferentie of PO-nummer. */
     public static function referentieOntbreekt(?string $ref): bool
     {
@@ -266,7 +283,8 @@ class PlanningOverzicht
             $al = (float) ($uitstaand[$r['item_number']] ?? 0);
             $r['al_in_huur'] = $al;
             $r['brandstof'] = self::isBrandstof($r['item_description'] ?? null, $r['item_number'] ?? null, $r['type'] ?? null);
-            $r['te_leveren'] = $r['brandstof'] ? 0 : max(0, (float) $r['qty'] - $al);
+            $r['niet_pickbaar'] = self::isNietPickbaar($r['item_description'] ?? null, $r['item_number'] ?? null, $r['type'] ?? null);
+            $r['te_leveren'] = $r['niet_pickbaar'] ? 0 : max(0, (float) $r['qty'] - $al);
             if (! empty($r['item_delivery_date'])) {
                 $r['delivery_date'] = is_string($r['item_delivery_date']) ? substr($r['item_delivery_date'], 0, 10) : $r['item_delivery_date'];
             }
