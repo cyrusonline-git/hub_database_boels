@@ -163,6 +163,24 @@ class Overzicht
             'Retour niet afgemeld' => (int) $this->brug->waarde('inhuur', "SELECT COUNT(*) FROM rentals WHERE status = 'RETOUR NIET AFGEMELD'"),
         ]]);
         $probeer('servicedesk', 'Servicedesk (onderdelen)', fn () => ['cijfers' => ['Open bestellingen' => (int) $this->brug->waarde('servicedesk', "SELECT COUNT(*) FROM orders WHERE status <> 'afgehandeld'")]]);
+        $probeer('offertes', 'Offertes', fn () => ['cijfers' => [
+            'Nieuwe aanvragen' => (int) $this->brug->waarde('offertes', "SELECT COUNT(*) FROM quote_requests WHERE status = 'nieuw'"),
+            'In behandeling' => (int) $this->brug->waarde('offertes', "SELECT COUNT(*) FROM quote_requests WHERE status = 'in_behandeling'"),
+            'Offerte uit, wacht op klant' => (int) $this->brug->waarde('offertes', "SELECT COUNT(*) FROM quote_requests WHERE status = 'offerte_gemaakt'"),
+            'Gescoord (30 dagen)' => (int) $this->brug->waarde('offertes', "SELECT COUNT(*) FROM quote_requests WHERE status = 'gescoord' AND created_at >= date('now', '-30 days')"),
+        ]]);
+        $probeer('scanner', 'Scanner (projectmaterieel)', fn () => ['cijfers' => [
+            'Op locatie (uitgezet)' => (int) $this->brug->waarde('scanner', "SELECT COUNT(*) FROM location_items WHERE status = 'uitgezet'"),
+            'Ouder dan 30 dagen' => (int) $this->brug->waarde('scanner', "SELECT COUNT(*) FROM location_items WHERE status = 'uitgezet' AND placed_at < date('now', '-30 days')"),
+        ]]);
+        $probeer('voorraad', 'Voorraad tool', fn () => ['cijfers' => [
+            'Regels te zoeken' => (int) $this->brug->waarde('voorraad', "SELECT COUNT(*) FROM order_regels WHERE status_code = 'not_allocated'"),
+            'Aanvragen mislukt' => (int) $this->brug->waarde('voorraad', "SELECT COUNT(*) FROM aanvragen WHERE status = 'mislukt'"),
+        ]]);
+        $probeer('keuringen', 'Keuringen eigen materieel', fn () => ['cijfers' => [
+            'Keuring verlopen' => (int) $this->brug->waarde('keuringen', "SELECT COUNT(*) FROM machines WHERE inspection_valid_until < date('now')"),
+            'Verloopt binnen 30 dagen' => (int) $this->brug->waarde('keuringen', "SELECT COUNT(*) FROM machines WHERE inspection_valid_until >= date('now') AND inspection_valid_until < date('now', '+30 days')"),
+        ]]);
 
         return $apps;
     }

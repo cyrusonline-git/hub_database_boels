@@ -26,6 +26,7 @@ return [
         'planner' => ['type' => 'sqlite', 'pad' => 'planning.sorai.nl/public_html/data/planner.sqlite', 'slug' => 'planner', 'naam' => 'Transportplanner', 'url' => 'https://planning.sorai.nl'],
         'servicedesk' => ['type' => 'sqlite', 'pad' => 'servicedesk.sorai.nl/public_html/data/servicedesk.db', 'slug' => 'servicedesk', 'naam' => 'Servicedesk (onderdelen)', 'url' => 'https://servicedesk.sorai.nl'],
         'offertes' => ['type' => 'sqlite', 'pad' => 'offertes.sorai.nl/public_html/database/boels.db', 'slug' => 'offertes', 'naam' => 'Offertes', 'url' => 'https://offertes.sorai.nl'],
+        'keuringen' => ['type' => 'sqlite', 'pad' => 'keuringen.sorai.nl/public_html/keuringen.db', 'slug' => 'keuringen', 'naam' => 'Keuringen eigen materieel', 'url' => 'https://keuringen.sorai.nl'],
         'shell' => ['type' => 'mysql_secrets', 'pad' => 'shell.sorai.nl/public_html/config/secrets.php', 'prefix' => 'shell_', 'slug' => 'shell', 'naam' => 'Shell-portaal', 'url' => 'https://shell.sorai.nl'],
     ],
 
