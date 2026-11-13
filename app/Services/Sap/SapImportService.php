@@ -54,6 +54,10 @@ class SapImportService
             return ['ok' => false, 'melding' => "Dit bestand is herkend als \"$label\", maar je zette het bij \"".config("sap.soorten.$verwacht.label", $verwacht).'". Upload het op de juiste kaart.'];
         }
         $dubbel = SapUpload::where('soort', $opslag)->where('hash', $hash)->orderByDesc('id')->first();
+        // Uitzondering: een 8.7-snapshot van vóór de PickUpInfo-kolom mag met hetzelfde bestand opnieuw ingeladen worden
+        if ($dubbel && $opslag === 'planning' && empty($dubbel->samenvatting['pickinfo_bekend'])) {
+            $dubbel = null;
+        }
         if ($dubbel) {
             return ['ok' => false, 'soort' => $soort, 'melding' => "Dit exacte bestand is al verwerkt op {$dubbel->created_at->format('d-m-Y H:i')} (upload #{$dubbel->id}). Niets gewijzigd."];
         }
