@@ -144,7 +144,7 @@ class Overzicht
             try {
                 $apps[$bron] = ['label' => $label, 'url' => $c['url'] ?? null, 'ok' => true] + $fn();
             } catch (\Throwable $e) {
-                $apps[$bron] = ['label' => $label, 'url' => $c['url'] ?? null, 'ok' => false, 'cijfers' => []];
+                $apps[$bron] = ['label' => $label, 'url' => $c['url'] ?? null, 'ok' => false, 'cijfers' => [], 'fout' => mb_substr($e->getMessage(), 0, 160)];
             }
         };
         $probeer('projectschade', 'Projectschade', fn () => ['cijfers' => [

@@ -47,6 +47,15 @@ if (! empty($_GET['diagnose'])) {
     foreach (app(\App\Vraagbaak\DataBrug::class)->diagnose() as $d) {
         echo str_pad($d['bron'], 14).($d['leesbaar'] ? 'OK  ' : 'NEE ').str_pad((string) ($d['tabellen'] ?? '-'), 5).($d['fout'] ?: '').'  '.$d['pad']."\n";
     }
+    if ($_GET['diagnose'] === '2') {
+        // Cijfers per app zoals het managementoverzicht ze berekent (zonder cache)
+        $ov = app(\App\Services\Sap\Overzicht::class);
+        $m = new \ReflectionMethod($ov, 'apps');
+        foreach ($m->invoke($ov) as $k => $a) {
+            echo "\n".str_pad($k, 14).($a['ok'] ? json_encode($a['cijfers'], JSON_UNESCAPED_UNICODE) : 'FOUT: '.($a['fout'] ?? 'query mislukt'));
+        }
+        echo "\n";
+    }
     exit;
 }
 if (! empty($_GET['maak_kaarten'])) {
