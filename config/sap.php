@@ -48,6 +48,8 @@ return [
             'frequentie_dagen' => 1,
             'omschrijving' => 'Optioneel: de gegroepeerde 8.7-export met per order de artikelregels. Vult het orderdetail aan voor orders die niet in 2.6 staan.',
             'kop' => ['COLLECTION DATE/TIME', 'ITEM NUMBER', 'CONTRACTS.CONTNO'],
+            'verborgen' => true,      // geen eigen kaart: mag op de kaart "Planning + pickstand" (wordt dan als aanvulling verwerkt)
+            'alias_van' => 'planning',
         ],
         'reserveringen' => [
             'label' => 'Reserveringen (offertes + toekomstige contracten)',

@@ -24,6 +24,9 @@ class SapController extends Controller
     {
         $uit = [];
         foreach ((array) config('sap.soorten') as $soort => $cfg) {
+            if (! empty($cfg['verborgen'])) {
+                continue;
+            }
             $u = SapUpload::laatste($soort);
             $uit[$soort] = ($this->hire->uploadInfo($u) ?? ['id' => null]) + ['label' => $cfg['label'], 'bestand' => $cfg['bestand'], 'frequentie_dagen' => $cfg['frequentie_dagen'], 'verouderd' => $u ? $u->created_at->diffInDays(now()) > $cfg['frequentie_dagen'] + 1 : true];
         }

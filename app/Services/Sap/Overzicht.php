@@ -85,6 +85,9 @@ class Overzicht
     {
         $uit = [];
         foreach ((array) config('sap.soorten') as $soort => $cfg) {
+            if (! empty($cfg['verborgen'])) {
+                continue;
+            }
             $u = SapUpload::laatste($soort);
             $uit[$soort] = ['label' => $cfg['label'], 'moment' => $u?->created_at?->toDateTimeString(), 'door' => $u?->user?->name, 'verouderd' => $u ? $u->created_at->diffInDays(now()) > $cfg['frequentie_dagen'] + 1 : true];
         }

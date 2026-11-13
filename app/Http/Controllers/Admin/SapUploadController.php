@@ -25,6 +25,9 @@ class SapUploadController extends Controller
     {
         $soorten = [];
         foreach ((array) config('sap.soorten') as $sleutel => $cfg) {
+            if (! empty($cfg['verborgen'])) {
+                continue;
+            }
             $laatste = SapUpload::laatste($sleutel);
             $oud = $laatste ? $laatste->created_at->diffInDays(now()) > $cfg['frequentie_dagen'] + 1 : true;
             $soorten[$sleutel] = $cfg + ['laatste' => $laatste, 'verouderd' => $oud];

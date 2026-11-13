@@ -47,7 +47,7 @@ class SapImportService
         }
         $soort = $herkend['soort'];
         $label = config("sap.soorten.$soort.label", $soort);
-        if ($verwacht && $verwacht !== $soort) {
+        if ($verwacht && $verwacht !== $soort && config("sap.soorten.$soort.alias_van") !== $verwacht) {
             return ['ok' => false, 'melding' => "Dit bestand is herkend als \"$label\", maar je zette het bij \"".config("sap.soorten.$verwacht.label", $verwacht).'". Upload het op de juiste kaart.'];
         }
         $dubbel = SapUpload::where('soort', $soort)->where('hash', $hash)->orderByDesc('id')->first();
