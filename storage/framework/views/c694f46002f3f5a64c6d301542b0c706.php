@@ -56,10 +56,15 @@
     }
     .side-link:hover { background: #fff4ec; color: #212529; }
     .side-link > i:first-child { color: var(--boels-orange); font-size: 17px; flex: 0 0 auto; }
-    .dash-tegel { border: 1px solid #e6e8eb; border-radius: 12px; transition: transform .12s, box-shadow .12s; }
-    .dash-tegel:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.08); border-color: #FF6600; }
-    .dash-tegel i { font-size: 1.35rem; color: #FF6600; }
-    .dash-tegel .lbl { font-size: .78rem; font-weight: 600; color: #333; margin-top: 4px; line-height: 1.2; }
+    .dash-tegel { border: 1px solid #e6e8eb; border-radius: 14px; transition: transform .12s, box-shadow .12s, border-color .12s; background: #fff; }
+    .dash-tegel:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); border-color: #FF6600; }
+    .dash-tegel .dash-icoon { width: 46px; height: 46px; border-radius: 12px; background: #FF6600; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; }
+    .dash-tegel .lbl { font-weight: 700; color: #222; font-size: 1rem; line-height: 1.2; }
+    .dash-tegel .sub { font-size: .78rem; color: #6b7280; margin-top: 2px; }
+    .dash-tegel-breed { background: linear-gradient(135deg, #FF6600 0%, #ff8533 100%); border-color: #FF6600; }
+    .dash-tegel-breed .dash-icoon { background: rgba(255,255,255,.22); } .dash-tegel-breed .lbl, .dash-tegel-breed .sub, .dash-tegel-breed .bi-chevron-right { color: #fff !important; }
+    .app-tile-klein .icon-circle-klein { width: 34px; height: 34px; font-size: 1rem; margin: 0; flex-shrink: 0; }
+    .app-tile-klein .app-badge { top: -6px; right: -6px; }
     .quick-link {
         display: flex; align-items: center; gap: 10px; padding: 10px 14px;
         border-radius: 12px; background: #fff; text-decoration: none; color: #212529;
@@ -139,10 +144,35 @@
             <?php if($isAdmin && $quickLinks->isNotEmpty()): ?>
                 <a href="<?php echo e(url('/admin/handige-links')); ?>" class="small mt-2 d-inline-block"><i class="bi bi-pencil"></i> links beheren</a>
             <?php endif; ?>
+            <hr class="my-2">
+            <a href="<?php echo e(route('password.change')); ?>" class="side-link"><i class="bi bi-key"></i><span class="flex-grow-1">Wachtwoord wijzigen</span></a>
         </div>
     </div>
 
+    <?php ($metDash = ! empty($dashboardTegels)); ?>
     <div class="col-lg-6 order-1 order-lg-2">
+        <?php if($metDash): ?>
+        
+        <div class="section-title text-center">Dashboard</div>
+        <div class="row g-3">
+            <?php $__currentLoopData = $dashboardTegels; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="<?php echo e($t['breed'] ? 'col-12' : 'col-12 col-md-6'); ?>">
+                <a href="<?php echo e($t['url']); ?>" class="text-decoration-none">
+                    <div class="card dash-tegel h-100 <?php echo e($t['breed'] ? 'dash-tegel-breed' : ''); ?>">
+                        <div class="d-flex align-items-center gap-3 p-3">
+                            <div class="dash-icoon"><i class="<?php echo e($t['icoon']); ?>"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="lbl"><?php echo e($t['label']); ?></div>
+                                <div class="sub"><?php echo e($t['sub']); ?></div>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
+        <?php else: ?>
         <div class="section-title text-center">Jouw applicaties</div>
         <?php if($apps->isEmpty()): ?>
             <div class="alert alert-warning">
@@ -168,39 +198,32 @@
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
         <?php endif; ?>
+        <?php endif; ?>
     </div>
-
     <div class="col-lg-3 order-3">
-        <?php if(!empty($dashboardTegels)): ?>
-        <div class="section-title">Dashboard</div>
-        <div class="row g-2 mb-3">
-            <?php $__currentLoopData = $dashboardTegels; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="col-6">
-                <a href="<?php echo e($t['url']); ?>" class="text-decoration-none">
-                    <div class="card dash-tegel h-100 text-center p-2">
-                        <i class="<?php echo e($t['icoon']); ?>"></i>
-                        <div class="lbl"><?php echo e($t['label']); ?></div>
-                    </div>
-                </a>
-            </div>
+        <?php if($metDash): ?>
+        <div class="section-title">Jouw applicaties</div>
+        <?php if($apps->isEmpty()): ?>
+            <div class="text-muted small">Nog geen applicaties.</div>
+        <?php else: ?>
+        <div class="row g-2">
+            <?php $__currentLoopData = $apps; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $app): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <div class="col-6 col-lg-12">
+                    <a href="<?php echo e($app->url ?: '#'); ?>" <?php if(! str_starts_with((string) $app->url, '/')): ?> target="_blank" <?php endif; ?> class="text-decoration-none">
+                        <div class="card app-tile app-tile-klein h-100 position-relative">
+                            <?php ($b = $badges[$app->id] ?? 0); ?>
+                            <span class="app-badge" data-badge-app="<?php echo e($app->id); ?>" <?php if($b > 0): ?> style="display:flex;" <?php endif; ?>><?php echo e($b > 99 ? '99+' : $b); ?></span>
+                            <div class="d-flex align-items-center gap-2 p-2">
+                                <div class="icon-circle icon-circle-klein" style="background: <?php echo e($app->color); ?>; color: #fff;"><i class="<?php echo e($app->icon ?: 'bi-app'); ?>"></i></div>
+                                <div class="min-w-0"><div class="text-dark fw-semibold small text-truncate"><?php echo e($app->name); ?></div></div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
         <?php endif; ?>
-        <div class="section-title">Snelkoppelingen</div>
-        <div class="d-flex flex-column gap-2 mb-3">
-            <a href="#" class="quick-link" onclick="document.getElementById('chatFab')?.click(); return false;">
-                <i class="bi bi-chat-dots"></i> Chat met een collega
-            </a>
-            <a href="<?php echo e(route('password.change')); ?>" class="quick-link"><i class="bi bi-key"></i> Wachtwoord wijzigen</a>
-            <?php if($isAdmin): ?>
-                <a href="<?php echo e(url('/admin/klanten')); ?>" class="quick-link"><i class="bi bi-building"></i> Klanten</a>
-                <a href="<?php echo e(url('/admin/materieel')); ?>" class="quick-link"><i class="bi bi-tools"></i> Materieel</a>
-                <a href="<?php echo e(url('/admin/employees')); ?>" class="quick-link"><i class="bi bi-people"></i> Medewerkers</a>
-                <a href="<?php echo e(url('/admin/users')); ?>" class="quick-link"><i class="bi bi-person-gear"></i> Gebruikers</a>
-                <a href="<?php echo e(url('/admin/imports')); ?>" class="quick-link"><i class="bi bi-upload"></i> Import</a>
-                <a href="<?php echo e(url('/admin/audit-log')); ?>" class="quick-link"><i class="bi bi-clock-history"></i> Audit log</a>
-            <?php endif; ?>
-        </div>
+        <?php endif; ?>
     </div>
 </div>
 

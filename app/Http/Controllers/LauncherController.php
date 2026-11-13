@@ -77,17 +77,18 @@ class LauncherController extends Controller
             $rollen = $user->is_super_admin ? ['admin'] : $user->roles()->where('application_id', $dash->id)->pluck('slug')->map(fn ($s) => str_replace('-', '_', $s))->all();
             $heeft = fn (array $toegestaan) => $user->is_super_admin || array_intersect($rollen, $toegestaan);
             $tegels = [
-                ['Planning', 'bi-calendar-check', '/planning', null],
-                ['Planbord', 'bi-kanban', '/planbord', null],
-                ['Uit factuurrun', 'bi-receipt', '/factuurrun', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin']],
-                ['Ophaallijst', 'bi-arrow-return-left', '/in-huur/ophalen', null],
-                ['In huur', 'bi-box-seam', '/in-huur', null],
-                ['AVI', 'bi-cash-coin', '/in-huur/avi', ['binnendienst', 'area_manager', 'bu_manager', 'admin']],
-                ['Acties per persoon', 'bi-people', '/team', ['area_manager', 'bu_manager', 'admin']],
+                ['Dashboard', 'bi-speedometer2', '/', null, 'Mijn start: vandaag te leveren, op te halen, factuurrun', true],
+                ['Planning', 'bi-calendar-check', '/planning', null, 'Orders per leverdag met pickstand', false],
+                ['Planbord', 'bi-kanban', '/planbord', null, 'Aankomende orders op tijd', false],
+                ['Uit factuurrun', 'bi-receipt', '/factuurrun', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin'], 'Contracten die niet gefactureerd worden', false],
+                ['Ophaallijst', 'bi-arrow-return-left', '/in-huur/ophalen', null, 'Afgemeld, nog op te halen', false],
+                ['In huur', 'bi-box-seam', '/in-huur', null, 'Alles wat bij klanten staat', false],
+                ['AVI', 'bi-cash-coin', '/in-huur/avi', ['binnendienst', 'area_manager', 'bu_manager', 'admin'], 'Weekhuur per klant en in de tijd', false],
+                ['Acties per persoon', 'bi-people', '/team', ['area_manager', 'bu_manager', 'admin'], 'Open werk per medewerker', false],
             ];
-            foreach ($tegels as [$label, $icoon, $pad, $rolFilter]) {
+            foreach ($tegels as [$label, $icoon, $pad, $rolFilter, $sub, $breed]) {
                 if ($rolFilter === null || $heeft($rolFilter)) {
-                    $dashboardTegels[] = ['label' => $label, 'icoon' => $icoon, 'url' => $base.$pad];
+                    $dashboardTegels[] = ['label' => $label, 'icoon' => $icoon, 'url' => $base.$pad, 'sub' => $sub, 'breed' => $breed];
                 }
             }
         }
