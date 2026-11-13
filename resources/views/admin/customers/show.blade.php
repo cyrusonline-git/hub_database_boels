@@ -80,6 +80,7 @@
             </div>
         </div>
 
+        @include('partials.sap_klant', ['sap' => $sap ?? []])
         <div class="card">
             <div class="card-header fw-bold">
                 Andere debiteuren binnen dit concern

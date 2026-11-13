@@ -50,6 +50,7 @@ class ArticleController extends Controller
         return view('articles.show', [
             'machine' => $machine,
             'subgroup' => $machine->subgroup,
+            'inHuur' => app(\App\Services\Sap\KlantContext::class)->voorMachine($machine->machine_number),
         ]);
     }
 

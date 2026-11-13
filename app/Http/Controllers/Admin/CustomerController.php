@@ -52,7 +52,9 @@ class CustomerController extends Controller
                 ->orderBy('customer_name')->get(['id', 'customer_number', 'customer_name'])
             : collect();
 
-        return view('admin.customers.show', compact('customer', 'concernCustomers'));
+        $sap = app(\App\Services\Sap\KlantContext::class)->voorKlant($customer->customer_number, $customer->customer_name);
+
+        return view('admin.customers.show', compact('customer', 'concernCustomers', 'sap'));
     }
 
     public function upload(Request $request)

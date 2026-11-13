@@ -164,10 +164,26 @@ class LauncherController extends Controller
                 'url'   => route('articles.subgroup', $s),
             ]);
 
+        // Contract-/ordernummers (SAP): alleen bij een cijferreeks van 5+ cijfers
+        $contracten = collect();
+        if (preg_match('/^\d{5,}$/', $q)) {
+            $dash = \App\Services\Sap\KlantContext::dashboardUrl();
+            if ($wow = \App\Models\SapUpload::laatste('wow')) {
+                $contracten = $contracten->merge(\App\Models\HireLine::where('upload_id', $wow->id)->where('contract_number', 'like', $q.'%')
+                    ->selectRaw('contract_number, MAX(customer_name) AS klant, COUNT(*) AS regels')->groupBy('contract_number')->limit(5)->get()
+                    ->map(fn ($c) => ['label' => 'Contract '.$c->contract_number.' — '.$c->klant, 'sub' => 'in huur · '.$c->regels.' regels', 'url' => $dash.'/in-huur/'.$c->contract_number]));
+            }
+            if ($pl = \App\Models\SapUpload::laatste('planning')) {
+                $contracten = $contracten->merge(\App\Models\PlanningOrder::where('upload_id', $pl->id)->where('order_number', 'like', $q.'%')->limit(5)->get()
+                    ->map(fn ($o) => ['label' => 'Order '.$o->order_number.' — '.$o->customer_name, 'sub' => 'planning · lever '.$o->delivery_date?->format('d-m-Y').' · '.($o->picked + 0).'/'.($o->total + 0).' gepickt', 'url' => $dash.'/planning/'.$o->order_number]));
+            }
+        }
+
         return [
             'customers' => $customers,
             'employees' => $employees,
             'subgroups' => $subgroups,
+            'contracten' => $contracten->values(),
         ];
     }
 }

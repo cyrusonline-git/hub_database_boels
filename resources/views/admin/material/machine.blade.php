@@ -31,6 +31,7 @@
 
 <div class="row g-3">
     <div class="col-lg-5">
+        @include('partials.sap_machine', ['inHuur' => $inHuur ?? []])
         <div class="card mb-3">
             <div class="card-header fw-bold">Deze machine</div>
             <div class="card-body p-0">
