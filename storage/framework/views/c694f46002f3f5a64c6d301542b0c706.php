@@ -65,6 +65,9 @@
     .dash-tegel-breed .dash-icoon { background: rgba(255,255,255,.22); } .dash-tegel-breed .lbl, .dash-tegel-breed .sub, .dash-tegel-breed .bi-chevron-right { color: #fff !important; }
     .app-tile-klein .icon-circle-klein { width: 34px; height: 34px; font-size: 1rem; margin: 0; flex-shrink: 0; }
     .app-tile-klein .app-badge { top: -6px; right: -6px; }
+    .vd-kaart { border-radius: 14px; border: 1px solid #e6e8eb; }
+    .vd-kaart .card-header { background: #fff; font-weight: 600; border-radius: 14px 14px 0 0; }
+    .bg-boels { background: #FF6600 !important; color: #fff; }
     .quick-link {
         display: flex; align-items: center; gap: 10px; padding: 10px 14px;
         border-radius: 12px; background: #fff; text-decoration: none; color: #212529;
@@ -226,6 +229,10 @@
         <?php endif; ?>
     </div>
 </div>
+
+<?php if(!empty($vandaag) && !empty($dashboardTegels)): ?>
+    <?php echo $__env->make('launcher._vandaag', ['vandaag' => $vandaag], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php endif; ?>
 
 <?php if($isAdmin && $admin): ?>
 

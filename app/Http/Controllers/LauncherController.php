@@ -86,14 +86,23 @@ class LauncherController extends Controller
                 ['AVI', 'bi-cash-coin', '/in-huur/avi', ['binnendienst', 'area_manager', 'bu_manager', 'admin'], 'Weekhuur per klant en in de tijd', false],
                 ['Acties per persoon', 'bi-people', '/team', ['area_manager', 'bu_manager', 'admin'], 'Open werk per medewerker', false],
             ];
+            $tegels[] = ['Managementoverzicht', 'bi-graph-up-arrow', '/overzicht', ['area_manager', 'bu_manager', 'admin'], 'Alle cijfers van SAP en de apps bij elkaar', false];
             foreach ($tegels as [$label, $icoon, $pad, $rolFilter, $sub, $breed]) {
                 if ($rolFilter === null || $heeft($rolFilter)) {
                     $dashboardTegels[] = ['label' => $label, 'icoon' => $icoon, 'url' => $base.$pad, 'sub' => $sub, 'breed' => $breed];
                 }
             }
+            // Blok "Vandaag" onder de tegels (zelfde cijfers als /api/overzicht, 5 min cache)
+            try {
+                $manager = $user->is_super_admin || array_intersect($rollen, ['area_manager', 'bu_manager', 'admin']);
+                $vandaag = app(\App\Services\Sap\Overzicht::class)->voor($user, $rollen, (bool) $manager);
+            } catch (\Throwable $e) {
+                report($e);
+                $vandaag = null;
+            }
         }
 
-        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges', 'dashboardTegels'));
+        return view('launcher.index', compact('apps', 'isAdmin', 'admin', 'quickLinks', 'badges', 'dashboardTegels') + ['vandaag' => $vandaag ?? null]);
     }
 
     /** Actuele tellers voor de tegel-bolletjes — gepolld door het dashboard. */

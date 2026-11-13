@@ -234,6 +234,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/planning/orders/{nr}', [\App\Http\Controllers\Api\SapController::class, 'planningOrder']);
     Route::post('/planning/orders/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'planningNote']);
 
+    // ---- Cockpit: alles voor het startscherm/managementoverzicht in één keer (5 min cache) ----
+    Route::get('/overzicht', function (Request $r) {
+        $u = $r->user();
+        $appId = \App\Models\Application::where('slug', 'dashboard')->value('id');
+        $rollen = $u->is_super_admin ? array_map(fn ($s) => str_replace('-', '_', $s), ['admin']) : $u->roles()->where('application_id', $appId)->pluck('slug')->map(fn ($s) => str_replace('-', '_', $s))->all();
+        $manager = $u->is_super_admin || array_intersect($rollen, ['area_manager', 'bu_manager', 'admin']);
+
+        return app(\App\Services\Sap\Overzicht::class)->voor($u, $rollen, (bool) $manager);
+    });
+
     // ---- Acties per persoon: open werk uit alle apps + SAP-signalen ----
     Route::get('/acties', [\App\Http\Controllers\Api\ActiesController::class, 'mijn']);
     Route::get('/acties/alle', [\App\Http\Controllers\Api\ActiesController::class, 'alle']);
