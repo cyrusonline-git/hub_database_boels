@@ -36,20 +36,19 @@ return [
             'kop' => ['CONTRACT NUMBER', 'DATE LAST INVOICE', 'CREATED BY'],
         ],
         'planning' => [
-            'label' => 'Planning + pickstand',
-            'bestand' => '8.7 INDUSTRIAL HOP, SOP and DT View.xlsx',
+            'label' => '8.7 orders + pickstand (platte lijst, PickUpDate … DelDate)',
+            'bestand' => '8.7 INDUSTRIAL HOP, SOP and DT View.xlsx — platte View',
             'frequentie_dagen' => 1,
             'omschrijving' => 'Eén rij per order: huur, verkoop, transfers; met gepickt/totaal, leverdatum en verkoper. Let op: de platte "View" met kop PickUpDate … DelDate.',
             'kop' => ['PickUpDate', 'Items', 'contno', 'SalesPerson'],
         ],
         'planning_regels' => [
-            'label' => 'Planning: artikelregels (8.7 gegroepeerd)',
-            'bestand' => '8.7 INDUSTRIAL HOP, SOP and DT View.xlsx (gegroepeerde variant met artikelregels)',
+            'label' => '8.7 artikelregels (gegroepeerd, met COLLECTION DATE/TIME)',
+            'bestand' => '8.7 INDUSTRIAL HOP, SOP and DT View.xlsx — gegroepeerde variant',
             'frequentie_dagen' => 1,
-            'omschrijving' => 'Optioneel: de gegroepeerde 8.7-export met per order de artikelregels. Vult het orderdetail aan voor orders die niet in 2.6 staan.',
+            'omschrijving' => 'De 8.7-export met per order de artikelregels en per regel de leverdatum. Nodig om bijhuur op een lopend contract op de juiste dag te zetten en de nieuwe artikelen te tonen.',
             'kop' => ['COLLECTION DATE/TIME', 'ITEM NUMBER', 'CONTRACTS.CONTNO'],
-            'verborgen' => true,      // geen eigen kaart: mag op de kaart "Planning + pickstand" (wordt dan als aanvulling verwerkt)
-            'alias_van' => 'planning',
+            'alias_van' => 'planning', // mag ook op de kaart "Planning + pickstand" worden gezet
         ],
         'reserveringen' => [
             'label' => 'Reserveringen (offertes + toekomstige contracten)',
