@@ -69,11 +69,17 @@ class PlanningOverzicht
             // Bijhuur: de echte leverdatum is die van de nieuwe regels (gegroepeerde 8.7), niet de oude contractdatum
             $datumContract = $datum;
             $nieuweRegels = $teLeveren[$nr] ?? [];
+            $datumOnbekend = false;
             if ($nieuweRegels) {
                 $d = collect($nieuweRegels)->pluck('delivery_date')->filter()->sort()->first();
                 if ($d) {
                     $datum = $d;
                 }
+            } elseif (isset($inHuur[$nr]) && $o && (float) $o->total > (float) $o->picked && $datum !== null && $datum < $vandaag) {
+                // Bijhuur op een lopend contract: de platte 8.7 houdt de oude contractdatum; de nieuwe regel moet
+                // gewoon gepickt worden → vandaag tonen, niet bij "op te schonen"
+                $datum = $vandaag;
+                $datumOnbekend = true;
             }
             $total = $o ? (float) $o->total : null;
             $picked = $o ? (float) $o->picked : null;
@@ -95,6 +101,7 @@ class PlanningOverzicht
                 'nog_te_picken' => $total !== null && $total > 0 ? max(0, $total - $picked) : null,
                 'bijhuur' => isset($inHuur[$nr]),
                 'delivery_date_contract' => $datumContract,
+                'datum_onbekend' => $datumOnbekend,
                 'nieuwe_regels' => array_values($nieuweRegels),
                 'in_huur_regels' => isset($inHuur[$nr]) ? (int) $inHuur[$nr]->n : 0,
                 'in_huur_sinds' => isset($inHuur[$nr]) ? $inHuur[$nr]->laatste : null,
