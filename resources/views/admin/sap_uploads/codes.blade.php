@@ -19,7 +19,7 @@
     Smartview schrijft de aanmaker als code: de eerste vijf letters van de achternaam (zonder tussenvoegsel) plus de eerste letter
     van de voornaam — <em>Wouter Zwackhalen</em> = <code>ZWACKW</code>. CORE koppelt automatisch als precies één medewerker
     past; de rest koppel je hier eenmalig. Staat iemand alleen als <strong>gebruiker</strong> in CORE (zonder medewerkerkaart), kies dan die gebruiker:
-    CORE maakt dan een medewerkerkaart aan en koppelt het account eraan. Namen die SAP voluit schrijft (planning) staan als <code>NAAM:…</code>.
+    CORE maakt dan een medewerkerkaart aan en koppelt het account eraan. Namen die Smartview voluit schrijft (planning) staan als <code>NAAM:…</code>.
 </p>
 <div class="card">
     <div class="table-responsive">

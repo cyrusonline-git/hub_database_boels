@@ -58,9 +58,10 @@
     <div class="card-body py-2"><canvas id="planningWeek" height="60"></canvas></div>
 </div>
 <?php $__env->startPush('scripts'); ?>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="<?php echo e(asset('js/chart.umd.min.js')); ?>?v=4.4.1"></script>
 <script>
 (function () {
+  try {
     const w = <?php echo json_encode($vandaag['planning_week'], 15, 512) ?>;
     const lbl = w.map(d => new Date(d.datum).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }));
     new Chart(document.getElementById('planningWeek'), { type: 'bar', data: { labels: lbl, datasets: [
@@ -68,6 +69,7 @@
         { label: 'Deels', data: w.map(d => d.deels), backgroundColor: '#ef6c00', borderRadius: 4 },
         { label: 'Nog niet', data: w.map(d => d.niets), backgroundColor: '#cfd4d9', borderRadius: 4 } ] },
       options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
+  } catch (e) { console.error('Grafiek', e); const c = document.getElementById('planningWeek'); if (c) c.insertAdjacentHTML('afterend', '<div class="text-danger small">Grafiek kon niet laden: ' + e.message + '</div>'); }
 })();
 </script>
 <?php $__env->stopPush(); ?>
