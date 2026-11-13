@@ -189,8 +189,9 @@ class ActiesService
                 $uit[$eid][] = ['bron' => 'sap', 'label' => 'Profielen niet ingevuld (PickUpInfo leeg, expeditie ziet de order niet)', 'aantal' => (int) $n, 'url' => $dash.'/planning?niet_op_scanner=1', 'soort' => 'sap'];
             }
             // Klantreferentie/PO-nummer ontbreekt (8.7 REF leeg of 'volgt') per verkoper — zonder referentie wordt de factuur niet betaald
-            foreach (app(\App\Services\Sap\PlanningOverzicht::class)->rijen(['referentie_ontbreekt' => 1])->whereNotNull('employee_id')->countBy('employee_id') as $eid => $n) {
-                $uit[$eid][] = ['bron' => 'sap', 'label' => 'Referentie / PO-nummer ontbreekt (factuur wordt niet betaald)', 'aantal' => (int) $n, 'url' => $dash.'/planning?referentie_ontbreekt=1', 'soort' => 'sap'];
+            // PO-bewaking: planning én in huur, tot de referentie in Smartview staat
+            foreach (app(\App\Services\Sap\ReferentieBewaking::class)->lijst([])->whereNotNull('employee_id')->countBy('employee_id') as $eid => $n) {
+                $uit[$eid][] = ['bron' => 'sap', 'label' => 'Referentie / PO-nummer ontbreekt (factuur wordt niet betaald)', 'aantal' => (int) $n, 'url' => $dash.'/referenties', 'soort' => 'sap'];
             }
             // Offerte verlopen (2.6, H = Offerte, leverdatum < vandaag) per aanmaker
             if ($u = SapUpload::laatste('reserveringen')) {

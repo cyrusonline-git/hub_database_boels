@@ -8,6 +8,7 @@ use App\Models\PlanningNote;
 use App\Models\SapUpload;
 use App\Services\Sap\HireData;
 use App\Services\Sap\PlanningOverzicht;
+use App\Services\Sap\ReferentieBewaking;
 use Illuminate\Http\Request;
 
 /**
@@ -17,7 +18,7 @@ use Illuminate\Http\Request;
  */
 class SapController extends Controller
 {
-    public function __construct(private HireData $hire, private PlanningOverzicht $planning) {}
+    public function __construct(private HireData $hire, private PlanningOverzicht $planning, private ReferentieBewaking $referenties) {}
 
     /** Laatste stand per bestandssoort (voor de "stand van …"-balk). */
     public function uploads()
@@ -96,6 +97,28 @@ class SapController extends Controller
         $n->user_id = $r->user()?->id;
         $n->eerst_gezien ??= now()->toDateString();
         $n->save();
+
+        return ['ok' => true, 'note' => $n];
+    }
+
+    /** PO-bewaking: contracten (WOW) en orders (8.7) zonder klantreferentie/PO-nummer, met handmatige status. */
+    public function references(Request $r)
+    {
+        $rijen = $this->referenties->lijst($r->only(['employee_id', 'status', 'bron', 'q', 'alles']));
+        $open = $rijen->where('status', '!=', 'afgehandeld');
+
+        return [
+            'uploads' => ['wow' => $this->hire->uploadInfo(SapUpload::laatste('wow')), 'planning' => $this->hire->uploadInfo(SapUpload::laatste('planning'))],
+            'totaal' => ['contracten' => $rijen->count(), 'open' => $open->where('status', 'open')->count(), 'opgevraagd' => $open->where('status', 'opgevraagd')->count(), 'ouder_dan_30' => $open->where('dagen', '>', 30)->count(), 'weekhuur' => round($open->sum('weekhuur'), 2), 'in_huur' => $open->where('bron', 'in_huur')->count(), 'planning' => $open->where('bron', 'planning')->count()],
+            'data' => $rijen,
+            'historie' => $this->referenties->historie(),
+        ];
+    }
+
+    public function referenceNote(Request $r, string $nr)
+    {
+        $data = $r->validate(['opmerking' => ['nullable', 'string', 'max:2000'], 'status' => ['nullable', 'in:open,opgevraagd,afgehandeld']]);
+        $n = $this->referenties->notitie($nr, $data, $r->user()?->id);
 
         return ['ok' => true, 'note' => $n];
     }

@@ -81,6 +81,7 @@ class LauncherController extends Controller
                 ['Planning', 'bi-calendar-check', '/planning', null, 'Orders per leverdag met pickstand', false],
                 ['Planbord', 'bi-kanban', '/planbord', null, 'Aankomende orders op tijd', false],
                 ['Uit factuurrun', 'bi-receipt', '/factuurrun', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin'], 'Contracten die niet gefactureerd worden', false],
+                ['PO-bewaking', 'bi-receipt-cutoff', '/referenties', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin'], 'Contracten zonder klantreferentie of PO-nummer', false],
                 ['Ophaallijst', 'bi-arrow-return-left', '/in-huur/ophalen', null, 'Afgemeld, nog op te halen', false],
                 ['In huur', 'bi-box-seam', '/in-huur', null, 'Alles wat bij klanten staat', false],
                 ['AVI', 'bi-cash-coin', '/in-huur/avi', ['binnendienst', 'area_manager', 'bu_manager', 'admin'], 'Weekhuur per klant en in de tijd', false],

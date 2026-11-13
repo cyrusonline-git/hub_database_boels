@@ -230,6 +230,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/hire/invoice-run', [\App\Http\Controllers\Api\SapController::class, 'invoiceRun']);     // uit factuurrun + redenen
     Route::get('/hire/invoice-run/{nr}', [\App\Http\Controllers\Api\SapController::class, 'invoiceRunContract']);
     Route::post('/hire/invoice-run/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'invoiceRunNote']);
+    Route::get('/hire/references', [\App\Http\Controllers\Api\SapController::class, 'references']);      // PO-bewaking: zonder klantreferentie
+    Route::post('/hire/references/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'referenceNote']);
     Route::get('/planning/orders', [\App\Http\Controllers\Api\SapController::class, 'planning']);        // 8.7 + 2.6 samengevoegd
     Route::get('/planning/orders/{nr}', [\App\Http\Controllers\Api\SapController::class, 'planningOrder']);
     Route::post('/planning/orders/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'planningNote']);

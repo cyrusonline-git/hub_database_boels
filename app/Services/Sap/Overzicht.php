@@ -127,6 +127,7 @@ class Overzicht
             'orders_week_volledig' => $orders->where('pick_status', 'volledig')->count(),
             'niet_op_scanner' => $this->planning->rijen(['niet_op_scanner' => 1])->count(),
             'referentie_ontbreekt' => $this->planning->rijen(['referentie_ontbreekt' => 1])->count(),
+            'referenties' => (function () { $l = app(ReferentieBewaking::class)->lijst([]); return ['open' => $l->count(), 'ouder_dan_30' => $l->where('dagen', '>', 30)->count(), 'weekhuur' => round($l->sum('weekhuur'), 2), 'in_huur' => $l->where('bron', 'in_huur')->count()]; })(),
             'op_te_schonen' => $opTeSchonen,
             'transfers_in' => (int) ($transfers['transfer_in'] ?? 0),
             'transfers_uit' => (int) ($transfers['transfer_uit'] ?? 0),
