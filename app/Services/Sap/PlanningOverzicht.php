@@ -51,6 +51,9 @@ class PlanningOverzicht
                 $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs34)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
                     ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
                 foreach (ReservationLine::where('upload_id', $r->id)->whereIn('contract_number', $bijhuurNrs34)->get() as $l) {
+                    if (self::isBrandstof($l->item_description, $l->item_number, $l->type)) {
+                        continue;   // brandstof bijboeken = niets te picken
+                    }
                     $al = (float) ($uitstaand[$l->contract_number][$l->item_number] ?? 0);
                     $rest = (float) $l->qty - $al;
                     if ($rest > 0) {
@@ -66,6 +69,9 @@ class PlanningOverzicht
                 $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
                     ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
                 foreach (PlanningLine::where('upload_id', $pl->id)->whereIn('contract_number', $bijhuurNrs)->get() as $l) {
+                    if (self::isBrandstof($l->item_description, $l->item_number)) {
+                        continue;
+                    }
                     $al = (float) ($uitstaand[$l->contract_number][$l->item_number] ?? 0);
                     $rest = (float) $l->qty - $al;
                     if ($rest > 0) {
@@ -208,6 +214,24 @@ class PlanningOverzicht
         return $rijen->sortBy([fn ($a, $b) => strcmp((string) ($a->delivery_date ?? '9999'), (string) ($b->delivery_date ?? '9999')) ?: strcmp($a->customer_name ?? '', $b->customer_name ?? '')])->values();
     }
 
+    /**
+     * Brandstofregel (Wim 13-11-2026): gasolie/diesel die op een contract wordt bijgeboekt (verkoopartikel "per liter",
+     * bv. 44331 "Diesel fuel on return per litre" / "Gasolie bij retourname per liter"). Hoeft niet gepickt te worden en
+     * telt dus niet als nieuwe regel/bijhuur. Aggregaten, compressors, brandstoftanks en -slangen met 'diesel' of
+     * 'brandstof' in de naam zijn gewoon materieel en tellen wél.
+     */
+    public static function isBrandstof(?string $omschrijving, ?string $itemNumber = null, ?string $type = null): bool
+    {
+        if (in_array((string) $itemNumber, ['44331'], true)) {
+            return true;
+        }
+        $d = mb_strtolower((string) $omschrijving);
+        $brandstof = preg_match('/gasolie|diesel|fuel|brandstof|benzine|adblue|hvo/u', $d);
+        $perLiter = preg_match('/\blit(er|re)s?\b|\bltr\b|retourname|on return|bijgevuld|bijvullen|getankt|tanken/u', $d);
+
+        return (bool) ($brandstof && $perLiter);
+    }
+
     /** Leeg, alleen leestekens, of 'volgt' / 'PO volgt' / 'referentie volgt' / 'nvt' = er is nog geen klantreferentie of PO-nummer. */
     public static function referentieOntbreekt(?string $ref): bool
     {
@@ -241,7 +265,8 @@ class PlanningOverzicht
             $r = is_array($r) ? $r : $r->toArray();
             $al = (float) ($uitstaand[$r['item_number']] ?? 0);
             $r['al_in_huur'] = $al;
-            $r['te_leveren'] = max(0, (float) $r['qty'] - $al);
+            $r['brandstof'] = self::isBrandstof($r['item_description'] ?? null, $r['item_number'] ?? null, $r['type'] ?? null);
+            $r['te_leveren'] = $r['brandstof'] ? 0 : max(0, (float) $r['qty'] - $al);
             if (! empty($r['item_delivery_date'])) {
                 $r['delivery_date'] = is_string($r['item_delivery_date']) ? substr($r['item_delivery_date'], 0, 10) : $r['item_delivery_date'];
             }
