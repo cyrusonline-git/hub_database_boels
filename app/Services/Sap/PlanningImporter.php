@@ -6,7 +6,7 @@ use App\Models\PlanningOrder;
 
 /**
  * 8.7 INDUSTRIAL HOP, SOP and DT View — platte lijst, één rij per order.
- * Kolommen: PickUpDate, PickUpInfo (leeg = niet op de scanner van de expeditie), Account, Type, ContractStatus,
+ * Kolommen: PickUpDate, PickUpInfo (leeg = profiel niet ingevuld, expeditie ziet de order niet), Account, Type, ContractStatus,
  * Items ("gepickt/totaal"), Location, DelMemo, DelMethod (negeren), Depot,
  * HiringDepot, Modification, ModMemo, Number, contno, REF, SalesPerson, DelDate.
  */
@@ -93,7 +93,7 @@ class PlanningImporter
             PlanningOrder::insert($buffer);
         }
         $r->contracten = count($gezien);
-        // pickinfo_bekend: snapshots van vóór deze kolom tonen geen 'niet op scanner'-markering
+        // pickinfo_bekend: snapshots van vóór deze kolom tonen geen 'profiel niet ingevuld'-markering
         $r->samenvatting = ['per_soort' => $perSoort, 'op_te_schonen' => $oud, 'niet_op_scanner' => $zonderPickinfo, 'pickinfo_bekend' => true];
 
         return $r;

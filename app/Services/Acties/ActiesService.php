@@ -184,9 +184,9 @@ class ActiesService
                     $uit[$r->employee_id][] = ['bron' => 'sap', 'label' => 'Orders op te schonen (leverdatum voorbij)', 'aantal' => (int) $r->n, 'url' => $dash.'/planning?verleden=1', 'soort' => 'sap'];
                 }
             }
-            // Niet op de scanner van de expeditie (8.7 PickUpInfo leeg, nog te picken) per verkoper
+            // Profielen niet ingevuld (8.7 PickUpInfo leeg → expeditie ziet de order niet in InspHire Mobile), nog te picken, per verkoper
             foreach (app(\App\Services\Sap\PlanningOverzicht::class)->rijen(['niet_op_scanner' => 1])->whereNotNull('employee_id')->countBy('employee_id') as $eid => $n) {
-                $uit[$eid][] = ['bron' => 'sap', 'label' => 'Niet op de scanner van de expeditie (PickUpInfo leeg)', 'aantal' => (int) $n, 'url' => $dash.'/planning?niet_op_scanner=1', 'soort' => 'sap'];
+                $uit[$eid][] = ['bron' => 'sap', 'label' => 'Profielen niet ingevuld (PickUpInfo leeg, expeditie ziet de order niet)', 'aantal' => (int) $n, 'url' => $dash.'/planning?niet_op_scanner=1', 'soort' => 'sap'];
             }
             // Offerte verlopen (2.6, H = Offerte, leverdatum < vandaag) per aanmaker
             if ($u = SapUpload::laatste('reserveringen')) {

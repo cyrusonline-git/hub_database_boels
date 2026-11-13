@@ -27,7 +27,7 @@ class PlanningOverzicht
         $notes = PlanningNote::all()->keyBy('order_number');
 
         $orders = $p ? PlanningOrder::where('upload_id', $p->id)->get()->keyBy('order_number') : collect();
-        // 8.7 kolom B (PickUpInfo) leeg = order staat niet op de scanner van de expeditie en wordt dus niet gepickt (Wim 13-11-2026)
+        // 8.7 kolom B (PickUpInfo) leeg = 'profiel niet ingevuld': de expeditie ziet de order niet in InspHire Mobile en pickt hem niet (Wim 13-11-2026)
         $pickinfoBekend = $p && ! empty($p->samenvatting['pickinfo_bekend']);
         $res = $r ? ReservationLine::where('upload_id', $r->id)
             ->selectRaw('contract_number, MAX(customer_number) AS customer_number, MAX(customer_name) AS customer_name, MIN(is_contract) AS is_contract, MAX(is_bijhuur) AS is_bijhuur, MAX(offerte_status) AS offerte_status, MAX(contract_status) AS contract_status,
