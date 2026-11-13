@@ -102,7 +102,7 @@ class ContractItemsImporter
             ReservationLine::insert($buffer);
         }
         $r->contracten = count($contracten);
-        $r->samenvatting = ['contracten' => $tel['contract'], 'offertes' => $tel['offerte'], 'bijhuur_contracten' => $tel['bijhuur']];
+        $r->samenvatting = ['contracten' => $tel['contract'], 'offertes' => $tel['offerte'], 'status_inhuur' => $tel['bijhuur']];
 
         return $r;
     }

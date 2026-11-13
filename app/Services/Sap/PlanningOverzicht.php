@@ -42,7 +42,9 @@ class PlanningOverzicht
         $teLeveren = [];
         // 1) Uit 3.4 (reservation_lines met item_delivery_date): nieuwe regels op lopende contracten (bijhuur) minus wat al in huur staat
         if ($wow && $r) {
-            $bijhuurNrs34 = $res->filter(fn ($x) => (bool) $x->is_bijhuur || isset($inHuur[$x->contract_number]))->keys()->values();
+            // Alleen contracten die volgens WOW al (deels) in huur staan; 3.4-status 'Inhuur' alleen zegt niets
+            // (ook een vandaag volledig gepickte nieuwe order krijgt die status)
+            $bijhuurNrs34 = $res->keys()->filter(fn ($nr) => isset($inHuur[$nr]))->values();
             if ($bijhuurNrs34->isNotEmpty()) {
                 $uitstaand = HireLine::where('upload_id', $wow->id)->whereIn('contract_number', $bijhuurNrs34)->selectRaw('contract_number, item_number, SUM(qty_out) AS q')->groupBy('contract_number', 'item_number')->get()
                     ->groupBy('contract_number')->map(fn ($g) => $g->pluck('q', 'item_number'));
@@ -72,7 +74,7 @@ class PlanningOverzicht
         }
         $nummers = $orders->keys()->merge($res->keys())->unique();
         $empIds = collect();
-        $rijen = $nummers->map(function ($nr) use ($orders, $res, $codes, $notes, $vandaag, $plRegels, $inHuur, $teLeveren, &$empIds) {
+        $rijen = $nummers->map(function ($nr) use ($r, $orders, $res, $codes, $notes, $vandaag, $plRegels, $inHuur, $teLeveren, &$empIds) {
             $o = $orders->get($nr);
             $v = $res->get($nr);
             $isOfferte = $o === null && $v && ! (bool) $v->is_contract && ! (bool) $v->is_bijhuur;
@@ -81,7 +83,10 @@ class PlanningOverzicht
             if ($empId) {
                 $empIds->push($empId);
             }
-            $datum = $o?->delivery_date?->toDateString() ?? $v?->delivery_date;
+            // Datums altijd als 'Y-m-d'-string: de Eloquent-cast maakt van de aggregaten een Carbon, en die
+            // wordt in JSON een UTC-tijdstip (23:00 van de dag ervoor) → verkeerde dagkop en volgorde in het dashboard
+            $dag = fn ($x) => $x instanceof \DateTimeInterface ? $x->format('Y-m-d') : ($x ? substr((string) $x, 0, 10) : null);
+            $datum = $o?->delivery_date?->toDateString() ?? $dag($v?->delivery_date);
             // Bijhuur: de echte leverdatum is die van de nieuwe regels (gegroepeerde 8.7), niet de oude contractdatum
             $datumContract = $datum;
             $nieuweRegels = $teLeveren[$nr] ?? [];
@@ -91,9 +96,9 @@ class PlanningOverzicht
                 if ($d) {
                     $datum = $d;
                 }
-            } elseif (isset($inHuur[$nr]) && $o && (float) $o->total > (float) $o->picked && $datum !== null && $datum < $vandaag) {
-                // Bijhuur op een lopend contract: de platte 8.7 houdt de oude contractdatum; de nieuwe regel moet
-                // gewoon gepickt worden → vandaag tonen, niet bij "op te schonen"
+            } elseif (! $r && isset($inHuur[$nr]) && $o && (float) $o->total > (float) $o->picked && $datum !== null && $datum < $vandaag) {
+                // Alleen zonder 3.4-export: bijhuur op een lopend contract waarvan de platte 8.7 de oude contractdatum
+                // houdt → vandaag tonen. Mét 3.4 bepalen de regeldatums dit en is zo'n order zonder 3.4-regels gewoon oud.
                 $datum = $vandaag;
                 $datumOnbekend = true;
             }
@@ -115,7 +120,8 @@ class PlanningOverzicht
                 'total' => $total,
                 'pick_status' => $total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets'))),
                 'nog_te_picken' => $total !== null && $total > 0 ? max(0, $total - $picked) : null,
-                'bijhuur' => isset($inHuur[$nr]) || (bool) ($v->is_bijhuur ?? false),
+                // Bijhuur (Wim 13-11-2026): contract staat al in huur (WOW) én 3.4 bevat aanvullende regels die nog niet uitstaan
+                'bijhuur' => isset($inHuur[$nr]) && ($nieuweRegels !== [] || $datumOnbekend),
                 'delivery_date_contract' => $datumContract,
                 'datum_onbekend' => $datumOnbekend,
                 'nieuwe_regels' => array_values($nieuweRegels),
@@ -127,8 +133,8 @@ class PlanningOverzicht
                 'regels' => $v ? (int) $v->regels : (isset($plRegels[$nr]) ? (int) $plRegels[$nr]->n : null),
                 'aantal' => $v ? (float) $v->aantal : (isset($plRegels[$nr]) ? (float) $plRegels[$nr]->aantal : null),
                 'regels_bron' => $v ? 'reserveringen' : (isset($plRegels[$nr]) ? 'planning_regels' : null),
-                'hire_start_date' => $v?->hire_start_date,
-                'hire_end_date' => $v?->hire_end_date,
+                'hire_start_date' => $dag($v?->hire_start_date),
+                'hire_end_date' => $dag($v?->hire_end_date),
                 'delivery_name' => $v?->delivery_name, 'street' => $v?->street, 'city' => $v?->city,
                 'ordered_by' => $v?->ordered_by,
                 'reference' => $o?->reference ?? $v?->customer_reference,
