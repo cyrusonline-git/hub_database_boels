@@ -5,6 +5,8 @@ namespace App\Services\Sap;
 use App\Models\HireLine;
 use App\Models\InvoiceRunLine;
 use App\Models\InvoiceRunNote;
+use App\Models\PlanningOrder;
+use App\Models\ReservationLine;
 use App\Models\SapUpload;
 use App\Models\SapUserCode;
 use Illuminate\Support\Collection;
@@ -112,7 +114,22 @@ class HireData
             'weekhuur' => round($regels->sum(fn ($r) => $r->weekly_hire_rate * $r->qty_out), 2),
             'regels' => $regels,
             'upload' => $this->uploadInfo($u),
+            'open_order' => $this->openOrder($nr),
         ];
+    }
+
+    /** Nog te leveren op dit contract volgens 8.7 (bijhuur op een lopend contract) + eventuele 2.6-regels. */
+    public function openOrder(string $nr): ?array
+    {
+        $pl = SapUpload::laatste('planning');
+        $o = $pl ? PlanningOrder::where('upload_id', $pl->id)->where('order_number', $nr)->first() : null;
+        if (! $o) {
+            return null;
+        }
+        $rs = SapUpload::laatste('reserveringen');
+        $regels = $rs ? ReservationLine::where('upload_id', $rs->id)->where('contract_number', $nr)->orderBy('delivery_date')->get(['item_number', 'item_description', 'qty', 'delivery_date']) : collect();
+
+        return ['order_number' => $o->order_number, 'soort' => $o->soort, 'delivery_date' => $o->delivery_date?->toDateString(), 'contract_status' => $o->contract_status, 'picked' => (float) $o->picked, 'total' => (float) $o->total, 'nog_te_picken' => max(0, (float) $o->total - (float) $o->picked), 'sales_person' => $o->sales_person, 'reference' => $o->reference, 'regels_26' => $regels];
     }
 
     /** Ophaallijst: regels met status To Collect, per contract, gesorteerd op ophaaldatum. */

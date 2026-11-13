@@ -2,6 +2,7 @@
 
 namespace App\Services\Sap;
 
+use App\Models\HireLine;
 use App\Models\PlanningLine;
 use App\Models\PlanningNote;
 use App\Models\PlanningOrder;
@@ -34,9 +35,12 @@ class PlanningOverzicht
 
         $pl = SapUpload::laatste('planning_regels');
         $plRegels = $pl ? PlanningLine::where('upload_id', $pl->id)->selectRaw('contract_number, COUNT(*) AS n, SUM(qty) AS aantal')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
+        // Bijhuur: order op een contract dat volgens WOW al (deels) in huur is
+        $wow = SapUpload::laatste('wow');
+        $inHuur = $wow ? HireLine::where('upload_id', $wow->id)->selectRaw('contract_number, COUNT(*) AS n, MAX(hire_date) AS laatste, MAX(customer_name) AS klant')->groupBy('contract_number')->get()->keyBy('contract_number') : collect();
         $nummers = $orders->keys()->merge($res->keys())->unique();
         $empIds = collect();
-        $rijen = $nummers->map(function ($nr) use ($orders, $res, $codes, $notes, $vandaag, $plRegels, &$empIds) {
+        $rijen = $nummers->map(function ($nr) use ($orders, $res, $codes, $notes, $vandaag, $plRegels, $inHuur, &$empIds) {
             $o = $orders->get($nr);
             $v = $res->get($nr);
             $isOfferte = $o === null && $v && ! (bool) $v->is_contract;
@@ -63,6 +67,10 @@ class PlanningOverzicht
                 'picked' => $picked,
                 'total' => $total,
                 'pick_status' => $total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets'))),
+                'nog_te_picken' => $total !== null && $total > 0 ? max(0, $total - $picked) : null,
+                'bijhuur' => isset($inHuur[$nr]),
+                'in_huur_regels' => isset($inHuur[$nr]) ? (int) $inHuur[$nr]->n : 0,
+                'in_huur_sinds' => isset($inHuur[$nr]) ? $inHuur[$nr]->laatste : null,
                 'contract_status' => $o?->contract_status ?? $v?->contract_status,
                 'offerte_status' => $v?->offerte_status,
                 'goods_value' => $v ? (float) $v->goods_value : null,
@@ -100,6 +108,9 @@ class PlanningOverzicht
         }
         if (! empty($f['soort'])) {
             $rijen = $rijen->whereIn('soort', (array) $f['soort']);
+        }
+        if (! empty($f['bijhuur'])) {
+            $rijen = $rijen->where('bijhuur', true);
         }
         if (! empty($f['employee_id'])) {
             $rijen = $rijen->where('employee_id', (int) $f['employee_id']);

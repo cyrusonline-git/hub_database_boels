@@ -102,7 +102,7 @@ class SapController extends Controller
 
     public function planning(Request $r)
     {
-        $rijen = $this->planning->rijen($r->only(['van', 'tm', 'soort', 'employee_id', 'q', 'verleden', 'alles']));
+        $rijen = $this->planning->rijen($r->only(['van', 'tm', 'soort', 'employee_id', 'q', 'verleden', 'alles', 'bijhuur']));
 
         return [
             'uploads' => ['planning' => $this->hire->uploadInfo(SapUpload::laatste('planning')), 'reserveringen' => $this->hire->uploadInfo(SapUpload::laatste('reserveringen'))],

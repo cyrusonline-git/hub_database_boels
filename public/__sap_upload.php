@@ -58,6 +58,17 @@ if (! empty($_GET['diagnose'])) {
     }
     exit;
 }
+if (! empty($_GET['contract'])) {
+    $nr = preg_replace('/\D/', '', (string) $_GET['contract']);
+    $hd = app(\App\Services\Sap\HireData::class);
+    $c = $hd->contract($nr);
+    echo "WOW: ".($c ? count($c['regels'])." regels in huur bij {$c['customer_name']}, hire_date ".collect($c['regels'])->min('hire_date')?->format('d-m-Y')." t/m ".collect($c['regels'])->max('hire_date')?->format('d-m-Y').", weekhuur € {$c['weekhuur']}" : 'niet in huur')."\n";
+    $oo = $hd->openOrder($nr);
+    echo "8.7: ".($oo ? "{$oo['soort']} lever {$oo['delivery_date']} status {$oo['contract_status']} pick {$oo['picked']}/{$oo['total']} → nog te picken {$oo['nog_te_picken']} · verkoper {$oo['sales_person']} · 2.6-regels ".count($oo['regels_26']) : 'geen open order')."\n";
+    $rij = app(\App\Services\Sap\PlanningOverzicht::class)->rijen(['alles' => 1])->firstWhere('order_number', $nr);
+    echo "Overzicht: ".($rij ? json_encode(['bron' => $rij->bron, 'bijhuur' => $rij->bijhuur, 'in_huur_regels' => $rij->in_huur_regels, 'delivery_date' => $rij->delivery_date, 'pick_status' => $rij->pick_status, 'nog_te_picken' => $rij->nog_te_picken, 'te_laat' => $rij->te_laat]) : 'niet in planning')."\n";
+    exit;
+}
 if (! empty($_GET['maak_kaarten'])) {
     $res = app(\App\Services\Sap\SapUserCodes::class)->maakKaartenVoorGebruikers();
     echo count($res['aangemaakt'])." medewerkerkaart(en) aangemaakt:\n";
