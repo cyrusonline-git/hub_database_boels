@@ -111,7 +111,7 @@
      applicatie-tegels (3 per rij), rechts de snelkoppelingen.
      Op mobiel komen de tegels bovenaan (order-classes). --}}
 <div class="row g-4 mb-4">
-    <div class="col-lg-3 order-2 order-lg-1">
+    <div class="{{ $metDash ? 'col-lg-3 col-xl-2' : 'col-lg-3' }} order-2 order-lg-1">
         <div class="section-title">Handige links</div>
         <div class="card stat-card shadow-sm p-3 mb-3">
             @forelse($quickLinks as $category => $links)
@@ -143,7 +143,7 @@
         </div>
     </div>
 
-    <div class="col-lg-6 order-1 order-lg-2">
+    <div class="{{ $metDash ? 'col-lg-6 col-xl-8' : 'col-lg-6' }} order-1 order-lg-2">
         @if($metDash)
         @include('launcher._kop', ['u' => $u, 'compact' => true])
         {{-- Dashboard centraal: de werkschermen van dashboard.sorai.nl --}}
@@ -199,7 +199,7 @@
         @endif
         @endif
     </div>
-    <div class="col-lg-3 order-3">
+    <div class="{{ $metDash ? 'col-lg-3 col-xl-2' : 'col-lg-3' }} order-3">
         @if($metDash)
         <div class="section-title">Jouw applicaties</div>
         @if($apps->isEmpty())

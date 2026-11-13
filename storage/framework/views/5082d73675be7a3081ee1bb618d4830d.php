@@ -1,6 +1,6 @@
 
 <?php ($d = $vandaag['dashboard']); ?>
-<?php ($kol = ! empty($compact) ? 'col-md-6' : 'col-md-6 col-xl-3'); ?>
+<?php ($kol = 'col-md-6 col-xl-3'); ?>
 <?php ($pick = fn ($o) => $o->pick_status === 'onbekend' ? 'nog niet in 8.7' : ($o->pick_status === 'geen_regels' ? 'geen regels' : (($o->picked + 0).'/'.($o->total + 0).' gepickt'))); ?>
 <div class="section-title text-center mt-4">Vandaag</div>
 <div class="row g-3 mb-4">
@@ -56,7 +56,7 @@
 </div>
 <div class="card mb-4 vd-kaart">
     <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-bar-chart-line text-boels me-1"></i>Planning komende 7 dagen</span><a href="<?php echo e($d); ?>/planbord" class="small">planbord →</a></div>
-    <div class="card-body py-2"><canvas id="planningWeek" height="60"></canvas></div>
+    <div class="card-body py-3"><div style="position:relative;height:300px"><canvas id="planningWeek"></canvas></div></div>
 </div>
 <?php $__env->startPush('scripts'); ?>
 <script src="<?php echo e(asset('js/chart.umd.min.js')); ?>?v=4.4.1"></script>
@@ -69,7 +69,13 @@
         { label: 'Volledig gepickt', data: w.map(d => d.volledig), backgroundColor: '#2e7d32', borderRadius: 4 },
         { label: 'Deels', data: w.map(d => d.deels), backgroundColor: '#ef6c00', borderRadius: 4 },
         { label: 'Nog niet', data: w.map(d => d.niets), backgroundColor: '#cfd4d9', borderRadius: 4 } ] },
-      options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
+      options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 13 } } }, tooltip: { callbacks: { footer: items => 'Totaal: ' + items.reduce((t, i) => t + i.parsed.y, 0) + ' orders' } } },
+        scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 13 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0, font: { size: 13 } }, title: { display: true, text: 'orders' } } } } });
+    // Totaal per dag boven de staaf
+    const ch = Chart.getChart('planningWeek');
+    ch.options.animation = { onComplete() { const c = ch.ctx; c.save(); c.font = 'bold 13px sans-serif'; c.fillStyle = '#333'; c.textAlign = 'center';
+      w.forEach((d, i) => { const tot = d.volledig + d.deels + d.niets; if (!tot) return; const last = [2, 1, 0].map(k => ch.getDatasetMeta(k).data[i]).find(b => b && b.height > 0) || ch.getDatasetMeta(0).data[i]; c.fillText(tot, last.x, last.y - 6); }); c.restore(); } };
+    ch.update();
   } catch (e) { console.error('Grafiek', e); const c = document.getElementById('planningWeek'); if (c) c.insertAdjacentHTML('afterend', '<div class="text-danger small">Grafiek kon niet laden: ' + e.message + '</div>'); }
 })();
 </script>
