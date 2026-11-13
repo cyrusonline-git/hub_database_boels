@@ -112,7 +112,8 @@ class PlanningOverzicht
             }
             $total = $o ? (float) $o->total : null;
             $picked = $o ? (float) $o->picked : null;
-            $nietOpScanner = $pickinfoBekend && $o && trim((string) $o->pick_up_info) === '' && $soort !== 'retour'
+            // Alleen huur- en verkooporders: bij transfers en retouren is PickUpInfo niet van toepassing (Wim 13-11-2026)
+            $nietOpScanner = $pickinfoBekend && $o && trim((string) $o->pick_up_info) === '' && in_array($soort, ['huur', 'verkoop'], true)
                 && ($total <= 0 || $picked < $total) && ($datum === null || $datum >= $vandaag);
             // 8.7 kolom P (REF) leeg of 'volgt' / 'PO volgt' = klantreferentie/PO-nummer ontbreekt → factuur wordt niet betaald (Wim 13-11-2026)
             $refOntbreekt = $o && in_array($soort, ['huur', 'verkoop'], true) && ($datum === null || $datum >= $vandaag) && self::referentieOntbreekt($o->reference);

@@ -61,7 +61,7 @@ class PlanningImporter
             $datum = SapBestand::datum($v($rij, 'deldate'));
             $soort = self::soort(SapBestand::tekst($v($rij, 'type')));
             $pickinfo = SapBestand::tekst($v($rij, 'pickinfo'));
-            if ($pickinfo === null && $soort !== 'retour' && ($total <= 0 || $picked < $total) && (! $datum || $datum->toDateString() >= $vandaag)) {
+            if ($pickinfo === null && in_array($soort, ['huur', 'verkoop'], true) && ($total <= 0 || $picked < $total) && (! $datum || $datum->toDateString() >= $vandaag)) {
                 $zonderPickinfo++;
             }
             $buffer[] = [
