@@ -16,6 +16,7 @@ foreach ([__DIR__ . '/../laravel_app', __DIR__ . '/..'] as $p) { if (file_exists
 require $root . '/vendor/autoload.php';
 $app = require_once $root . '/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app_namen = \App\Models\Application::pluck('slug', 'id')->all();
 $q = trim((string) ($_GET['q'] ?? ''));
 if ($q === '') exit("Geef ?q=<naam of e-mail>\n");
 $users = \App\Models\User::with(['employee', 'roles'])->where(fn ($w) => $w->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"))->limit(10)->get();
