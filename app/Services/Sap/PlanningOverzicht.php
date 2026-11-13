@@ -129,7 +129,7 @@ class PlanningOverzicht
                 'te_laat' => $datum !== null && $datum < $vandaag,
                 'picked' => $picked,
                 'total' => $total,
-                'pick_status' => $total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets'))),
+                'pick_status' => $geleverd ? 'geleverd' : ($total === null ? 'onbekend' : ($total <= 0 ? 'geen_regels' : ($picked >= $total ? 'volledig' : ($picked > 0 ? 'deels' : 'niets')))),
                 'nog_te_picken' => $total !== null && $total > 0 ? max(0, $total - $picked) : null,
                 // Bijhuur (Wim 13-11-2026): contract staat al in huur (WOW) én 3.4 bevat aanvullende regels die nog niet uitstaan
                 'bijhuur' => isset($inHuur[$nr]) && ($nieuweRegels !== [] || $datumOnbekend),
@@ -171,6 +171,10 @@ class PlanningOverzicht
             $rijen = $rijen->where('te_laat', true);
         } elseif (empty($f['alles'])) {
             $rijen = $rijen->filter(fn ($x) => $x->delivery_date === null || $x->delivery_date >= $vandaag);
+            // Uitgeleverde orders horen niet meer in de planning (wel op te vragen met geleverd=1 of alles=1)
+            if (! isset($f['geleverd']) || $f['geleverd'] === '' || $f['geleverd'] === null) {
+                $rijen = $rijen->where('geleverd', false);
+            }
         }
         if (! empty($f['van'])) {
             $rijen = $rijen->filter(fn ($x) => $x->delivery_date !== null && $x->delivery_date >= $f['van']);
