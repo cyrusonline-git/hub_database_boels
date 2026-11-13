@@ -117,10 +117,10 @@ class SapController extends Controller
 
     public function referenceNote(Request $r, string $nr)
     {
-        $data = $r->validate(['opmerking' => ['nullable', 'string', 'max:2000'], 'status' => ['nullable', 'in:open,opgevraagd,afgehandeld']]);
+        $data = $r->validate(['opmerking' => ['nullable', 'string', 'max:2000'], 'status' => ['nullable', 'in:open,opgevraagd,afgehandeld'], 'gevraagd_aan' => ['nullable', 'string', 'max:255'], 'gevraagd_op' => ['nullable', 'date_format:Y-m-d'], 'log' => ['nullable', 'boolean']]);
         $n = $this->referenties->notitie($nr, $data, $r->user()?->id);
 
-        return ['ok' => true, 'note' => $n];
+        return ['ok' => true, 'note' => $n, 'verzoeken' => $this->referenties->verzoeken([$nr])[$nr] ?? []];
     }
 
     public function planning(Request $r)

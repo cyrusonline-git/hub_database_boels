@@ -6,6 +6,7 @@ use App\Models\HireLine;
 use App\Models\InvoiceRunLine;
 use App\Models\PlanningOrder;
 use App\Models\ReferenceNote;
+use App\Models\ReferenceRequest;
 use App\Models\ReservationLine;
 use App\Models\SapUpload;
 use App\Models\SapUserCode;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\DB;
  *   - daarna in huur (WOW, kolom "Your Reference / Order Number" leeg of 'volgt') tot de referentie in
  *     Smartview staat — dan verdwijnt het contract vanzelf uit de lijst (verdwenen_op) en blijft het in de historie.
  * Handmatig per contract: status open | opgevraagd | afgehandeld + opmerking (reference_notes), overleeft uploads.
+ * Logboek (reference_requests): elke keer dat iemand bij de klant om een PO is gevraagd — aan wie, wanneer, door wie —
+ * zodat je de klant kunt laten zien dat zijn medewerkers al meerdere keren gevraagd zijn.
  */
 class ReferentieBewaking
 {
@@ -116,6 +119,7 @@ class ReferentieBewaking
                 }
             }
 
+            $verzoeken = $this->verzoeken($nrs);
             // 3) Notities synchroniseren: eerst/laatst gezien, verdwenen (= referentie ingevuld of contract weg)
             $notes = ReferenceNote::whereIn('contract_number', $nrs ?: ['-'])->get()->keyBy('contract_number');
             foreach ($rijen as $nr => $r) {
@@ -135,6 +139,11 @@ class ReferentieBewaking
                 $r->opgevraagd_op = $n->opgevraagd_op?->toDateString();
                 $r->note_user_id = $n->user_id;
                 $r->note_updated_at = $n->updated_at?->toDateTimeString();
+                $v = $verzoeken[$nr] ?? [];
+                $r->verzoeken = $v;
+                $r->keer_gevraagd = count($v);
+                $r->laatst_gevraagd_op = $v[0]['op'] ?? null;
+                $r->laatst_gevraagd_aan = $v[0]['aan'] ?? null;
             }
             ReferenceNote::whereNull('verdwenen_op')->whereNotIn('contract_number', $nrs ?: ['-'])->update(['verdwenen_op' => $vandaag]);
 
@@ -142,10 +151,34 @@ class ReferentieBewaking
         });
     }
 
-    /** Handmatige status/opmerking; 'opgevraagd' zet de datum als die nog leeg is. */
+    /** Logboek per contract, nieuwste eerst: [['op','aan','door','opmerking'], …]. */
+    public function verzoeken(array $nrs): array
+    {
+        if (! $nrs) {
+            return [];
+        }
+        $uit = [];
+        foreach (ReferenceRequest::with('user:id,name')->whereIn('contract_number', $nrs)->orderByDesc('gevraagd_op')->orderByDesc('id')->get() as $v) {
+            $uit[$v->contract_number][] = ['id' => $v->id, 'op' => $v->gevraagd_op?->toDateString(), 'aan' => $v->gevraagd_aan, 'door' => $v->user?->name, 'opmerking' => $v->opmerking];
+        }
+
+        return $uit;
+    }
+
+    /**
+     * Handmatige status/opmerking. Met 'gevraagd_aan' (of 'log' = 1) komt er een regel in het logboek bij en gaat de
+     * status naar 'opgevraagd' (tenzij expliciet 'afgehandeld'); het contract blijft open tot de referentie in Smartview staat.
+     */
     public function notitie(string $nr, array $data, ?int $userId): ReferenceNote
     {
         $n = ReferenceNote::firstOrNew(['contract_number' => $nr]);
+        $aan = trim((string) ($data['gevraagd_aan'] ?? ''));
+        if ($aan !== '' || ! empty($data['log'])) {
+            ReferenceRequest::create(['contract_number' => $nr, 'gevraagd_aan' => $aan ?: null, 'opmerking' => $data['opmerking'] ?? null, 'user_id' => $userId, 'gevraagd_op' => $data['gevraagd_op'] ?? now()->toDateString()]);
+            if (($data['status'] ?? null) !== 'afgehandeld') {
+                $data['status'] = 'opgevraagd';
+            }
+        }
         if (array_key_exists('opmerking', $data)) {
             $n->opmerking = $data['opmerking'];
         }
