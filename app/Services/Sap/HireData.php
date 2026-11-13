@@ -191,7 +191,13 @@ class HireData
                 $r->employee_id = $r->created_by_code ? ($codes[$r->created_by_code] ?? null) : null;
                 $r->employee_name = $r->employee_id ? ($namen[$r->employee_id] ?? null) : null;
                 $r->weekhuur = (float) ($weekhuur[$r->contract_number] ?? 0);
-                $r->dagen_zonder_factuur = (int) $vandaag->diffInDays($r->last_invoice_date ? \Carbon\Carbon::parse($r->last_invoice_date) : \Carbon\Carbon::parse($r->hire_start_date ?: $vandaag));
+                // Datums als 'Y-m-d'-string (de cast maakt er Carbon van → in JSON UTC = dag ervoor); dagen zonder factuur
+                // = dagen sinds laatste factuur, anders sinds huurstart; Carbon 3 geeft een getekend verschil, dus datum → vandaag
+                $dag = fn ($x) => $x instanceof \DateTimeInterface ? $x->format('Y-m-d') : ($x ? substr((string) $x, 0, 10) : null);
+                $r->last_invoice_date = $dag($r->last_invoice_date);
+                $r->hire_start_date = $dag($r->hire_start_date);
+                $ref = $r->last_invoice_date ?: $r->hire_start_date;
+                $r->dagen_zonder_factuur = $ref ? max(0, (int) \Carbon\Carbon::parse($ref)->startOfDay()->diffInDays($vandaag)) : 0;
                 $r->nooit_gefactureerd = $r->last_invoice_date === null;
                 $r->reden = $n?->reden;
                 $r->note_status = $n?->status ?? 'te_controleren';
