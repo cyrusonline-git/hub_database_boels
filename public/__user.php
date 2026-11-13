@@ -29,7 +29,7 @@ foreach ($users as $u) {
     $depots = $u->allowed_depots ?: ($u->employee?->depot ? [$u->employee->depot] : []);
     $areas = $u->allowed_areas ?: ($u->employee?->area ? [$u->employee->area] : []);
     echo "  → /api/me geeft:        depots=" . json_encode($depots) . " areas=" . json_encode($areas) . "\n";
-    echo "  rollen: " . $u->roles->map(fn ($r) => $r->slug . ($r->application_id ? " (app {$r->application_id})" : ''))->implode(', ') . "\n\n";
+    echo "  rollen: " . $u->roles->map(fn ($r) => $r->slug . ($r->application_id ? " (app " . ($app_namen[$r->application_id] ?? $r->application_id) . ")" : ''))->implode(', ') . "\n\n";
 }
 $emps = \App\Models\Employee::where(fn ($w) => $w->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"))->limit(10)->get();
 foreach ($emps as $e) echo "MEDEWERKERKAART #{$e->id} {$e->name} <{$e->email}> depot='{$e->depot}' area='{$e->area}'\n";
