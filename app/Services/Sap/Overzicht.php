@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Cockpit-cijfers voor het CORE-startscherm ("Vandaag") en het managementoverzicht:
- * alles uit de eigen SAP-tabellen + ActiesService + de hoofdcijfers van de apps (DataBrug).
+ * alles uit de eigen Smartview-tabellen + ActiesService + de hoofdcijfers van de apps (DataBrug).
  * Eén aanroep, 5 minuten gecached per gebruiker.
  */
 class Overzicht
@@ -27,7 +27,7 @@ class Overzicht
     /** @param array $rollen dashboard-rollen (underscore-slugs) van de gebruiker */
     public function voor(User $user, array $rollen, bool $manager): array
     {
-        $sleutel = 'overzicht:'.$user->id.':'.md5(implode(',', $rollen).($manager ? 'm' : ''));
+        $sleutel = 'overzicht:'.SapUpload::stand().':'.$user->id.':'.md5(implode(',', $rollen).($manager ? 'm' : ''));
 
         return Cache::remember($sleutel, 300, function () use ($user, $rollen, $manager) {
             $vandaag = now()->toDateString();

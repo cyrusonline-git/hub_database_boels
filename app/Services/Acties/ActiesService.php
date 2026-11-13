@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * "Acties per persoon": ALLEEN werk dat echt op naam staat — uit de bestaande apps via de
- * alleen-lezen DataBrug plus de signalen uit de SAP-data. De CORE-badges doen hier bewust
+ * alleen-lezen DataBrug plus de signalen uit de Smartview-data. De CORE-badges doen hier bewust
  * NIET mee: Projectschade/Tankapp melden die per depot/rol, zodat iedereen van de binnendienst
  * hetzelfde aantal zou krijgen (Wim 13-11-2026). Die tellers staan al op de CORE-tegels. Elke bron is
  * één methode die per e-mailadres (kleine letters) een lijst signalen geeft:
@@ -65,7 +65,7 @@ class ActiesService
 
     private function alles(): array
     {
-        return Cache::remember('acties:alles', 120, function () {
+        return Cache::remember('acties:alles:'.SapUpload::stand(), 120, function () {
             $uit = [];
             foreach ($this->bronnen() as $naam => $fn) {
                 try {
@@ -158,10 +158,10 @@ class ActiesService
         return $uit;
     }
 
-    /** SAP-signalen per employee_id (uit de laatste snapshots). */
+    /** Smartview-signalen per employee_id (uit de laatste snapshots). */
     private function sapPerMedewerker(): array
     {
-        return Cache::remember('acties:sap', 120, function () {
+        return Cache::remember('acties:sap:'.SapUpload::stand(), 120, function () {
             $uit = [];
             $dash = rtrim((string) (Application::where('slug', 'dashboard')->value('url') ?: 'https://dashboard.sorai.nl'), '/');
             $codes = SapUserCode::whereNotNull('employee_id')->pluck('employee_id', 'code');

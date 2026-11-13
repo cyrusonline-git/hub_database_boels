@@ -2,9 +2,9 @@
 
 /*
 |--------------------------------------------------------------------------
-| SAP-exports (Boels Industrial) — centraal in CORE
+| Smartview-exports (Boels Industrial) — centraal in CORE
 |--------------------------------------------------------------------------
-| Vier Excel-rapporten uit SAP landen via Beheer → Uploads SAP in CORE en
+| Vier Excel-rapporten uit Smartview landen via Beheer → Uploads Smartview in CORE en
 | worden via /api/hire/*, /api/planning/* en /api/sap/* aan de child-apps
 | (Dashboard, Shell/BP/Damen/RMW, Projectschade, Tankapp) aangeboden.
 | Zie docs/sap-uploads.md voor de kolomregels per bestand.

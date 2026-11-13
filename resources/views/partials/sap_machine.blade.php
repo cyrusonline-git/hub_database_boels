@@ -1,7 +1,7 @@
 {{-- Blok "In huur" op een machine-/artikelpagina; $inHuur uit KlantContext::voorMachine --}}
 @if(!empty($inHuur['beschikbaar']))
 <div class="card mb-3 {{ !empty($inHuur['regels']) ? 'border-warning' : '' }}">
-    <div class="card-header fw-bold"><i class="bi bi-geo-alt text-boels me-1"></i>Waar staat dit nu? <small class="text-muted fw-normal">volgens SAP, stand {{ \Carbon\Carbon::parse($inHuur['stand'])->format('d-m H:i') }}</small></div>
+    <div class="card-header fw-bold"><i class="bi bi-geo-alt text-boels me-1"></i>Waar staat dit nu? <small class="text-muted fw-normal">volgens Smartview, stand {{ \Carbon\Carbon::parse($inHuur['stand'])->format('d-m H:i') }}</small></div>
     <div class="card-body">
         @forelse($inHuur['regels'] as $r)
             <div class="mb-2">

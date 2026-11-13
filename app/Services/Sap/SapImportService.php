@@ -72,6 +72,7 @@ class SapImportService
             return $res;
         });
         $this->ruimOp($soort);
+        \Illuminate\Support\Facades\Cache::forget('sap:stand'); // alle afgeleide caches direct verversen
         if (class_exists(\App\Models\AuditLog::class)) {
             try {
                 \App\Models\AuditLog::create(['user_id' => $userId, 'event' => 'sap_upload', 'auditable_type' => SapUpload::class, 'auditable_id' => $upload->id, 'new_values' => ['soort' => $soort, 'bestand' => $bestandsnaam, 'regels' => $res->regels]]);

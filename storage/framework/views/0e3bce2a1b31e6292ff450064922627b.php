@@ -3,7 +3,7 @@
 <?php ($d = $sap['dashboard']); ?>
 <div class="card mb-3">
     <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-box-seam text-boels me-1"></i>Bij deze klant volgens SAP</span>
+        <span><i class="bi bi-box-seam text-boels me-1"></i>Bij deze klant volgens Smartview</span>
         <?php if($sap['stand']): ?><small class="text-muted fw-normal">stand <?php echo e(\Carbon\Carbon::parse($sap['stand'])->format('d-m H:i')); ?></small><?php endif; ?>
     </div>
     <div class="card-body">

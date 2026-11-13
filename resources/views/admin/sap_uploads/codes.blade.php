@@ -1,9 +1,9 @@
 @extends('layouts.app')
-@section('title','SAP-codes → medewerkers')
+@section('title','Smartview-codes → medewerkers')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-person-badge text-boels"></i> SAP-codes → medewerkers</h3>
+    <h3><i class="bi bi-person-badge text-boels"></i> Smartview-codes → medewerkers</h3>
     <div class="d-flex gap-2">
         @if($gebruikers->isNotEmpty())
         <form method="POST" action="{{ route('admin.sap-uploads.maak-kaarten') }}" onsubmit="return confirm('Voor {{ $gebruikers->count() }} gebruiker(s) zonder medewerkerkaart een kaart aanmaken en het account koppelen?')">
@@ -11,12 +11,12 @@
             <button class="btn btn-boels btn-sm"><i class="bi bi-person-plus"></i> Kaarten aanmaken voor {{ $gebruikers->count() }} gebruiker(s) zonder medewerkerkaart</button>
         </form>
         @endif
-        <a href="{{ route('admin.sap-uploads.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Uploads SAP</a>
+        <a href="{{ route('admin.sap-uploads.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Uploads Smartview</a>
     </div>
 </div>
 @if (session('ok'))<div class="alert alert-success">{{ session('ok') }}</div>@endif
 <p class="text-muted">
-    SAP schrijft de aanmaker als code: de eerste vijf letters van de achternaam (zonder tussenvoegsel) plus de eerste letter
+    Smartview schrijft de aanmaker als code: de eerste vijf letters van de achternaam (zonder tussenvoegsel) plus de eerste letter
     van de voornaam — <em>Wouter Zwackhalen</em> = <code>ZWACKW</code>. CORE koppelt automatisch als precies één medewerker
     past; de rest koppel je hier eenmalig. Staat iemand alleen als <strong>gebruiker</strong> in CORE (zonder medewerkerkaart), kies dan die gebruiker:
     CORE maakt dan een medewerkerkaart aan en koppelt het account eraan. Namen die SAP voluit schrijft (planning) staan als <code>NAAM:…</code>.
@@ -24,7 +24,7 @@
 <div class="card">
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Code / naam in SAP</th><th>Gezien</th><th>Medewerker in CORE</th><th>Bron</th><th style="width:360px">Koppelen</th></tr></thead>
+            <thead><tr><th>Code / naam in Smartview</th><th>Gezien</th><th>Medewerker in CORE</th><th>Bron</th><th style="width:360px">Koppelen</th></tr></thead>
             <tbody>
             @foreach($rijen as $c)
                 <tr class="{{ $c->employee_id ? '' : 'table-warning' }}">

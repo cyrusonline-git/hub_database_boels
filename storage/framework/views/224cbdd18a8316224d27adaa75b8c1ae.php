@@ -85,7 +85,7 @@
                             <li><a class="dropdown-item" href="<?php echo e(url('/admin/klanten')); ?>">Klanten</a></li>
                             <li><a class="dropdown-item" href="<?php echo e(url('/admin/materieel')); ?>">Materieel</a></li>
                             <li><a class="dropdown-item" href="<?php echo e(url('/admin/material-imports')); ?>">Materieel import</a></li>
-                            <li><a class="dropdown-item" href="<?php echo e(url('/admin/sap-uploads')); ?>">Uploads SAP</a></li>
+                            <li><a class="dropdown-item" href="<?php echo e(url('/admin/sap-uploads')); ?>">Uploads Smartview</a></li>
                             <li><a class="dropdown-item" href="<?php echo e(url('/admin/imports')); ?>">Import Engine</a></li>
                             <li><a class="dropdown-item" href="<?php echo e(url('/admin/handige-links')); ?>">Handige links (dashboard)</a></li>
                             <li><a class="dropdown-item" href="<?php echo e(url('/admin/audit-log')); ?>">Audit Log</a></li>

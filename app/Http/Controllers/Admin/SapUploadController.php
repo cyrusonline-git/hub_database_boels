@@ -13,9 +13,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Beheer → Uploads SAP: per bestandssoort een kaart met de exacte bestandsnaam,
+ * Beheer → Uploads Smartview: per bestandssoort een kaart met de exacte bestandsnaam,
  * frequentie en laatste stand; upload via dezelfde kaart. Plus het koppelscherm
- * voor SAP-gebruikerscodes die niet automatisch aan een medewerker te koppelen zijn.
+ * voor Smartview-gebruikerscodes die niet automatisch aan een medewerker te koppelen zijn.
  */
 class SapUploadController extends Controller
 {
@@ -113,7 +113,7 @@ class SapUploadController extends Controller
     public function maakKaarten(SapUserCodes $codes)
     {
         $res = $codes->maakKaartenVoorGebruikers();
-        $tekst = count($res['aangemaakt']).' medewerkerkaart(en) aangemaakt'.($res['aangemaakt'] ? ' ('.implode(', ', array_slice($res['aangemaakt'], 0, 15)).(count($res['aangemaakt']) > 15 ? ', …' : '').')' : '').'; '.$res['gekoppeld'].' SAP-code(s) alsnog automatisch gekoppeld.';
+        $tekst = count($res['aangemaakt']).' medewerkerkaart(en) aangemaakt'.($res['aangemaakt'] ? ' ('.implode(', ', array_slice($res['aangemaakt'], 0, 15)).(count($res['aangemaakt']) > 15 ? ', …' : '').')' : '').'; '.$res['gekoppeld'].' Smartview-code(s) alsnog automatisch gekoppeld.';
 
         return redirect()->route('admin.sap-uploads.codes')->with('ok', $tekst);
     }

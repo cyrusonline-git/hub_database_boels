@@ -1,14 +1,14 @@
-# Uploads SAP (Boels Industrial) — bestanden, regels en API
+# Uploads Smartview (Boels Industrial) — bestanden, regels en API
 
-Vier SAP-rapporten voeden het Industrial-dashboard (dashboard.sorai.nl) en zijn via de CORE-API
-beschikbaar voor andere apps. Upload: **Beheer → Uploads SAP** (sleep op de kaart) of
+Vier Smartview-rapporten voeden het Industrial-dashboard (dashboard.sorai.nl) en zijn via de CORE-API
+beschikbaar voor andere apps. Upload: **Beheer → Uploads Smartview** (sleep op de kaart) of
 `curl -F file=@"<bestand>" "https://databasehub.sorai.nl/__sap_upload.php?k=<DEPLOY_SECRET>"`
 of op de server `php artisan sap:import <pad>`. Herkenning gebeurt op de **kopregel**.
 Elke upload is een snapshot (`sap_uploads`); de API leest altijd de laatste. Regels van oude
 snapshots worden na `config('sap.bewaar_snapshots')` (30) uploads opgeruimd, de samenvatting blijft.
 Alleen contracten die beginnen met `config('sap.depot')` (759) tellen mee.
 
-| Soort | Bestand (SAP-naam) | Frequentie | Tabel |
+| Soort | Bestand (Smartview-naam) | Frequentie | Tabel |
 |---|---|---|---|
 | `wow` | `boels_whatsoutwhere_incllimitedmode.xls` (binair .xls, kop rij 2) | dagelijks | `hire_lines` |
 | `factuurrun` | `0.07 Contracts and items not part of invoice run.xlsx` (gegroepeerd) | wekelijks | `invoice_run_lines` + `invoice_run_notes` |
@@ -23,7 +23,7 @@ Alleen contracten die beginnen met `config('sap.depot')` (759) tellen mee.
   aan `machines.machine_number` gekoppeld (`machine_id`).
 - **Factuurrun**: groepregels (`ACCOUNT NAME:`, `CONTRACT NUMBER:`) overslaan; itemregels staan één
   kolom verschoven (klantnummer in C). `DATE LAST INVOICE` 30-12-1899 = nooit gefactureerd (NULL).
-  `CREATED BY` = SAP-code van de aanmaker. Per contract een **reden** + status (`invoice_run_notes`),
+  `CREATED BY` = Smartview-code van de aanmaker. Per contract een **reden** + status (`invoice_run_notes`),
   blijft staan over uploads; verdwijnt het contract → `verdwenen_op`, komt het terug → weer open.
 - **Planning (8.7)**: de platte View is leidend (orders + pickstand); de gegroepeerde variant (kop
   `COLLECTION DATE/TIME`) mag er optioneel naast voor artikelregels (`planning_regels`), kolom A/C negeren. Kolommen `PickUpInfo` en `DelMethod` negeren. `Items` = `gepickt/totaal`.
@@ -34,10 +34,10 @@ Alleen contracten die beginnen met `config('sap.depot')` (759) tellen mee.
   Y = aanmakerscode. 8.7 + 2.6 worden samengevoegd tot één rij per contractnummer
   (`PlanningOverzicht`): 8.7 levert soort/pickstand/verkoper, 2.6 levert regels/waarde/periode.
 
-## SAP-code → medewerker (`sap_user_codes`)
+## Smartview-code → medewerker (`sap_user_codes`)
 Code = eerste 5 letters achternaam zonder tussenvoegsel + 1e letter voornaam (Wouter Zwackhalen =
 ZWACKW, Wilco van Bergen = BERGEW, Martijn Kwak = KWAKM). Automatisch gekoppeld als precies één
-medewerker past; anders handmatig via Beheer → Uploads SAP → SAP-codes. Namen voluit staan als `NAAM:…`.
+medewerker past; anders handmatig via Beheer → Uploads Smartview → Smartview-codes. Namen voluit staan als `NAAM:…`.
 
 ## API (auth:sanctum, cookie-relay of token)
 - `GET /api/sap/uploads` — laatste stand per soort (+ `verouderd`).
@@ -50,4 +50,4 @@ medewerker past; anders handmatig via Beheer → Uploads SAP → SAP-codes. Name
 - `GET /api/planning/orders?van=&tm=&soort=&employee_id=&q=&verleden=1&alles=1` ·
   `GET /api/planning/orders/{nr}` · `POST /api/planning/orders/{nr}/note {expeditie_employee_id, opmerking, vlag}`
 - `GET /api/acties` (eigen open werk dat op naam staat: Spoedverhuur/Servicedesk/Planner/Inhuur via DataBrug +
-  SAP-signalen; CORE-badges bewust niet, die zijn per depot/rol) · `GET /api/acties/alle` (super-admin of Dashboard-rol area-manager/bu-manager/admin).
+  Smartview-signalen; CORE-badges bewust niet, die zijn per depot/rol) · `GET /api/acties/alle` (super-admin of Dashboard-rol area-manager/bu-manager/admin).

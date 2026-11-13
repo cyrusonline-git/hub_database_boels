@@ -1,6 +1,6 @@
 <?php
 /**
- * Boels CORE — SAP-export uploaden via script (zelfde verwerking als Beheer → Uploads SAP).
+ * Boels CORE — Smartview-export uploaden via script (zelfde verwerking als Beheer → Uploads Smartview).
  *
  *   curl -F file=@"boels_whatsoutwhere_incllimitedmode.xls" "https://databasehub.sorai.nl/__sap_upload.php?k=<DEPLOY_SECRET>"
  *   optioneel &soort=wow|factuurrun|planning|reserveringen (controle), &status=1 (alleen laatste stand tonen)
@@ -48,7 +48,7 @@ if (! empty($_GET['maak_kaarten'])) {
     foreach ($res['aangemaakt'] as $n) {
         echo "  - $n\n";
     }
-    echo $res['gekoppeld']." SAP-code(s) alsnog automatisch gekoppeld.\n";
+    echo $res['gekoppeld']." Smartview-code(s) alsnog automatisch gekoppeld.\n";
     foreach (\App\Models\SapUserCode::with('employee')->orderBy('code')->get() as $c) {
         echo str_pad($c->code, 26).str_pad($c->bron, 10).($c->employee?->name ?? '—')."\n";
     }

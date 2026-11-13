@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title','Uploads SAP')
+@section('title','Uploads Smartview')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-cloud-upload text-boels"></i> Uploads SAP</h3>
+    <h3><i class="bi bi-cloud-upload text-boels"></i> Uploads Smartview</h3>
     <a href="{{ route('admin.sap-uploads.codes') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-person-badge"></i> SAP-codes → medewerkers
+        <i class="bi bi-person-badge"></i> Smartview-codes → medewerkers
         @if($ongekoppeld)<span class="badge bg-warning text-dark ms-1">{{ $ongekoppeld }} open</span>@endif
     </a>
 </div>
@@ -15,7 +15,7 @@
 @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
 
 <p class="text-muted">
-    Vier SAP-rapporten voeden het Industrial-dashboard en de andere apps. Exporteer ze in SAP met de
+    Vier Smartview-rapporten voeden het Industrial-dashboard en de andere apps. Exporteer ze in Smartview met de
     standaardnaam hieronder en sleep ze op de juiste kaart. CORE herkent het bestand aan de kopregel;
     een verkeerd bestand wordt geweigerd. Alleen contracten van depot <strong>{{ config('sap.depot') ?: 'alle' }}</strong> worden meegenomen.
 </p>

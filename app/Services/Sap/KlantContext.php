@@ -11,7 +11,7 @@ use App\Models\InvoiceRunLine;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * SAP-beeld van één klant of één machine, voor de klantkaart en materieelpagina's in CORE
+ * Smartview-beeld van één klant of één machine, voor de klantkaart en materieelpagina's in CORE
  * en voor de child-apps. Leest de laatste snapshots; 5 minuten gecached.
  */
 class KlantContext
@@ -24,7 +24,7 @@ class KlantContext
     /** Alles over een klant op klantnummer (en als terugval op naam). */
     public function voorKlant(?string $nummer, ?string $naam = null): array
     {
-        $sleutel = 'sap:klant:'.md5($nummer.'|'.$naam);
+        $sleutel = 'sap:klant:'.SapUpload::stand().':'.md5($nummer.'|'.$naam);
 
         return Cache::remember($sleutel, 300, function () use ($nummer, $naam) {
             $uit = ['beschikbaar' => false, 'huur' => null, 'factuurrun' => null, 'planning' => [], 'offertes' => [], 'dashboard' => self::dashboardUrl(), 'stand' => null];
@@ -86,7 +86,7 @@ class KlantContext
     /** Waar staat deze machine (artikel-/machinenummer) volgens de laatste WOW? */
     public function voorMachine(string $nummer): array
     {
-        return Cache::remember('sap:machine:'.$nummer, 300, function () use ($nummer) {
+        return Cache::remember('sap:machine:'.SapUpload::stand().':'.$nummer, 300, function () use ($nummer) {
             $wow = SapUpload::laatste('wow');
             if (! $wow) {
                 return ['beschikbaar' => false, 'regels' => [], 'dashboard' => self::dashboardUrl()];

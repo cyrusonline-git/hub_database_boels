@@ -1,10 +1,10 @@
-<?php $__env->startSection('title','Uploads SAP'); ?>
+<?php $__env->startSection('title','Uploads Smartview'); ?>
 
 <?php $__env->startSection('content'); ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-cloud-upload text-boels"></i> Uploads SAP</h3>
+    <h3><i class="bi bi-cloud-upload text-boels"></i> Uploads Smartview</h3>
     <a href="<?php echo e(route('admin.sap-uploads.codes')); ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-person-badge"></i> SAP-codes → medewerkers
+        <i class="bi bi-person-badge"></i> Smartview-codes → medewerkers
         <?php if($ongekoppeld): ?><span class="badge bg-warning text-dark ms-1"><?php echo e($ongekoppeld); ?> open</span><?php endif; ?>
     </a>
 </div>
@@ -14,7 +14,7 @@
 <?php if($errors->any()): ?><div class="alert alert-danger"><?php echo e($errors->first()); ?></div><?php endif; ?>
 
 <p class="text-muted">
-    Vier SAP-rapporten voeden het Industrial-dashboard en de andere apps. Exporteer ze in SAP met de
+    Vier Smartview-rapporten voeden het Industrial-dashboard en de andere apps. Exporteer ze in Smartview met de
     standaardnaam hieronder en sleep ze op de juiste kaart. CORE herkent het bestand aan de kopregel;
     een verkeerd bestand wordt geweigerd. Alleen contracten van depot <strong><?php echo e(config('sap.depot') ?: 'alle'); ?></strong> worden meegenomen.
 </p>
