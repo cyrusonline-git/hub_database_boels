@@ -59,6 +59,73 @@ class HireData
             'per_maand' => $perMaand,
             'weekhuur_projecten' => $projectGeld,
             'trend' => $trend,
+            'maand' => $this->maandprognose($u->id),
+        ];
+    }
+
+    /**
+     * Omzetprognose lopende maand (Wim 13-11-2026): als alles wat nu in huur staat tot het einde van de maand blijft
+     * staan, wat is dan de huuromzet van deze maand? Per regel: netto weekhuur × aantal × dagen in huur deze maand / 7,
+     * gerekend vanaf de huurstart (of de 1e van de maand als de huur eerder begon) t/m de laatste dag van de maand.
+     * Daarnaast: het deel t/m vandaag, het deel dat nog komt, en een variant waarin afgemelde regels (To Collect) op
+     * hun ophaaldatum stoppen.
+     */
+    public function maandprognose(int $uploadId): array
+    {
+        $start = now()->startOfMonth();
+        $eind = now()->endOfMonth();
+        $vandaag = now()->startOfDay();
+        $dagenMaand = (int) $start->diffInDays($eind) + 1;
+        $tot = $totVandaag = $totRealistisch = 0.0;
+        $perKlant = [];
+        $dag = fn ($x) => $x ? \Carbon\Carbon::parse(substr((string) $x, 0, 10))->startOfDay() : null;
+        HireLine::where('upload_id', $uploadId)->select(['customer_number', 'customer_name', 'contract_number', 'hire_date', 'coll_date', 'status', 'weekly_hire_rate', 'qty_out'])
+            ->orderBy('id')->chunk(2000, function ($regels) use (&$tot, &$totVandaag, &$totRealistisch, &$perKlant, $start, $eind, $vandaag, $dag) {
+                foreach ($regels as $l) {
+                    $week = (float) $l->weekly_hire_rate * (float) $l->qty_out;
+                    if ($week <= 0) {
+                        continue;
+                    }
+                    $van = $dag($l->hire_date) ?? $start;
+                    if ($van->lt($start)) {
+                        $van = $start->copy();
+                    }
+                    if ($van->gt($eind)) {
+                        continue;   // huur begint pas na deze maand
+                    }
+                    $dagen = (int) $van->diffInDays($eind) + 1;
+                    $bedrag = $week * $dagen / 7;
+                    $tot += $bedrag;
+                    $dagenTot = $van->lte($vandaag) ? min($dagen, (int) $van->diffInDays($vandaag) + 1) : 0;
+                    $totVandaag += $week * $dagenTot / 7;
+                    // Realistisch: afgemeld (To Collect) stopt op de ophaaldatum (minimaal vandaag)
+                    $tot2 = $eind;
+                    if (str_contains((string) $l->status, 'To Collect') && ($c = $dag($l->coll_date)) && $c->lt($eind)) {
+                        $tot2 = $c->lt($vandaag) ? $vandaag : $c;
+                    }
+                    $dagen2 = $tot2->lt($van) ? 0 : (int) $van->diffInDays($tot2) + 1;
+                    $totRealistisch += $week * $dagen2 / 7;
+                    $k = $l->customer_number ?: $l->customer_name;
+                    $perKlant[$k] ??= ['customer_number' => $l->customer_number, 'customer_name' => $l->customer_name, 'omzet' => 0.0, 'contracten' => []];
+                    $perKlant[$k]['omzet'] += $bedrag;
+                    $perKlant[$k]['contracten'][$l->contract_number] = true;
+                }
+            });
+        $klanten = collect($perKlant)->map(fn ($k) => ['customer_number' => $k['customer_number'], 'customer_name' => $k['customer_name'], 'omzet' => round($k['omzet'], 2), 'contracten' => count($k['contracten'])])
+            ->sortByDesc('omzet')->values();
+
+        return [
+            'maand' => $start->format('Y-m'),
+            'maand_label' => \Illuminate\Support\Str::ucfirst($start->locale('nl')->translatedFormat('F Y')),
+            'dagen_maand' => $dagenMaand,
+            'dagen_voorbij' => (int) $start->diffInDays($vandaag) + 1,
+            'dagen_rest' => max(0, (int) $vandaag->diffInDays($eind)),
+            'prognose' => round($tot, 2),
+            'tot_vandaag' => round($totVandaag, 2),
+            'nog_te_komen' => round($tot - $totVandaag, 2),
+            'prognose_realistisch' => round($totRealistisch, 2),
+            'per_klant' => $klanten->take(15)->values(),
+            'klanten' => $klanten->count(),
         ];
     }
 
