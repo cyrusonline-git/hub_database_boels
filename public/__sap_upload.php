@@ -73,6 +73,9 @@ if (! empty($_GET['po'])) {
     foreach (\App\Models\ReferenceRequest::orderByDesc('id')->take(10)->get() as $v) {
         echo $v->id, ' ', $v->contract_number, ' aan=', var_export($v->gevraagd_aan, true), ' raw=', var_export($v->getRawOriginal('gevraagd_op'), true), ' cast=', var_export($v->gevraagd_op?->toDateString(), true), ' user=', $v->user_id, ' created=', $v->created_at, "\n";
     }
+    foreach (\App\Models\ReferenceNote::orderByDesc('updated_at')->take(8)->get() as $n) {
+        echo 'note ', $n->contract_number, ' status=', $n->status, ' opmerking=', var_export($n->opmerking, true), ' opgevraagd_op=', $n->opgevraagd_op?->toDateString(), ' user=', $n->user_id, ' updated=', $n->updated_at, "\n";
+    }
     echo json_encode(app(\App\Services\Sap\ReferentieBewaking::class)->verzoeken(\App\Models\ReferenceRequest::pluck('contract_number')->unique()->values()->all()), JSON_UNESCAPED_UNICODE), "\n";
     exit;
 }
