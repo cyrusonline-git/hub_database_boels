@@ -173,8 +173,11 @@ class ReferentieBewaking
     {
         $n = ReferenceNote::firstOrNew(['contract_number' => $nr]);
         $aan = trim((string) ($data['gevraagd_aan'] ?? ''));
-        if ($aan !== '' || ! empty($data['log'])) {
-            ReferenceRequest::create(['contract_number' => $nr, 'gevraagd_aan' => $aan ?: null, 'opmerking' => $data['opmerking'] ?? null, 'user_id' => $userId, 'gevraagd_op' => $data['gevraagd_op'] ?? now()->toDateString()]);
+        $opm = trim((string) ($data['opmerking'] ?? ''));
+        // Elke actie met inhoud (naam, opmerking of status 'opgevraagd') wordt een gedateerde logregel: zo staat er
+        // altijd wie wanneer door wie is gevraagd, ook als de naam per ongeluk in de opmerking is gezet
+        if ($aan !== '' || $opm !== '' || ! empty($data['log']) || ($data['status'] ?? null) === 'opgevraagd') {
+            ReferenceRequest::create(['contract_number' => $nr, 'gevraagd_aan' => $aan ?: null, 'opmerking' => $opm ?: null, 'user_id' => $userId, 'gevraagd_op' => $data['gevraagd_op'] ?? now()->toDateString()]);
             if (($data['status'] ?? null) !== 'afgehandeld') {
                 $data['status'] = 'opgevraagd';
             }
