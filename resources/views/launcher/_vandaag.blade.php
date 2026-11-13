@@ -1,9 +1,10 @@
 {{-- Blok "Vandaag" op het startscherm (alleen met dashboardtoegang); $vandaag uit Overzicht::voor --}}
 @php($d = $vandaag['dashboard'])
+@php($kol = ! empty($compact) ? 'col-md-6' : 'col-md-6 col-xl-3')
 @php($pick = fn ($o) => $o->pick_status === 'onbekend' ? 'nog niet in 8.7' : ($o->pick_status === 'geen_regels' ? 'geen regels' : (($o->picked + 0).'/'.($o->total + 0).' gepickt')))
-<div class="section-title text-center mt-2">Vandaag</div>
+<div class="section-title text-center mt-4">Vandaag</div>
 <div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-3">
+    <div class="{{ $kol }}">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-truck text-boels me-1"></i>Te leveren vandaag</span><span>@if(!empty($vandaag['vandaag']['niet_op_scanner'])) <a href="{{ $d }}/planning?niet_op_scanner=1" class="badge bg-danger text-decoration-none me-1" title="Profielen niet ingevuld (PickUpInfo leeg in Smartview): de expeditie ziet deze orders niet in InspHire Mobile en pickt ze niet">{{ $vandaag['vandaag']['niet_op_scanner'] }} {{ $vandaag['vandaag']['niet_op_scanner'] === 1 ? 'profiel' : 'profielen' }} niet ingevuld</a>@endif <span class="badge bg-boels">{{ $vandaag['vandaag']['aantal'] }}</span></span></div>
             <ul class="list-group list-group-flush small">
                 @forelse($vandaag['vandaag']['orders'] as $o)
@@ -15,7 +16,7 @@
             <div class="card-footer small bg-white d-flex justify-content-between"><span class="text-muted">morgen: {{ $vandaag['vandaag']['morgen'] }}</span><a href="{{ $d }}/planning">planning →</a></div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="{{ $kol }}">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-arrow-return-left text-boels me-1"></i>Op te halen</span><span class="badge {{ $vandaag['ophalen']['te_laat'] ? 'bg-danger' : 'bg-boels' }}">{{ $vandaag['ophalen']['aantal'] }}</span></div>
             <ul class="list-group list-group-flush small">
                 @forelse($vandaag['ophalen']['lijst'] as $r)
@@ -28,7 +29,7 @@
         </div>
     </div>
     @if(($vandaag['factuurrun']['contracten'] ?? null) !== null)
-    <div class="col-md-6 col-xl-3">
+    <div class="{{ $kol }}">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-receipt text-boels me-1"></i>{{ $vandaag['factuurrun']['eigen'] ? 'Mijn factuurrun' : 'Uit factuurrun' }}</span><span class="badge {{ $vandaag['factuurrun']['zonder_reden'] ? 'bg-warning text-dark' : 'bg-success' }}">{{ $vandaag['factuurrun']['zonder_reden'] }} zonder reden</span></div>
             <div class="card-body py-2 small">
                 <div class="d-flex justify-content-between"><span>Contracten</span><strong>{{ $vandaag['factuurrun']['contracten'] }}</strong></div>
@@ -40,7 +41,7 @@
         </div>
     </div>
     @endif
-    <div class="col-md-6 col-xl-3">
+    <div class="{{ $kol }}">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-bell text-boels me-1"></i>Signalen voor mij</span><span class="badge bg-boels">{{ array_sum(array_column($vandaag['signalen'], 'aantal')) }}</span></div>
             <ul class="list-group list-group-flush small">
                 @forelse($vandaag['signalen'] as $s)

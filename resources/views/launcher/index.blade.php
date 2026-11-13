@@ -178,6 +178,11 @@
             </div>
             @endforeach
         </div>
+        {{-- "Vandaag" (KPI-kaarten + planninggrafiek) direct onder de dashboardtegels, zodat het aansluit op de
+             dashboardweergave en niet onder de hoogte van de zijkolommen hangt (Wim 13-11-2026) --}}
+        @if(!empty($vandaag))
+            @include('launcher._vandaag', ['vandaag' => $vandaag, 'compact' => true])
+        @endif
         @else
         <div class="section-title text-center">Jouw applicaties</div>
         @if($apps->isEmpty())
@@ -233,9 +238,6 @@
     </div>
 </div>
 
-@if(!empty($vandaag) && !empty($dashboardTegels))
-    @include('launcher._vandaag', ['vandaag' => $vandaag])
-@endif
 
 @if($isAdmin && $admin)
 {{-- Beheer-overzicht --}}

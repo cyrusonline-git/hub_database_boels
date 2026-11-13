@@ -1,9 +1,10 @@
 
 <?php ($d = $vandaag['dashboard']); ?>
+<?php ($kol = ! empty($compact) ? 'col-md-6' : 'col-md-6 col-xl-3'); ?>
 <?php ($pick = fn ($o) => $o->pick_status === 'onbekend' ? 'nog niet in 8.7' : ($o->pick_status === 'geen_regels' ? 'geen regels' : (($o->picked + 0).'/'.($o->total + 0).' gepickt'))); ?>
-<div class="section-title text-center mt-2">Vandaag</div>
+<div class="section-title text-center mt-4">Vandaag</div>
 <div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-3">
+    <div class="<?php echo e($kol); ?>">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-truck text-boels me-1"></i>Te leveren vandaag</span><span><?php if(!empty($vandaag['vandaag']['niet_op_scanner'])): ?> <a href="<?php echo e($d); ?>/planning?niet_op_scanner=1" class="badge bg-danger text-decoration-none me-1" title="Profielen niet ingevuld (PickUpInfo leeg in Smartview): de expeditie ziet deze orders niet in InspHire Mobile en pickt ze niet"><?php echo e($vandaag['vandaag']['niet_op_scanner']); ?> <?php echo e($vandaag['vandaag']['niet_op_scanner'] === 1 ? 'profiel' : 'profielen'); ?> niet ingevuld</a><?php endif; ?> <span class="badge bg-boels"><?php echo e($vandaag['vandaag']['aantal']); ?></span></span></div>
             <ul class="list-group list-group-flush small">
                 <?php $__empty_1 = true; $__currentLoopData = $vandaag['vandaag']['orders']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $o): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
@@ -15,7 +16,7 @@
             <div class="card-footer small bg-white d-flex justify-content-between"><span class="text-muted">morgen: <?php echo e($vandaag['vandaag']['morgen']); ?></span><a href="<?php echo e($d); ?>/planning">planning →</a></div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="<?php echo e($kol); ?>">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-arrow-return-left text-boels me-1"></i>Op te halen</span><span class="badge <?php echo e($vandaag['ophalen']['te_laat'] ? 'bg-danger' : 'bg-boels'); ?>"><?php echo e($vandaag['ophalen']['aantal']); ?></span></div>
             <ul class="list-group list-group-flush small">
                 <?php $__empty_1 = true; $__currentLoopData = $vandaag['ophalen']['lijst']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
@@ -28,7 +29,7 @@
         </div>
     </div>
     <?php if(($vandaag['factuurrun']['contracten'] ?? null) !== null): ?>
-    <div class="col-md-6 col-xl-3">
+    <div class="<?php echo e($kol); ?>">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-receipt text-boels me-1"></i><?php echo e($vandaag['factuurrun']['eigen'] ? 'Mijn factuurrun' : 'Uit factuurrun'); ?></span><span class="badge <?php echo e($vandaag['factuurrun']['zonder_reden'] ? 'bg-warning text-dark' : 'bg-success'); ?>"><?php echo e($vandaag['factuurrun']['zonder_reden']); ?> zonder reden</span></div>
             <div class="card-body py-2 small">
                 <div class="d-flex justify-content-between"><span>Contracten</span><strong><?php echo e($vandaag['factuurrun']['contracten']); ?></strong></div>
@@ -40,7 +41,7 @@
         </div>
     </div>
     <?php endif; ?>
-    <div class="col-md-6 col-xl-3">
+    <div class="<?php echo e($kol); ?>">
         <div class="card h-100 vd-kaart"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-bell text-boels me-1"></i>Signalen voor mij</span><span class="badge bg-boels"><?php echo e(array_sum(array_column($vandaag['signalen'], 'aantal'))); ?></span></div>
             <ul class="list-group list-group-flush small">
                 <?php $__empty_1 = true; $__currentLoopData = $vandaag['signalen']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $s): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>

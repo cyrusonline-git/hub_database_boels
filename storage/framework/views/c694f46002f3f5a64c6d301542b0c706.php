@@ -175,6 +175,10 @@
             </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
+        
+        <?php if(!empty($vandaag)): ?>
+            <?php echo $__env->make('launcher._vandaag', ['vandaag' => $vandaag, 'compact' => true], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        <?php endif; ?>
         <?php else: ?>
         <div class="section-title text-center">Jouw applicaties</div>
         <?php if($apps->isEmpty()): ?>
@@ -230,9 +234,6 @@
     </div>
 </div>
 
-<?php if(!empty($vandaag) && !empty($dashboardTegels)): ?>
-    <?php echo $__env->make('launcher._vandaag', ['vandaag' => $vandaag], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-<?php endif; ?>
 
 <?php if($isAdmin && $admin): ?>
 
