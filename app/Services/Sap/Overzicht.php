@@ -155,10 +155,6 @@ class Overzicht
         ]]);
         $probeer('tankapp', 'Tankapp', fn () => ['cijfers' => ['Door te belasten' => (int) $this->brug->waarde('tankapp', "SELECT COUNT(*) FROM aftankingen WHERE status = 'afgetankt' AND archived = 0")]]);
         $probeer('spoedverhuur', 'Spoedverhuur', fn () => ['cijfers' => ['Open ruilverzoeken' => (int) $this->brug->waarde('spoedverhuur', "SELECT COUNT(*) FROM ruilingen WHERE status = 'aangevraagd'")]]);
-        $probeer('planner', 'Transportplanner', fn () => ['cijfers' => [
-            'Aangevraagd' => (int) $this->brug->waarde('planner', "SELECT COUNT(*) FROM rides WHERE status = 'AANGEVRAAGD' AND archived = 0 AND deleted_at IS NULL"),
-            'Probleem' => (int) $this->brug->waarde('planner', "SELECT COUNT(*) FROM rides WHERE status = 'PROBLEEM' AND archived = 0 AND deleted_at IS NULL"),
-        ]]);
         $probeer('inhuur', 'Inhuur', fn () => ['cijfers' => [
             'In huur' => (int) $this->brug->waarde('inhuur', "SELECT COUNT(*) FROM rentals WHERE status = 'IN HUUR'"),
             'Retour niet afgemeld' => (int) $this->brug->waarde('inhuur', "SELECT COUNT(*) FROM rentals WHERE status = 'RETOUR NIET AFGEMELD'"),
@@ -170,18 +166,7 @@ class Overzicht
             'Offerte uit, wacht op klant' => (int) $this->brug->waarde('offertes', "SELECT COUNT(*) FROM quote_requests WHERE status = 'offerte_gemaakt'"),
             'Gescoord (30 dagen)' => (int) $this->brug->waarde('offertes', "SELECT COUNT(*) FROM quote_requests WHERE status = 'gescoord' AND created_at >= date('now', '-30 days')"),
         ]]);
-        $probeer('scanner', 'Scanner (projectmaterieel)', fn () => ['cijfers' => [
-            'Op locatie (uitgezet)' => (int) $this->brug->waarde('scanner', "SELECT COUNT(*) FROM location_items WHERE status = 'uitgezet'"),
-            'Ouder dan 30 dagen' => (int) $this->brug->waarde('scanner', "SELECT COUNT(*) FROM location_items WHERE status = 'uitgezet' AND placed_at < date('now', '-30 days')"),
-        ]]);
-        $probeer('voorraad', 'Voorraad tool', fn () => ['cijfers' => [
-            'Regels te zoeken' => (int) $this->brug->waarde('voorraad', "SELECT COUNT(*) FROM order_regels WHERE status_code = 'not_allocated'"),
-            'Aanvragen mislukt' => (int) $this->brug->waarde('voorraad', "SELECT COUNT(*) FROM aanvragen WHERE status = 'mislukt'"),
-        ]]);
-        $probeer('keuringen', 'Keuringen eigen materieel', fn () => ['cijfers' => [
-            'Keuring verlopen' => (int) $this->brug->waarde('keuringen', "SELECT COUNT(*) FROM machines WHERE inspection_valid_until < date('now')"),
-            'Verloopt binnen 30 dagen' => (int) $this->brug->waarde('keuringen', "SELECT COUNT(*) FROM machines WHERE inspection_valid_until >= date('now') AND inspection_valid_until < date('now', '+30 days')"),
-        ]]);
+        // Transportplanner, Scanner, Voorraad tool en Keuringen eigen materieel bewust weggelaten (Wim 13-11-2026)
 
         return $apps;
     }
