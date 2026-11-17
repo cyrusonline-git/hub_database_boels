@@ -36,6 +36,7 @@ $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 if (! empty($_GET['status'])) {
+    echo 'php upload_max_filesize='.ini_get('upload_max_filesize').' post_max_size='.ini_get('post_max_size').' memory_limit='.ini_get('memory_limit').' max_execution_time='.ini_get('max_execution_time')."\n";
     foreach ((array) config('sap.soorten') as $soort => $cfg) {
         $l = \App\Models\SapUpload::laatste($soort);
         echo str_pad($soort, 16).($l ? $l->created_at->format('d-m-Y H:i').'  '.$l->regels.' regels, '.$l->contracten.' contracten  '.json_encode($l->samenvatting, JSON_UNESCAPED_UNICODE) : 'nog nooit')."\n";

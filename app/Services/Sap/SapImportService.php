@@ -2,6 +2,7 @@
 
 namespace App\Services\Sap;
 
+use App\Models\FleetItem;
 use App\Models\HireLine;
 use App\Models\InvoiceRunLine;
 use App\Models\PlanningLine;
@@ -23,6 +24,7 @@ class SapImportService
         'reserveringen' => ReserveringenImporter::class,
         'planning_regels' => PlanningRegelsImporter::class,
         'contract_items' => ContractItemsImporter::class,
+        'vloot' => VlootImporter::class,
     ];
 
     private const REGELS = [
@@ -32,6 +34,7 @@ class SapImportService
         'reserveringen' => ReservationLine::class,
         'planning_regels' => PlanningLine::class,
         'contract_items' => ReservationLine::class,
+        'vloot' => FleetItem::class,
     ];
 
     /**
@@ -91,7 +94,9 @@ class SapImportService
             'ok' => true,
             'soort' => $soort,
             'upload' => $upload->fresh(),
-            'melding' => "$label verwerkt: {$res->regels} regels, {$res->contracten} contracten/orders, {$res->overgeslagen} overgeslagen (groepregels, lege regels of ander depot).",
+            'melding' => $soort === 'vloot'
+                ? "$label verwerkt: ".number_format($res->regels, 0, ',', '.')." machines in {$res->contracten} depots, bezetting {$res->samenvatting['bezetting_pct']}."
+                : "$label verwerkt: {$res->regels} regels, {$res->contracten} contracten/orders, {$res->overgeslagen} overgeslagen (groepregels, lege regels of ander depot).",
             'meldingen' => $res->meldingen,
         ];
     }
@@ -99,7 +104,7 @@ class SapImportService
     /** Regels van oude snapshots verwijderen; de upload-rij met samenvatting blijft. */
     public function ruimOp(string $soort): void
     {
-        $bewaar = max(1, (int) config('sap.bewaar_snapshots', 30));
+        $bewaar = max(1, (int) config("sap.soorten.$soort.bewaar_snapshots", config('sap.bewaar_snapshots', 30)));
         $houden = SapUpload::where('soort', $soort)->orderByDesc('id')->limit($bewaar)->pluck('id');
         $oud = SapUpload::where('soort', $soort)->where('regels_opgeruimd', false)->whereNotIn('id', $houden)->pluck('id');
         if ($oud->isEmpty()) {

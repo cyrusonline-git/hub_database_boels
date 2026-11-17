@@ -19,6 +19,14 @@ class SapBestand
     {
         @set_time_limit(600);
         @ini_set('memory_limit', '1024M');
+        // Grote .xlsx (bv. vlootvoorraad, ~70.000 rijen): streamend lezen — PhpSpreadsheet kost daar
+        // ~50 s en ~400 MB. Kleine bestanden blijven via PhpSpreadsheet gaan (bewezen gedrag).
+        if (filesize($pad) > 1024 * 1024 && self::isXlsx($pad)) {
+            $rijen = self::xlsxStream($pad);
+            if ($rijen !== null) {
+                return $rijen;
+            }
+        }
         $reader = IOFactory::createReaderForFile($pad);
         $reader->setReadDataOnly(true);
         $sheet = $reader->load($pad)->getSheet(0);
@@ -38,6 +46,129 @@ class SapBestand
         }
 
         return $rijen;
+    }
+
+    private static function isXlsx(string $pad): bool
+    {
+        $f = @fopen($pad, 'rb');
+        $sig = $f ? fread($f, 4) : '';
+        $f && fclose($f);
+
+        return $sig === "PK\x03\x04" && class_exists(\ZipArchive::class) && class_exists(\XMLReader::class);
+    }
+
+    /**
+     * Eerste werkblad van een .xlsx streamend lezen (XMLReader); zelfde uitvoer als rijen():
+     * 0-based kolommen, ruwe waarden (getallen als int/float, datums als Excel-serial), lege rijen weg.
+     * null = niet gelukt → terugval op PhpSpreadsheet.
+     */
+    private static function xlsxStream(string $pad): ?array
+    {
+        $zip = new \ZipArchive;
+        if ($zip->open($pad) !== true) {
+            return null;
+        }
+        try {
+            // Eerste werkblad: workbook.xml → r:id → Target in workbook.xml.rels
+            $blad = 'xl/worksheets/sheet1.xml';
+            $wb = (string) $zip->getFromName('xl/workbook.xml');
+            $rels = (string) $zip->getFromName('xl/_rels/workbook.xml.rels');
+            if (preg_match('/<(?:\w+:)?sheet\b[^>]*\br:id="([^"]+)"/', $wb, $m)) {
+                foreach (preg_split('/(?=<Relationship\b)/', $rels) as $rel) {
+                    if (str_contains($rel, 'Id="'.$m[1].'"') && preg_match('/Target="([^"]+)"/', $rel, $t)) {
+                        $doel = ltrim($t[1], '/');
+                        $blad = str_starts_with($doel, 'xl/') ? $doel : 'xl/'.$doel;
+                    }
+                }
+            }
+            if ($zip->locateName($blad) === false) {
+                return null;
+            }
+            // Gedeelde teksten
+            $ss = [];
+            if (($xml = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
+                $r = new \XMLReader;
+                $r->XML($xml);
+                $huidig = null;
+                while ($r->read()) {
+                    if ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 'si') {
+                        $huidig = '';
+                    } elseif ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 'rPh') {
+                        $r->next(); // fonetische hints overslaan
+                    } elseif ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 't' && $huidig !== null) {
+                        $huidig .= $r->readString();
+                    } elseif ($r->nodeType === \XMLReader::END_ELEMENT && $r->localName === 'si') {
+                        $ss[] = $huidig;
+                        $huidig = null;
+                    }
+                }
+                $r->close();
+                unset($xml);
+            }
+            $kolomIndex = function (string $ref): int {
+                $n = 0;
+                foreach (str_split(preg_replace('/[^A-Z]/', '', $ref)) as $ch) {
+                    $n = $n * 26 + (ord($ch) - 64);
+                }
+
+                return $n - 1;
+            };
+            $r = new \XMLReader;
+            if (! $r->open('zip://'.$pad.'#'.$blad)) {
+                return null;
+            }
+            $rijen = [];
+            $rij = null;
+            while ($r->read()) {
+                if ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 'row') {
+                    $rij = $r->isEmptyElement ? null : [];
+                } elseif ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 'c' && $rij !== null) {
+                    $ref = (string) $r->getAttribute('r');
+                    $type = (string) $r->getAttribute('t');
+                    $col = $ref !== '' ? $kolomIndex($ref) : count($rij);
+                    $waarde = null;
+                    if (! $r->isEmptyElement) {
+                        $diepte = $r->depth;
+                        $v = null;
+                        $inline = '';
+                        while ($r->read() && ! ($r->nodeType === \XMLReader::END_ELEMENT && $r->localName === 'c' && $r->depth === $diepte)) {
+                            if ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 'v') {
+                                $v = $r->readString();
+                            } elseif ($r->nodeType === \XMLReader::ELEMENT && $r->localName === 't') {
+                                $inline .= $r->readString();
+                            }
+                        }
+                        $waarde = match ($type) {
+                            's' => $v === null ? null : ($ss[(int) $v] ?? null),
+                            'inlineStr' => $inline,
+                            'str', 'e' => $v,
+                            'b' => $v === null ? null : (bool) $v,
+                            default => $v === null || $v === '' ? null : (is_numeric($v) ? (preg_match('/^-?\d+$/', $v) ? (int) $v : (float) $v) : $v),
+                        };
+                    }
+                    $rij[$col] = $waarde;
+                } elseif ($r->nodeType === \XMLReader::END_ELEMENT && $r->localName === 'row' && $rij !== null) {
+                    $gevuld = array_filter($rij, fn ($w) => $w !== null && trim((string) $w) !== '');
+                    if ($gevuld) {
+                        $vol = array_fill(0, max(array_keys($rij)) + 1, null);
+                        foreach ($rij as $c => $w) {
+                            $vol[$c] = $w;
+                        }
+                        $rijen[] = $vol;
+                    }
+                    $rij = null;
+                }
+            }
+            $r->close();
+
+            return $rijen;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        } finally {
+            $zip->close();
+        }
     }
 
     public static function tekst(mixed $v): ?string

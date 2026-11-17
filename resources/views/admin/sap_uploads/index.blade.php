@@ -15,9 +15,9 @@
 @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
 
 <p class="text-muted">
-    Vier Smartview-rapporten voeden het Industrial-dashboard en de andere apps. Exporteer ze in Smartview met de
+    De Smartview-rapporten voeden het Industrial-dashboard en de andere apps. Exporteer ze in Smartview met de
     standaardnaam hieronder en sleep ze op de juiste kaart. CORE herkent het bestand aan de kopregel;
-    een verkeerd bestand wordt geweigerd. Alleen contracten van depot <strong>{{ config('sap.depot') ?: 'alle' }}</strong> worden meegenomen.
+    een verkeerd bestand wordt geweigerd. Alleen contracten van depot <strong>{{ config('sap.depot') ?: 'alle' }}</strong> worden meegenomen; de vlootvoorraad bevat alle Industrial-depots.
 </p>
 
 <div class="row g-3 mb-4">
@@ -27,7 +27,7 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start">
                     <h5 class="card-title mb-1">{{ $s['label'] }}</h5>
-                    <span class="badge {{ $s['frequentie_dagen'] <= 1 ? 'bg-boels' : 'bg-secondary' }}">{{ $s['frequentie_dagen'] <= 1 ? 'dagelijks' : 'wekelijks' }}</span>
+                    <span class="badge {{ $s['frequentie_dagen'] <= 1 ? 'bg-boels' : 'bg-secondary' }}">{{ $s['frequentie_dagen'] == 0 ? 'meerdere keren per dag' : ($s['frequentie_dagen'] <= 1 ? 'dagelijks' : 'wekelijks') }}</span>
                 </div>
                 <div class="small mb-2"><i class="bi bi-file-earmark-excel text-success"></i> <code>{{ $s['bestand'] }}</code></div>
                 <p class="text-muted small">{{ $s['omschrijving'] }}</p>
@@ -36,7 +36,7 @@
                         <i class="bi {{ $s['verouderd'] ? 'bi-exclamation-triangle' : 'bi-clock-history' }}"></i>
                         Laatste stand: <strong>{{ $s['laatste']->created_at->format('d-m-Y H:i') }}</strong>
                         door {{ $s['laatste']->user?->name ?? 'script' }} ·
-                        {{ number_format($s['laatste']->regels, 0, ',', '.') }} regels, {{ $s['laatste']->contracten }} contracten/orders
+                        {{ number_format($s['laatste']->regels, 0, ',', '.') }} {{ $sleutel === 'vloot' ? 'machines' : 'regels' }}, {{ $s['laatste']->contracten }} {{ $sleutel === 'vloot' ? 'depots' : 'contracten/orders' }}
                         @if($s['verouderd']) · <strong>verouderd</strong>@endif
                         @if(is_array($s['laatste']->samenvatting))
                             <br>

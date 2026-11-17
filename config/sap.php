@@ -21,6 +21,15 @@ return [
 
     // Bestandssoorten: sleutel => label, verwachte bestandsnaam, frequentie (dagen), kopherkenning
     'soorten' => [
+        'vloot' => [
+            'label' => 'Vlootvoorraad (Items With Every Status)',
+            'bestand' => 'Items With Every Status.xlsx',
+            'frequentie_dagen' => 0,          // 0 = meerdere keren per dag
+            'omschrijving' => 'Momentopname van de hele Industrial-vloot: per machine de status (beschikbaar, verhuurd, onderhoud, reparatie, onderweg) en het depot waar hij nu staat. Basis voor bezettingsmeters en de voorraadcheck.',
+            'kop' => ['ITEMNO', 'Item Description', 'GRPCODE', 'STATUS', 'CURRDEPOT'],
+            'alle_depots' => true,
+            'bewaar_snapshots' => 6,          // ~60.000 regels per upload: alleen de laatste uploads volledig bewaren
+        ],
         'wow' => [
             'label' => 'In huur (What\'s Out Where)',
             'bestand' => 'boels_whatsoutwhere_incllimitedmode.xls',
