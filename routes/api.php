@@ -235,6 +235,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/planning/orders', [\App\Http\Controllers\Api\SapController::class, 'planning']);        // 8.7 + 2.6 samengevoegd
     Route::get('/planning/orders/{nr}', [\App\Http\Controllers\Api\SapController::class, 'planningOrder']);
     Route::post('/planning/orders/{nr}/note', [\App\Http\Controllers\Api\SapController::class, 'planningNote']);
+    // Voorraadcheck (3.4 groepsregels × vlootvoorraad) en vloot (meters/werkplaats)
+    Route::get('/voorraad/contracten', [\App\Http\Controllers\Api\VoorraadController::class, 'contracten']);
+    Route::get('/voorraad/contracten/{nr}', [\App\Http\Controllers\Api\VoorraadController::class, 'contract']);
+    Route::get('/voorraad/vraag', [\App\Http\Controllers\Api\VoorraadController::class, 'vraag']);
+    Route::get('/voorraad/depots', [\App\Http\Controllers\Api\VoorraadController::class, 'depots']);
+    Route::get('/vloot/stand', [\App\Http\Controllers\Api\VoorraadController::class, 'stand']);
+    Route::get('/vloot/subgroepen', [\App\Http\Controllers\Api\VoorraadController::class, 'subgroepen']);
+    Route::get('/vloot/subgroepen/{groep}', [\App\Http\Controllers\Api\VoorraadController::class, 'subgroep']);
+    Route::get('/vloot/machines', [\App\Http\Controllers\Api\VoorraadController::class, 'machines']);
 
     // ---- Cockpit: alles voor het startscherm/managementoverzicht in één keer (5 min cache) ----
     Route::get('/overzicht', function (Request $r) {

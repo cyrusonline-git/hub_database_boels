@@ -60,13 +60,13 @@ return [
             'opslaan_als' => 'reserveringen',   // zelfde tabel/snapshotreeks als 2.6
         ],
         'planning_regels' => [
-            'label' => 'Artikelregels planning (8.A Schedule Hire logistic)',
+            'label' => 'Toegekende regels + projectnummer (8.A Schedule Hire logistic)',
             'bestand' => '8.A INDUSTRIAL Schedule Hire logistic.xlsx',
             'frequentie_dagen' => 1,
-            'omschrijving' => 'Per order de toegekende artikelregels met leverdatum en -tijd per regel. Hiermee komt een bijhuur op een lopend contract op de juiste dag in de planning, met de nieuwe artikelen uitgelicht.',
+            'omschrijving' => 'Per contract de TOEGEKENDE regels (item status Toegekend) met projectnummer. De voorraadcheck zoekt alleen wat níet toegekend is: 3.4-regels die hier (in aantal) niet in staan.',
             'kop' => ['COLLECTION DATE/TIME', 'ITEM NUMBER', 'CONTRACTS.CONTNO'],
             'alias_van' => 'planning',
-            'verborgen' => true,      // 3.4 vervangt dit (Wim 13-11-2026)
+            // 17-11-2026 weer nodig: enige bron van "Toegekend" per regel + projectnummer (voorraadcheck)
         ],
         'reserveringen' => [
             'label' => 'Reserveringen (offertes + toekomstige contracten)',
