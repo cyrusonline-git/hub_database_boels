@@ -14,9 +14,10 @@ use Illuminate\Support\Collection;
 /**
  * Voorraadcheck per contract of project — herbouw van de oude Voorraad tool (voorraad.sorai.nl),
  * regels van Wim 17-11-2026:
- *  - te zoeken = NIET TOEGEKENDE huurregels. Toegekend = regel staat in 8.A met ITEM STATUS "Toegekend"
- *    (8.A bevat alleen toegekende regels). Niet toegekend = 3.4-huurregel (geen verkoop) die voor dat contract
- *    niet, of niet in dat aantal, in 8.A staat. Nooit afgeleid uit de lengte van het nummer. Offertes staan nooit in 8.A.
+ *  - te zoeken = NIET TOEGEKENDE huurregels = 3.4-regels met TYPE "Groep" (groepsboeking, nog geen uniek
+ *    machinenummer). Toegekend = gepickt door de expeditie → de regel wordt TYPE "Verhuur" met een machinenummer.
+ *    Let op (Wim 17-11-2026): "Toegekend" in 8.A ≠ toegekend in deze zin (8.A zet ook groepsregels op Toegekend);
+ *    8.A wordt alleen gebruikt voor het projectnummer. Al geleverde regels (WOW) tellen niet.
  *  - voorraad = laatste vlootupload; telt: beschikbaar (en desgewenst "in onderhoud" als tweede keus, zoals
  *    In Service in de oude tool); reparatie NOOIT (staat elders kapot);
  *  - niet-toegekende regels van ANDERE contracten en offertes binnen de horizon houden voorraad vast in hun depot
@@ -104,23 +105,21 @@ class VoorraadCheck
     }
 
     /**
-     * Niet-toegekende huurregels per contract en artikel. Toegekend = TYPE "Verhuur" (er hangt een uniek
-     * machinenummer aan; 8.A bevat alleen Ingegeven-contracten, dus lopende contracten staan er niet in) of een
-     * groepsregel die in 8.A als Toegekend staat. Open = groepsregel-aantal min 8.A-toegekend min al geleverd (WOW).
+     * Niet-toegekende huurregels per contract en artikel: TYPE "Groep" (nog geen machine), min al geleverd (WOW).
+     * TYPE "Verhuur" = er hangt al een uniek machinenummer aan (gepickt) → telt niet.
      * Verkoop en niet-pickbare regels (brandstof, arbeid, heffingen) tellen niet.
      *
      * @return Collection<int, array{contract_number:string, item_number:string, omschrijving:?string, aantal:int, datum:?string, offerte:bool, klant:?string}>
      */
     private function openRegels(Collection $regels): Collection
     {
-        $toeg = $this->toegekend()['per'];
         $wow = $this->uitstaand();
         $uit = collect();
-        foreach ($regels->reject(fn ($l) => $this->telNiet($l) || mb_strtolower(trim((string) $l->type)) === 'verhuur')->groupBy(fn ($l) => $l->contract_number.'|'.$l->item_number) as $g) {
+        foreach ($regels->filter(fn ($l) => mb_strtolower(trim((string) $l->type)) === 'groep' && ! $this->telNiet($l))->groupBy(fn ($l) => $l->contract_number.'|'.$l->item_number) as $g) {
             $f = $g->first();
             $c = (string) $f->contract_number;
             $i = (string) $f->item_number;
-            $open = (int) round($g->sum('qty') - ($toeg[$c][$i] ?? 0) - ($wow[$c][$i] ?? 0));
+            $open = (int) round($g->sum('qty') - ($wow[$c][$i] ?? 0));
             if ($open <= 0) {
                 continue;
             }
@@ -241,9 +240,10 @@ class VoorraadCheck
             'gevonden' => false,
         ];
         if (! $toeg['upload']) {
-            $uit['waarschuwingen'][] = 'Er is nog geen 8.A (toegekende regels) geüpload: alle regels worden als niet toegekend behandeld.';
-        } elseif ($rs && $toeg['upload']->created_at->lt($rs->created_at->copy()->subHours(24))) {
-            $uit['waarschuwingen'][] = '8.A (toegekende regels) is ouder dan de 3.4 ('.$toeg['upload']->created_at->format('d-m H:i').'): regels die sindsdien zijn toegekend, staan hier nog als open.';
+            $uit['waarschuwingen'][] = 'Er is nog geen 8.A geüpload: zoeken op projectnummer werkt pas na die upload.';
+        }
+        if ($rs && $rs->created_at->lt(now()->subHours(24))) {
+            $uit['waarschuwingen'][] = 'De 3.4 (contractregels) is van '.$rs->created_at->format('d-m H:i').': regels die sindsdien gepickt of toegevoegd zijn, kloppen hier nog niet.';
         }
         if ($vl && $vl->created_at->lt(now()->subHours(24))) {
             $uit['waarschuwingen'][] = 'Vlootvoorraad is van '.$vl->created_at->format('d-m H:i').' — beschikbaarheid kan verouderd zijn.';
