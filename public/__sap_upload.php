@@ -43,6 +43,22 @@ if (! empty($_GET['status'])) {
     }
     exit;
 }
+if (! empty($_GET['voorraad'])) {
+    // Voorraadcheck-diagnose: 3.4-regels, 8.7-pickstand en uitkomst voor één contract/project
+    $nr = preg_replace('/\D/', '', (string) $_GET['voorraad']);
+    $rs = \App\Models\SapUpload::laatste('reserveringen');
+    echo "3.4 upload #".($rs?->id)." van ".$rs?->created_at."\n";
+    foreach (\App\Models\ReservationLine::where('upload_id', $rs?->id)->where('contract_number', $nr)->get() as $l) {
+        echo str_pad((string) $l->type, 14).str_pad((string) $l->item_number, 14).str_pad((string) $l->qty, 6).str_pad((string) $l->contract_status, 11).mb_substr((string) $l->item_description, 0, 40)."\n";
+    }
+    $pl = \App\Models\SapUpload::laatste('planning');
+    $o = \App\Models\PlanningOrder::where('upload_id', $pl?->id)->where('order_number', $nr)->first();
+    echo "8.7 upload #".($pl?->id)." van ".$pl?->created_at.": ".($o ? $o->picked.'/'.$o->total.' gepickt, lever '.$o->delivery_date : 'niet in 8.7')."\n";
+    $r = app(\App\Services\Sap\VoorraadCheck::class)->contract($nr);
+    unset($r['depots']);
+    echo json_encode(['melding' => $r['melding'] ?? null, 'telling' => $r['telling'] ?? null, 'totaal' => $r['totaal'] ?? null, 'waarschuwingen' => $r['waarschuwingen'] ?? []], JSON_UNESCAPED_UNICODE)."\n";
+    exit;
+}
 if (! empty($_GET['diagnose'])) {
     // Welke app-databases kan CORE lezen (DataBrug)? Voor het managementoverzicht en acties.
     foreach (app(\App\Vraagbaak\DataBrug::class)->diagnose() as $d) {
