@@ -43,6 +43,18 @@ if (! empty($_GET['status'])) {
     }
     exit;
 }
+if (! empty($_GET['planner'])) {
+    // Stockplanner-diagnose: tijd, geheugen en de eerste tekorten voor een depot
+    $t = microtime(true);
+    $p = app(\App\Services\Sap\StockPlanner::class);
+    $m = $p->matrix(preg_replace('/\D/', '', (string) $_GET['planner']) ?: '759', ['horizon' => 28, 'alleen_tekort' => true]);
+    printf("%d subgroepen met tekort (%d artikelen zonder vlootgegevens verborgen) · %.2f s · piek %d MB\n", $m['tekorten'], $m['zonder_vloot'], microtime(true) - $t, memory_get_peak_usage(true) / 1048576);
+    echo 'mutaties: '.json_encode($p->mutaties(14, true)->countBy('type'))."\n";
+    foreach (array_slice($m['rijen'], 0, 10) as $r) {
+        echo str_pad($r['subgroep'], 8).str_pad(mb_substr((string) $r['omschrijving'], 0, 38), 40).'nu '.str_pad((string) $r['start'], 5).'laagste '.str_pad((string) $r['min'], 6).'vanaf '.$r['eerste_tekort']."\n";
+    }
+    exit;
+}
 if (! empty($_GET['voorraad'])) {
     // Voorraadcheck-diagnose: 3.4-regels, 8.7-pickstand en uitkomst voor één contract/project
     $nr = preg_replace('/\D/', '', (string) $_GET['voorraad']);
