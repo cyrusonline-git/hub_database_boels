@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Cache;
  *  −       = nog niet gepickte contractregels (3.4 TYPE Groep, min WOW) op hun leverdatum
  *  −       = offertes (optioneel) op hun leverdatum, alleen vanaf vandaag (verlopen offertes niet)
  *  −       = gepickte maar nog niet geleverde machines (3.4 TYPE Verhuur) die in de vloot nog op beschikbaar staan
+ *  +       = goederen-in (0.05): retour gekomen machines die de vloot nog als verhuurd ziet, op goederen-in-datum +
+ *            dezelfde verwerkingstijd (in onderhoud/beschikbaar staan ze al in de vloot → niet dubbel)
  *  +       = lopende huur (WOW) met bekende einddatum (ophaaldatum, anders verwachte retourdatum) + instelbare
  *            verwerkingstijd ("einde huur als": einddatum / +7 / +14 dagen)
  *
@@ -32,6 +34,7 @@ class StockPlanner
         'offerte' => 'Offerte',
         'gepickt' => 'Gepickt, nog te leveren',
         'retour' => 'Retour einde huur',
+        'goederen_in' => 'Retour (goederen-in)',
     ];
 
     /** Alle mutaties (alle depots) — 5 min gecachet per uploadstand en opties. */
@@ -88,12 +91,42 @@ class StockPlanner
                 }
             }
 
-            // 3) Retouren: lopende huur met bekende einddatum
+            // 3a) Goederen-in (0.05): retour gekomen, vloot ziet ze nog als verhuurd (of kent ze niet) → komen terug
+            $goederenIn = [];
+            $gi = SapUpload::laatste('goederen_in');
+            if ($gi) {
+                $regels = \App\Models\GoodsInLine::where('upload_id', $gi->id)->get();
+                $status = $vl ? FleetItem::where('upload_id', $vl->id)->whereIn('item_number', $regels->pluck('item_number')->unique()->values()->all())
+                    ->get(['item_number', 'status_key', 'group_code'])->keyBy('item_number') : collect();
+                $sub = $this->check->subgroepVan($regels->pluck('item_number')->map(fn ($x) => (string) $x)->unique()->values()->all(), $vl);
+                foreach ($regels as $g) {
+                    $nr = (string) $g->item_number;
+                    $goederenIn[$nr] = true;
+                    $st = $status[$nr]->status_key ?? null;
+                    if ($st !== null && $st !== 'verhuurd') {
+                        continue;   // staat al als onderhoud/beschikbaar/reparatie in de vloot
+                    }
+                    $in = $g->goods_in_date ? \Carbon\Carbon::parse($g->goods_in_date)->addDays($retourDagen)->toDateString() : $vandaag;
+                    $uit[] = [
+                        'depot' => $this->check->depotUitContract((string) $g->contract_number),
+                        'subgroep' => (string) ($sub[$nr] ?? $nr),
+                        'datum' => max($vandaag, $in),
+                        'aantal' => (int) round((float) $g->qty ?: 1),
+                        'type' => 'goederen_in', 'contract' => (string) $g->contract_number, 'klant' => $g->customer_name,
+                        'omschrijving' => $g->item_description, 'achterstallig' => $in < $vandaag,
+                    ];
+                }
+            }
+
+            // 3) Retouren: lopende huur met bekende einddatum (niet als de machine al in goederen-in staat)
             if ($wow) {
                 $hl = HireLine::where('upload_id', $wow->id)->where(fn ($q) => $q->whereNotNull('coll_date')->orWhereNotNull('est_return_date'))
                     ->get(['depot', 'contract_number', 'customer_name', 'item_number', 'item_description', 'qty_out', 'coll_date', 'est_return_date', 'status']);
                 $sub = $this->check->subgroepVan($hl->pluck('item_number')->map(fn ($x) => (string) $x)->unique()->values()->all(), $vl);
                 foreach ($hl as $h) {
+                    if (isset($goederenIn[(string) $h->item_number])) {
+                        continue;
+                    }
                     $eind = $this->d($h->coll_date) ?? $this->d($h->est_return_date);
                     if (! $eind) {
                         continue;
@@ -123,14 +156,14 @@ class StockPlanner
         }
 
         return Cache::remember('stockplanner:start:'.$vl->id.':'.($depot ?? '*'), 300, function () use ($vl, $depot) {
-            $q = FleetItem::where('upload_id', $vl->id)->whereIn('status_key', ['beschikbaar', 'onderhoud', 'verhuurd']);
+            $q = FleetItem::where('upload_id', $vl->id)->whereIn('status_key', ['beschikbaar', 'onderhoud', 'verhuurd', 'reparatie']);
             if ($depot) {
                 $q->where('depot', $depot);
             }
             $uit = [];
             foreach ($q->selectRaw('depot, group_code, status_key, COUNT(*) AS n, MAX(item_description) AS oms')->groupBy('depot', 'group_code', 'status_key')->get() as $r) {
                 $x = &$uit[(string) $r->depot][(string) $r->group_code];
-                $x ??= ['beschikbaar' => 0, 'onderhoud' => 0, 'verhuurd' => 0, 'omschrijving' => $r->oms];
+                $x ??= ['beschikbaar' => 0, 'onderhoud' => 0, 'verhuurd' => 0, 'reparatie' => 0, 'omschrijving' => $r->oms];
                 $x[$r->status_key] = (int) $r->n;
                 unset($x);
             }
@@ -171,7 +204,7 @@ class StockPlanner
 
         $rijen = [];
         foreach ($subgroepen as $sub) {
-            $st = $start[$sub] ?? ['beschikbaar' => 0, 'onderhoud' => 0, 'verhuurd' => 0, 'omschrijving' => null];
+            $st = ($start[$sub] ?? []) + ['beschikbaar' => 0, 'onderhoud' => 0, 'verhuurd' => 0, 'reparatie' => 0, 'omschrijving' => null];
             $m = $perSub[$sub] ?? collect();
             if (! empty($o['alleen_mutaties']) && $m->isEmpty()) {
                 continue;
@@ -210,7 +243,7 @@ class StockPlanner
             }
             $rijen[] = [
                 'subgroep' => $sub, 'omschrijving' => $oms,
-                'beschikbaar' => $st['beschikbaar'], 'onderhoud' => $st['onderhoud'], 'verhuurd' => $st['verhuurd'],
+                'beschikbaar' => $st['beschikbaar'], 'onderhoud' => $st['onderhoud'], 'verhuurd' => $st['verhuurd'], 'reparatie' => $st['reparatie'],
                 'start' => $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0),
                 'uit' => (int) -$m->where('aantal', '<', 0)->sum('aantal'), 'in' => (int) $m->where('aantal', '>', 0)->sum('aantal'),
                 'reeks' => $reeks, 'min' => $min, 'eerste_tekort' => $eersteTekort, 'in_vloot' => $bekend,
