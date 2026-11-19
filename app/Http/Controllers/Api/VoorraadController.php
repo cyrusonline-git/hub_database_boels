@@ -34,6 +34,32 @@ class VoorraadController extends Controller
         return ['data' => $this->check->vraag((string) $r->input('depot', '759'), (int) ($r->input('horizon') ?: 14), $r->input('offertes', '1') !== '0')];
     }
 
+    /** Stockplanner: matrix per depot (rijen subgroepen, kolommen dagen/weken). */
+    public function planner(Request $r, \App\Services\Sap\StockPlanner $p)
+    {
+        return $p->matrix((string) ($r->input('depot') ?: config('sap.depot') ?: '759'), $this->plannerOpties($r) + [
+            'q' => $r->input('q'), 'alleen_tekort' => $r->boolean('alleen_tekort'), 'alleen_mutaties' => $r->input('alleen_mutaties', '1') !== '0',
+            'zonder_vloot' => $r->boolean('zonder_vloot'),
+            'per' => $r->input('per', 'dag'), 'limiet' => (int) ($r->input('limiet') ?: 400),
+        ]);
+    }
+
+    /** Stockplanner: één subgroep, tijdlijn per depot + mutaties. */
+    public function plannerSubgroep(Request $r, string $groep, \App\Services\Sap\StockPlanner $p)
+    {
+        return $p->subgroep($groep, $r->input('depot') ?: null, $this->plannerOpties($r));
+    }
+
+    private function plannerOpties(Request $r): array
+    {
+        return [
+            'horizon' => (int) ($r->input('horizon') ?: 28),
+            'retour_dagen' => (int) $r->input('retour_dagen', 14),
+            'offertes' => $r->input('offertes', '1') !== '0',
+            'onderhoud' => $r->input('onderhoud') === '1',
+        ];
+    }
+
     public function depots()
     {
         return $this->check->depots();

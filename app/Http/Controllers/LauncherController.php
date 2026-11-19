@@ -83,6 +83,7 @@ class LauncherController extends Controller
                 ['Uit factuurrun', 'bi-receipt', '/factuurrun', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin'], 'Contracten die niet gefactureerd worden', false],
                 ['PO-bewaking', 'bi-receipt-cutoff', '/referenties', ['binnendienst', 'servicedesk', 'area_manager', 'bu_manager', 'admin'], 'Contracten zonder klantreferentie of PO-nummer', false],
                 ['Voorraadcheck', 'bi-search', '/voorraad', null, 'Contract/project: wat hebben we, waar staat de rest, aanvragen', false],
+                ['Stockplanner', 'bi-calendar3-range', '/voorraad/planner', null, 'Wanneer komen we materieel tekort? Per subgroep in de tijd', false],
                 ['Vlootmeters', 'bi-speedometer', '/vloot', null, 'Bezetting en status per depot en subgroep', false],
                 ['Ophaallijst', 'bi-arrow-return-left', '/in-huur/ophalen', null, 'Afgemeld, nog op te halen', false],
                 ['In huur', 'bi-box-seam', '/in-huur', null, 'Alles wat bij klanten staat', false],

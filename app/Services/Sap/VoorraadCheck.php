@@ -111,7 +111,7 @@ class VoorraadCheck
      *
      * @return Collection<int, array{contract_number:string, item_number:string, omschrijving:?string, aantal:int, datum:?string, offerte:bool, klant:?string}>
      */
-    private function openRegels(Collection $regels): Collection
+    public function openRegels(Collection $regels): Collection
     {
         $wow = $this->uitstaand();
         $uit = collect();
@@ -143,7 +143,7 @@ class VoorraadCheck
     }
 
     /** Artikelnummer → subgroep: een machinenummer dat in de vloot staat → zijn GRPCODE, anders is het zelf de subgroep. */
-    private function subgroepVan(array $nummers, ?SapUpload $vl): array
+    public function subgroepVan(array $nummers, ?SapUpload $vl): array
     {
         $map = array_combine($nummers, $nummers) ?: [];
         if ($vl && $nummers) {

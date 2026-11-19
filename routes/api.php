@@ -239,6 +239,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/voorraad/contracten', [\App\Http\Controllers\Api\VoorraadController::class, 'contracten']);
     Route::get('/voorraad/contracten/{nr}', [\App\Http\Controllers\Api\VoorraadController::class, 'contract']);
     Route::get('/voorraad/vraag', [\App\Http\Controllers\Api\VoorraadController::class, 'vraag']);
+    Route::get('/voorraad/planner', [\App\Http\Controllers\Api\VoorraadController::class, 'planner']);
+    Route::get('/voorraad/planner/{groep}', [\App\Http\Controllers\Api\VoorraadController::class, 'plannerSubgroep']);
     Route::get('/voorraad/depots', [\App\Http\Controllers\Api\VoorraadController::class, 'depots']);
     Route::get('/vloot/stand', [\App\Http\Controllers\Api\VoorraadController::class, 'stand']);
     Route::get('/vloot/subgroepen', [\App\Http\Controllers\Api\VoorraadController::class, 'subgroepen']);
