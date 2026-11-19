@@ -28,7 +28,7 @@
                         <input type="password" name="password" class="form-control" required>
                     </div>
                     <div class="form-check mb-3">
-                        <input type="checkbox" name="remember" id="remember" class="form-check-input">
+                        <input type="checkbox" name="remember" id="remember" class="form-check-input" @checked(old('remember'))>
                         <label class="form-check-label" for="remember">Aangemeld blijven</label>
                     </div>
                     <button type="submit" class="btn btn-boels w-100">Inloggen</button>
@@ -42,3 +42,12 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+// Voorkom "419 Page expired": een inlogscherm dat de browser uit zijn geheugen terugzet (terugknop, herstelde tab)
+// of dat lang open staat, heeft een verlopen token. Dan eerst vers ophalen.
+window.addEventListener('pageshow', function (e) { if (e.persisted) { location.reload(); } });
+setTimeout(function () { location.reload(); }, 100 * 60 * 1000);
+</script>
+@endpush

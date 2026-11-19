@@ -62,6 +62,15 @@ Route::get('/internal/transport-middelen', function (Request $request) {
     return \App\Services\TransportTarief::middelen();
 });
 
+// Waar stond deze machine in huur (WOW)? Voor de schade-app op dezelfde server: vult bij het scannen van een
+// schade contract, klant en projectnummer in. Zelfde IP-guard; geeft alleen de benodigde velden terug.
+Route::get('/internal/hire/machines/{nummer}', function (Request $request, string $nummer) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+
+    return app(\App\Services\Sap\HireData::class)->machineVoorSchade($nummer);
+})->where('nummer', '[A-Za-z0-9\-\s]{3,30}');
+
 // Notificatie-tellers voor de dashboard-tegels. Child-apps melden hier
 // (server-to-server, met hun eigen sync_key uit CORE Admin > Applicaties)
 // het absolute aantal openstaande items per medewerker. De app bepaalt

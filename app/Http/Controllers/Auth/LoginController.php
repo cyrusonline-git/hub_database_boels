@@ -12,7 +12,17 @@ class LoginController extends Controller
 {
     public function showLogin()
     {
-        return view('auth.login');
+        $response = response()->view('auth.login')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        // Oude host-only cookies (van vóór SESSION_DOMAIN=.sorai.nl) naast de .sorai.nl-variant kunnen een
+        // verkeerd token opleveren (419). Laat de host-only versies verlopen; de domeinbrede blijven staan.
+        if (config('session.domain')) {
+            foreach ([config('session.cookie'), 'XSRF-TOKEN'] as $naam) {
+                $response->headers->setCookie(new \Symfony\Component\HttpFoundation\Cookie($naam, '', 1, '/', null, (bool) config('session.secure'), $naam !== 'XSRF-TOKEN', false, 'lax'));
+            }
+        }
+
+        return $response;
     }
 
     public function login(Request $request): RedirectResponse

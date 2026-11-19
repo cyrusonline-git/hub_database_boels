@@ -238,6 +238,53 @@ class HireData
         return $u ? HireLine::where('upload_id', $u->id)->where('item_number', $nummer)->get() : collect();
     }
 
+    /**
+     * Opzoeken voor de schade-app: waar stond deze machine in huur? Eerst de laatste WOW; niet gevonden →
+     * de meest recente bewaarde WOW-upload waarin het nummer nog voorkomt (machine net retour gemeld).
+     * Geeft alleen de velden die de schade-app nodig heeft (geen tarieven/notities).
+     */
+    public function machineVoorSchade(string $nummer): array
+    {
+        $nr = strtoupper(preg_replace('/[\s\-]+/', '', trim($nummer)));
+        $uit = ['machine_number' => $nr, 'gevonden' => false, 'historisch' => false, 'aantal_treffers' => 0, 'data' => null, 'treffers' => []];
+        if ($nr === '') {
+            return $uit;
+        }
+        $laatste = $this->laatsteUpload('wow');
+        if (! $laatste) {
+            return $uit + ['melding' => 'Nog geen WOW geüpload.'];
+        }
+        $uploads = \App\Models\SapUpload::where('soort', 'wow')->where('regels_opgeruimd', false)->orderByDesc('id')->pluck('created_at', 'id');
+        foreach ($uploads as $id => $moment) {
+            $regels = HireLine::where('upload_id', $id)->where('item_number', $nr)->orderByDesc('hire_date')->get();
+            if ($regels->isEmpty()) {
+                continue;
+            }
+            $map = fn ($r) => [
+                'contract_number' => $r->contract_number, 'customer_name' => $r->customer_name, 'customer_number' => $r->customer_number,
+                'project_number' => $r->project_number, 'project_description' => $r->project_description,
+                'delivery_name' => $r->delivery_name, 'status' => $r->status, 'depot' => $r->depot,
+                'hire_date' => $r->hire_date?->format('Y-m-d') ?? (is_string($r->hire_date) ? substr($r->hire_date, 0, 10) : null),
+                'coll_date' => $r->coll_date?->format('Y-m-d') ?? (is_string($r->coll_date) ? substr($r->coll_date, 0, 10) : null),
+                'item_description' => $r->item_description, 'qty_out' => (float) $r->qty_out,
+            ];
+            $contracten = $regels->pluck('contract_number')->unique();
+
+            return [
+                'machine_number' => $nr,
+                'gevonden' => true,
+                'historisch' => (int) $id !== (int) $laatste->id,
+                'upload_moment' => \Carbon\Carbon::parse($moment)->toDateTimeString(),
+                'aantal_treffers' => $contracten->count(),
+                // eenduidig = één contract; bij bulknummers op meerdere contracten niet automatisch invullen
+                'data' => $contracten->count() === 1 ? $map($regels->first()) : null,
+                'treffers' => $regels->take(10)->map($map)->values()->all(),
+            ];
+        }
+
+        return $uit + ['upload_moment' => $laatste->created_at->toDateTimeString()];
+    }
+
     /** Uit factuurrun: per contract, met notitie, medewerker en weekhuur uit WOW. */
     public function factuurrun(array $f = []): Collection
     {
