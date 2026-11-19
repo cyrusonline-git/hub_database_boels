@@ -71,6 +71,14 @@ Route::get('/internal/hire/machines/{nummer}', function (Request $request, strin
     return app(\App\Services\Sap\HireData::class)->machineVoorSchade($nummer);
 })->where('nummer', '[A-Za-z0-9\-\s]{3,30}');
 
+// Goederen-in (0.05) voor de tankapp: wat moet er nog afgetankt worden? Zelfde IP-guard.
+Route::get('/internal/goederen-in', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+
+    return app(\App\Services\Sap\HireData::class)->goederenIn(preg_replace('/\D/', '', (string) $request->input('depot')) ?: null, $request->boolean('diesel'));
+});
+
 // Notificatie-tellers voor de dashboard-tegels. Child-apps melden hier
 // (server-to-server, met hun eigen sync_key uit CORE Admin > Applicaties)
 // het absolute aantal openstaande items per medewerker. De app bepaalt

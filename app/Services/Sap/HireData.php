@@ -239,50 +239,136 @@ class HireData
     }
 
     /**
-     * Opzoeken voor de schade-app: waar stond deze machine in huur? Eerst de laatste WOW; niet gevonden →
-     * de meest recente bewaarde WOW-upload waarin het nummer nog voorkomt (machine net retour gemeld).
-     * Geeft alleen de velden die de schade-app nodig heeft (geen tarieven/notities).
+     * Opzoeken voor de schade-app en de tankapp: bij welke klant/contract/project hoort deze machine?
+     * Volgorde: 1) goederen-in (0.05: net retour, nog niet afgemeld — daar wordt afgetankt en schade gezien),
+     * 2) de laatste WOW (nog in huur), 3) de meest recente bewaarde oudere WOW-upload waarin het nummer voorkomt.
+     * Projectnummer/-omschrijving ontbreken in de 0.05 → via het contract uit de WOW-historie of de 8.A.
+     * Geeft alleen de velden die de apps nodig hebben (geen tarieven/notities).
      */
     public function machineVoorSchade(string $nummer): array
     {
         $nr = strtoupper(preg_replace('/[\s\-]+/', '', trim($nummer)));
-        $uit = ['machine_number' => $nr, 'gevonden' => false, 'historisch' => false, 'aantal_treffers' => 0, 'data' => null, 'treffers' => []];
+        $uit = ['machine_number' => $nr, 'gevonden' => false, 'historisch' => false, 'bron' => null, 'aantal_treffers' => 0, 'data' => null, 'treffers' => []];
         if ($nr === '') {
             return $uit;
         }
+        $antwoord = function (Collection $regels, string $bron, bool $historisch, ?string $moment) use ($nr) {
+            $contracten = $regels->pluck('contract_number')->unique()->values();
+            $map = fn (array $r) => array_merge($r, $this->projectVoorContract((string) $r['contract_number'], $r['project_number'] ?? null, $r['project_description'] ?? null));
+
+            return [
+                'machine_number' => $nr, 'gevonden' => true, 'historisch' => $historisch, 'bron' => $bron, 'upload_moment' => $moment,
+                'aantal_treffers' => $contracten->count(),
+                // eenduidig = één contract; bij bulknummers op meerdere contracten niet automatisch invullen
+                'data' => $contracten->count() === 1 ? $map($regels->first()) : null,
+                'treffers' => $regels->take(10)->map($map)->values()->all(),
+            ];
+        };
+        $d = fn ($v) => $v ? (is_string($v) ? substr($v, 0, 10) : $v->format('Y-m-d')) : null;
+
+        // 1) goederen-in (0.05)
+        $gi = \App\Models\SapUpload::laatste('goederen_in');
+        if ($gi) {
+            $regels = \App\Models\GoodsInLine::where('upload_id', $gi->id)->where('item_number', $nr)->orderByDesc('goods_in_date')->get()
+                ->map(fn ($r) => [
+                    'contract_number' => $r->contract_number, 'customer_name' => $r->customer_name, 'customer_number' => $r->customer_number,
+                    'project_number' => null, 'project_description' => null, 'delivery_name' => $r->delivery_name, 'city' => $r->city,
+                    'status' => 'Goederen in', 'depot' => substr((string) $r->contract_number, 0, 3), 'hire_date' => $d($r->hire_start_date),
+                    'coll_date' => $d($r->collection_date), 'goods_in_date' => $d($r->goods_in_date), 'item_description' => $r->item_description, 'qty_out' => (float) $r->qty,
+                ]);
+            if ($regels->isNotEmpty()) {
+                return $antwoord($regels, 'goederen_in', false, $gi->created_at->toDateTimeString());
+            }
+        }
+        // 2/3) WOW: laatste, anders de meest recente oudere upload met dit nummer
         $laatste = $this->laatsteUpload('wow');
         if (! $laatste) {
             return $uit + ['melding' => 'Nog geen WOW geüpload.'];
         }
         $uploads = \App\Models\SapUpload::where('soort', 'wow')->where('regels_opgeruimd', false)->orderByDesc('id')->pluck('created_at', 'id');
         foreach ($uploads as $id => $moment) {
-            $regels = HireLine::where('upload_id', $id)->where('item_number', $nr)->orderByDesc('hire_date')->get();
-            if ($regels->isEmpty()) {
-                continue;
+            $regels = HireLine::where('upload_id', $id)->where('item_number', $nr)->orderByDesc('hire_date')->get()
+                ->map(fn ($r) => [
+                    'contract_number' => $r->contract_number, 'customer_name' => $r->customer_name, 'customer_number' => $r->customer_number,
+                    'project_number' => $r->project_number, 'project_description' => $r->project_description, 'delivery_name' => $r->delivery_name,
+                    'city' => null, 'status' => $r->status, 'depot' => $r->depot, 'hire_date' => $d($r->hire_date), 'coll_date' => $d($r->coll_date),
+                    'goods_in_date' => null, 'item_description' => $r->item_description, 'qty_out' => (float) $r->qty_out,
+                ]);
+            if ($regels->isNotEmpty()) {
+                return $antwoord($regels, 'wow', (int) $id !== (int) $laatste->id, \Carbon\Carbon::parse($moment)->toDateTimeString());
             }
-            $map = fn ($r) => [
-                'contract_number' => $r->contract_number, 'customer_name' => $r->customer_name, 'customer_number' => $r->customer_number,
-                'project_number' => $r->project_number, 'project_description' => $r->project_description,
-                'delivery_name' => $r->delivery_name, 'status' => $r->status, 'depot' => $r->depot,
-                'hire_date' => $r->hire_date?->format('Y-m-d') ?? (is_string($r->hire_date) ? substr($r->hire_date, 0, 10) : null),
-                'coll_date' => $r->coll_date?->format('Y-m-d') ?? (is_string($r->coll_date) ? substr($r->coll_date, 0, 10) : null),
-                'item_description' => $r->item_description, 'qty_out' => (float) $r->qty_out,
-            ];
-            $contracten = $regels->pluck('contract_number')->unique();
-
-            return [
-                'machine_number' => $nr,
-                'gevonden' => true,
-                'historisch' => (int) $id !== (int) $laatste->id,
-                'upload_moment' => \Carbon\Carbon::parse($moment)->toDateTimeString(),
-                'aantal_treffers' => $contracten->count(),
-                // eenduidig = één contract; bij bulknummers op meerdere contracten niet automatisch invullen
-                'data' => $contracten->count() === 1 ? $map($regels->first()) : null,
-                'treffers' => $regels->take(10)->map($map)->values()->all(),
-            ];
         }
 
         return $uit + ['upload_moment' => $laatste->created_at->toDateTimeString()];
+    }
+
+    /** Dieselgedreven machine (aftanken nodig)? Op omschrijving: diesel / Stage V / aggregaat of generator — geen kabels, trafo's, tanks. */
+    public static function isDiesel(?string $omschrijving): bool
+    {
+        $o = mb_strtolower((string) $omschrijving);
+        if ($o === '' || preg_match('/kabel|cable|slang|hose|trafo|tank|verdeel|accu|lithium|230v|adapter|filter/u', $o)) {
+            return false;
+        }
+
+        return (bool) preg_match('/diesel|stage\s*v\b|aggregaat|aggregat|generator/u', $o);
+    }
+
+    /**
+     * Goederen-in (0.05) voor de tankapp: alle regels van de laatste upload, met dieselvlag en projectgegevens.
+     * $depot = eerste 3 cijfers van het contract (leeg = alle).
+     */
+    public function goederenIn(?string $depot = null, bool $alleenDiesel = false): array
+    {
+        $gi = \App\Models\SapUpload::laatste('goederen_in');
+        if (! $gi) {
+            return ['upload_moment' => null, 'data' => []];
+        }
+        $q = \App\Models\GoodsInLine::where('upload_id', $gi->id);
+        if ($depot) {
+            $q->where('contract_number', 'like', $depot.'%');
+        }
+        $d = fn ($v) => $v ? (is_string($v) ? substr($v, 0, 10) : $v->format('Y-m-d')) : null;
+        // Smartview vult einde huur / ophaaldatum met de rapportdatum zolang er niets is afgemeld → dan leeg
+        $rapport = $gi->rapportdatum?->format('Y-m-d') ?? $gi->created_at->format('Y-m-d');
+        $echt = fn ($v) => ($x = $d($v)) && $x !== $rapport ? $x : null;
+        $rijen = $q->orderBy('goods_in_date')->get()->map(function ($r) use ($d, $echt) {
+            $p = $this->projectVoorContract((string) $r->contract_number, null, null);
+
+            return [
+                'machine_number' => $r->item_number, 'omschrijving' => $r->item_description, 'diesel' => self::isDiesel($r->item_description),
+                'contract_number' => $r->contract_number, 'customer_name' => $r->customer_name, 'customer_number' => $r->customer_number,
+                'project_number' => $p['project_number'], 'project_description' => $p['project_description'],
+                'delivery_name' => $r->delivery_name, 'city' => $r->city, 'qty' => (float) $r->qty,
+                'hire_start_date' => $d($r->hire_start_date), 'hire_end_date' => $echt($r->hire_end_date),
+                'collection_date' => $echt($r->collection_date), 'goods_in_date' => $d($r->goods_in_date),
+                'ordered_by' => $r->ordered_by, 'created_by_code' => $r->created_by_code,
+            ];
+        });
+        if ($alleenDiesel) {
+            $rijen = $rijen->where('diesel', true);
+        }
+
+        return ['upload_moment' => $gi->created_at->toDateTimeString(), 'data' => $rijen->values()->all()];
+    }
+
+    /** Projectnummer/-omschrijving bij een contract: uit de regel zelf, anders WOW-historie, anders 8.A. Plus een projectnaam. */
+    private function projectVoorContract(string $contract, ?string $nummer, ?string $omschrijving): array
+    {
+        static $cache = [];
+        if (! $nummer && $contract !== '') {
+            $cache[$contract] ??= (function () use ($contract) {
+                $w = HireLine::where('contract_number', $contract)->whereNotNull('project_number')->orderByDesc('upload_id')->first(['project_number', 'project_description']);
+                if ($w) {
+                    return [$w->project_number, $w->project_description];
+                }
+                $p = \App\Models\PlanningLine::where('contract_number', $contract)->whereNotNull('project_number')->orderByDesc('upload_id')->value('project_number');
+
+                return [$p, null];
+            })();
+            [$nummer, $omschrijving] = [$cache[$contract][0], $omschrijving ?: $cache[$contract][1]];
+        }
+
+        return ['project_number' => $nummer ?: null, 'project_description' => $omschrijving ?: null];
     }
 
     /** Uit factuurrun: per contract, met notitie, medewerker en weekhuur uit WOW. */

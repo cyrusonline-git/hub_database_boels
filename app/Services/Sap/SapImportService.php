@@ -3,6 +3,7 @@
 namespace App\Services\Sap;
 
 use App\Models\FleetItem;
+use App\Models\GoodsInLine;
 use App\Models\HireLine;
 use App\Models\InvoiceRunLine;
 use App\Models\PlanningLine;
@@ -25,6 +26,7 @@ class SapImportService
         'planning_regels' => PlanningRegelsImporter::class,
         'contract_items' => ContractItemsImporter::class,
         'vloot' => VlootImporter::class,
+        'goederen_in' => GoederenInImporter::class,
     ];
 
     private const REGELS = [
@@ -35,6 +37,7 @@ class SapImportService
         'planning_regels' => PlanningLine::class,
         'contract_items' => ReservationLine::class,
         'vloot' => FleetItem::class,
+        'goederen_in' => GoodsInLine::class,
     ];
 
     /**

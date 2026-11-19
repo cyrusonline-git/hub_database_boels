@@ -30,6 +30,13 @@ return [
             'alle_depots' => true,
             'bewaar_snapshots' => 6,          // ~60.000 regels per upload: alleen de laatste uploads volledig bewaren
         ],
+        'goederen_in' => [
+            'label' => 'Goederen in, nog af te melden (0.05)',
+            'bestand' => '0.05 Goods in to be off hired.xlsx',
+            'frequentie_dagen' => 1,
+            'omschrijving' => 'Machines die de expeditie goederen-in heeft geboekt (retour, nog niet afgemeld/gefactureerd) met klant, contract en delivery name. Hiermee vullen de tankapp en de schade-app klant/contract/project in voor machines die niet meer in de WOW staan.',
+            'kop' => ['GOODS IN DATE ITEM', 'CONTRACT NUMBER', 'ITEM NUMBER', 'ITEM STATUS'],
+        ],
         'wow' => [
             'label' => 'In huur (What\'s Out Where)',
             'bestand' => 'boels_whatsoutwhere_incllimitedmode.xls',
