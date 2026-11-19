@@ -47,7 +47,30 @@ if (! empty($_GET['planner'])) {
     // Stockplanner-diagnose: tijd, geheugen en de eerste tekorten voor een depot
     $t = microtime(true);
     $p = app(\App\Services\Sap\StockPlanner::class);
-    $m = $p->matrix(preg_replace('/\D/', '', (string) $_GET['planner']) ?: '759', ['horizon' => 28, 'alleen_tekort' => true]);
+    $dep = preg_replace('/\D/', '', (string) $_GET['planner']) ?: '759';
+    if (! empty($_GET['sub'])) {
+        // Eén subgroep uitgesplitst: vlootstatus in dit depot, mutaties, en machines in goederen-in (0.05)
+        $sub = preg_replace('/\W/', '', (string) $_GET['sub']);
+        $vl = \App\Models\SapUpload::laatste('vloot');
+        echo "VLOOT {$dep} subgroep {$sub} (upload ".$vl?->created_at."):\n";
+        foreach (\App\Models\FleetItem::where('upload_id', $vl?->id)->where('group_code', $sub)->where('depot', $dep)->get() as $f) {
+            echo '  '.str_pad($f->item_number, 12).str_pad((string) $f->status, 16).$f->item_description."\n";
+        }
+        echo "MUTATIES (retour +14 d, offertes mee):\n";
+        foreach ($p->mutaties(14, true)->where('depot', $dep)->where('subgroep', $sub)->sortBy('datum') as $x) {
+            echo '  '.$x['datum'].'  '.str_pad(($x['aantal'] > 0 ? '+' : '').$x['aantal'], 5).str_pad($x['type'], 10).$x['contract'].'  '.$x['klant'].($x['achterstallig'] ? '  (achterstallig)' : '')."\n";
+        }
+        $gi = \App\Models\SapUpload::laatste('goederen_in');
+        echo "GOEDEREN-IN (0.05):\n";
+        foreach (\App\Models\GoodsInLine::where('upload_id', $gi?->id)->where('contract_number', 'like', $dep.'%')->get() as $g) {
+            $gc = \App\Models\FleetItem::where('upload_id', $vl?->id)->where('item_number', $g->item_number)->first();
+            if ((string) $gc?->group_code === $sub) {
+                echo '  '.str_pad($g->item_number, 12).'in '.$g->goods_in_date?->format('Y-m-d').'  vloot: '.($gc?->status ?? '?').' @'.($gc?->depot ?? '?').'  '.$g->customer_name."\n";
+            }
+        }
+        exit;
+    }
+    $m = $p->matrix($dep, ['horizon' => 28, 'alleen_tekort' => true]);
     printf("%d subgroepen met tekort (%d artikelen zonder vlootgegevens verborgen) · %.2f s · piek %d MB\n", $m['tekorten'], $m['zonder_vloot'], microtime(true) - $t, memory_get_peak_usage(true) / 1048576);
     echo 'mutaties: '.json_encode($p->mutaties(14, true)->countBy('type'))."\n";
     foreach (array_slice($m['rijen'], 0, 10) as $r) {
