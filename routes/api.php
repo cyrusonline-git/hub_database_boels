@@ -79,6 +79,14 @@ Route::get('/internal/goederen-in', function (Request $request) {
     return app(\App\Services\Sap\HireData::class)->goederenIn(preg_replace('/\D/', '', (string) $request->input('depot')) ?: null, $request->boolean('diesel'));
 });
 
+// Afkoopprijs bij een machine- of subgroepnummer (schade-app: total loss of repareren?). Zelfde IP-guard.
+Route::get('/internal/afkoopprijs', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+
+    return \App\Models\BuyoutPrice::voorNummer($request->input('nummer'), $request->input('subgroep'));
+});
+
 // Notificatie-tellers voor de dashboard-tegels. Child-apps melden hier
 // (server-to-server, met hun eigen sync_key uit CORE Admin > Applicaties)
 // het absolute aantal openstaande items per medewerker. De app bepaalt

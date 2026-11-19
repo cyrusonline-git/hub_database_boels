@@ -2,6 +2,7 @@
 
 namespace App\Services\Import;
 
+use App\Models\BuyoutPrice;
 use App\Models\Customer;
 use App\Models\Employee;
 use App\Models\Machine;
@@ -53,6 +54,18 @@ class EntityRegistry
                     'location'       => ['label' => 'Locatie'],
                     'external_id'    => ['label' => 'Externe ID'],
                     'source_system'  => ['label' => 'Bronsysteem'],
+                ],
+            ],
+            'buyout_price' => [
+                'label' => 'Afkoopprijzen (per subgroep)',
+                'model' => BuyoutPrice::class,
+                'unique_keys' => ['subgroup'],
+                'fields' => [
+                    'subgroup'    => ['label' => 'Subgroep (nummer)', 'required' => true],
+                    'price'       => ['label' => 'Afkoopprijs (bedrag of "op aanvraag")', 'required' => true],
+                    'type'        => ['label' => 'Type (Uniek/Bulk)'],
+                    'description' => ['label' => 'Omschrijving'],
+                    'source_system' => ['label' => 'Bronsysteem'],
                 ],
             ],
             'project' => [
