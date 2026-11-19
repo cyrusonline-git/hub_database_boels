@@ -58,7 +58,7 @@
             <label for="sync_mode" class="form-check-label">
                 <strong>Sync-modus aan</strong> &mdash;
                 {{ $config['label'] }} die NIET in dit bestand staan worden op
-                <em>inactief</em> gezet (active = 0 + soft-delete)@if($entity === 'employee') — alleen binnen de gekozen business unit@endif.
+                <em>inactief</em> gezet (active = 0 + soft-delete)@if($entity === 'employee') — alleen binnen de gekozen business unit @endif.
             </label>
             <div class="form-text">
                 Bij volgende import waar ze wel weer in staan, worden ze automatisch
