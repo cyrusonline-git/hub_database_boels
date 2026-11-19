@@ -302,15 +302,25 @@ class HireData
         return $uit + ['upload_moment' => $laatste->created_at->toDateTimeString()];
     }
 
-    /** Dieselgedreven machine (aftanken nodig)? Op omschrijving: diesel / Stage V / aggregaat of generator — geen kabels, trafo's, tanks. */
+    /**
+     * Moet deze machine afgetankt worden — alles waar diesel (of AdBlue) in kan (Wim 19-11-2026)? Op omschrijving:
+     * brandstof-/diesel-/AdBlue-tanks en hybride machines (lichtmasten met dieselgenerator) altijd; verder diesel / Stage V / aggregaat / generator / olie- of dieselgestookte
+     * heater, maar geen kabels, slangen, trafo's, accu-/230V-apparaten.
+     */
     public static function isDiesel(?string $omschrijving): bool
     {
         $o = mb_strtolower((string) $omschrijving);
-        if ($o === '' || preg_match('/kabel|cable|slang|hose|trafo|tank|verdeel|accu|lithium|230v|adapter|filter/u', $o)) {
+        if ($o === '') {
+            return false;
+        }
+        if (preg_match('/brandstof\s*tank|dieseltank|adblue\s*tank|fuel\s*tank|tank\b.*(diesel|brandstof|adblue)|hybride|hybrid/u', $o)) {
+            return true;
+        }
+        if (preg_match('/kabel|cable|slang|hose|trafo|verdeel|accu|lithium|230v|adapter|filter/u', $o)) {
             return false;
         }
 
-        return (bool) preg_match('/diesel|stage\s*v\b|aggregaat|aggregat|generator/u', $o);
+        return (bool) preg_match('/diesel|stage\s*v\b|aggregaat|aggregat|generator|oliegestookt|olie\s*gestookt|stookolie|heater.*(diesel|olie)|(diesel|olie).*heater/u', $o);
     }
 
     /**
