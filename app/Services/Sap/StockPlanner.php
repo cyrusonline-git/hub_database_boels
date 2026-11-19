@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Cache;
  *  +       = goederen-in (0.05): retour gekomen machines die de vloot nog als verhuurd ziet, op goederen-in-datum +
  *            dezelfde verwerkingstijd (in onderhoud/beschikbaar staan ze al in de vloot → niet dubbel)
  *  +       = lopende huur (WOW) met bekende einddatum (ophaaldatum, anders verwachte retourdatum) + instelbare
- *            verwerkingstijd ("einde huur als": einddatum / +7 / +14 dagen)
+ *            verwerkingstijd ("einde huur als": einddatum / +3 (standaard) / +7 / +14 dagen)
  *
  * Het depot van een mutatie komt uit het contractnummer (eerste 3 cijfers) of uit de WOW-kolom depot, nooit uit een
  * vaste waarde: zodra de uploads alle depots bevatten (config sap.depot leeg), rekent de planner voor alle depots.
@@ -188,7 +188,7 @@ class StockPlanner
     public function matrix(string $depot, array $o = []): array
     {
         $horizon = max(7, min(180, (int) ($o['horizon'] ?? 28)));
-        $retour = (int) ($o['retour_dagen'] ?? 14);
+        $retour = (int) ($o['retour_dagen'] ?? 3);
         $metOnderhoud = (bool) ($o['onderhoud'] ?? false);
         $metReparatie = (bool) ($o['reparatie'] ?? false);
         $perWeek = ($o['per'] ?? 'dag') === 'week';
@@ -268,7 +268,7 @@ class StockPlanner
     public function subgroep(string $sub, ?string $depot, array $o = []): array
     {
         $horizon = max(7, min(180, (int) ($o['horizon'] ?? 28)));
-        $retour = (int) ($o['retour_dagen'] ?? 14);
+        $retour = (int) ($o['retour_dagen'] ?? 3);
         $metOnderhoud = (bool) ($o['onderhoud'] ?? false);
         $metReparatie = (bool) ($o['reparatie'] ?? false);
         $kolommen = $this->kolommen($horizon, false);

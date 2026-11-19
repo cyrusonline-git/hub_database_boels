@@ -54,7 +54,7 @@ class VoorraadController extends Controller
     {
         return [
             'horizon' => (int) ($r->input('horizon') ?: 28),
-            'retour_dagen' => (int) $r->input('retour_dagen', 14),
+            'retour_dagen' => (int) $r->input('retour_dagen', 3),
             'offertes' => $r->input('offertes', '1') !== '0',
             'onderhoud' => $r->input('onderhoud') === '1',
             'reparatie' => $r->input('reparatie') === '1',
