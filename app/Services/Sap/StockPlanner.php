@@ -190,6 +190,7 @@ class StockPlanner
         $horizon = max(7, min(180, (int) ($o['horizon'] ?? 28)));
         $retour = (int) ($o['retour_dagen'] ?? 14);
         $metOnderhoud = (bool) ($o['onderhoud'] ?? false);
+        $metReparatie = (bool) ($o['reparatie'] ?? false);
         $perWeek = ($o['per'] ?? 'dag') === 'week';
         $q = mb_strtolower(trim((string) ($o['q'] ?? '')));
         $kolommen = $this->kolommen($horizon, $perWeek);
@@ -218,7 +219,7 @@ class StockPlanner
                 $zonderVloot++;   // bulk-/inhuur-/verkoopartikel zonder vlootgegevens: standaard verbergen
                 continue;
             }
-            $stand = $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0);
+            $stand = $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0) + ($metReparatie ? $st['reparatie'] : 0);
             $reeks = [];
             $min = $stand;
             $eersteTekort = null;
@@ -244,7 +245,7 @@ class StockPlanner
             $rijen[] = [
                 'subgroep' => $sub, 'omschrijving' => $oms,
                 'beschikbaar' => $st['beschikbaar'], 'onderhoud' => $st['onderhoud'], 'verhuurd' => $st['verhuurd'], 'reparatie' => $st['reparatie'],
-                'start' => $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0),
+                'start' => $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0) + ($metReparatie ? $st['reparatie'] : 0),
                 'uit' => (int) -$m->where('aantal', '<', 0)->sum('aantal'), 'in' => (int) $m->where('aantal', '>', 0)->sum('aantal'),
                 'reeks' => $reeks, 'min' => $min, 'eerste_tekort' => $eersteTekort, 'in_vloot' => $bekend,
             ];
@@ -269,6 +270,7 @@ class StockPlanner
         $horizon = max(7, min(180, (int) ($o['horizon'] ?? 28)));
         $retour = (int) ($o['retour_dagen'] ?? 14);
         $metOnderhoud = (bool) ($o['onderhoud'] ?? false);
+        $metReparatie = (bool) ($o['reparatie'] ?? false);
         $kolommen = $this->kolommen($horizon, false);
         $laatste = end($kolommen)['tot'];
         $start = $this->start();
@@ -279,16 +281,16 @@ class StockPlanner
         $perDepot = [];
         $oms = null;
         foreach ($alle as $d) {
-            $st = $start[$d][$sub] ?? ['beschikbaar' => 0, 'onderhoud' => 0, 'verhuurd' => 0, 'omschrijving' => null];
+            $st = ($start[$d][$sub] ?? []) + ['beschikbaar' => 0, 'onderhoud' => 0, 'verhuurd' => 0, 'reparatie' => 0, 'omschrijving' => null];
             $oms ??= $st['omschrijving'];
-            $stand = $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0);
+            $stand = $st['beschikbaar'] + ($metOnderhoud ? $st['onderhoud'] : 0) + ($metReparatie ? $st['reparatie'] : 0);
             $md = $mut->where('depot', $d);
             $reeks = [];
             foreach ($kolommen as $k) {
                 $stand += $md->filter(fn ($x) => $x['datum'] === $k['van'])->sum('aantal');
                 $reeks[] = $stand;
             }
-            $perDepot[] = ['depot' => $d, 'naam' => $depots[$d]['naam'] ?? null, 'beschikbaar' => $st['beschikbaar'], 'onderhoud' => $st['onderhoud'], 'verhuurd' => $st['verhuurd'], 'reeks' => $reeks, 'min' => $reeks ? min($reeks) : 0, 'mutaties' => $md->count()];
+            $perDepot[] = ['depot' => $d, 'naam' => $depots[$d]['naam'] ?? null, 'beschikbaar' => $st['beschikbaar'], 'onderhoud' => $st['onderhoud'], 'verhuurd' => $st['verhuurd'], 'reparatie' => $st['reparatie'], 'reeks' => $reeks, 'min' => $reeks ? min($reeks) : 0, 'mutaties' => $md->count()];
         }
         usort($perDepot, fn ($a, $b) => [$b['depot'] === $depot, $b['beschikbaar']] <=> [$a['depot'] === $depot, $a['beschikbaar']]);
 
