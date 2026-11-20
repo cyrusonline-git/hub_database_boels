@@ -17,6 +17,13 @@ Route::get('/internal/customers', function (Request $request) {
     return app(\App\Http\Controllers\Api\DataController::class)->customers($request);
 });
 
+// Afkoopprijzen per subgroep voor child-apps op dezelfde server (zelfde IP-guard).
+Route::get('/internal/afkoopprijzen', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+    return app(\App\Http\Controllers\Api\AfkoopController::class)->index($request);
+});
+
 // Materieellijst (producttypes/subgroepen) voor child-apps op dezelfde
 // server — o.a. de artikel-zoeker van de offerte-app. Zelfde IP-guard.
 Route::get('/internal/subgroups', function (Request $request) {
@@ -168,7 +175,12 @@ Route::middleware('auth:sanctum')->group(function () {
                 'scope' => $r->application_id ? 'app' : 'platform',
             ]),
             'permissions' => $permissions,
-        ];
+        ] + ($u->is_super_admin ? [
+            // Super-admin: alle rollen van deze app (extra veld; 'roles' blijft de expliciet aangevinkte rollen,
+            // zodat bestaande apps die daarop hun rolkeuze baseren niet veranderen).
+            'app_roles' => \App\Models\Role::where('application_id', $app->id)->orderBy('id')->get(['slug', 'name'])
+                ->map(fn ($r) => ['slug' => $r->slug, 'name' => $r->name, 'scope' => 'app'])->values(),
+        ] : []);
     });
 
     // Alle CORE-gebruikers die een rol hebben BINNEN één app (plus de
@@ -239,6 +251,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- Read-only data-API: klanten, materieel, personeel ----
     Route::get('/customers', [\App\Http\Controllers\Api\DataController::class, 'customers']);
+    Route::get('/afkoopprijzen', [\App\Http\Controllers\Api\AfkoopController::class, 'index']);            // ?subgroups=74046,81548
+    Route::get('/afkoopprijzen/{subgroep}', [\App\Http\Controllers\Api\AfkoopController::class, 'show']);
     Route::get('/customers/{number}', [\App\Http\Controllers\Api\DataController::class, 'customer']);
     Route::get('/machines', [\App\Http\Controllers\Api\DataController::class, 'machines']);
     Route::get('/machines/{number}', [\App\Http\Controllers\Api\DataController::class, 'machine']);

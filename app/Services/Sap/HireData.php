@@ -174,6 +174,7 @@ class HireData
             return null;
         }
         $kop = $regels->first();
+        $this->zetSubgroepen($regels);
 
         return [
             'contract_number' => $nr,
@@ -186,6 +187,38 @@ class HireData
             'upload' => $this->uploadInfo($u),
             'open_order' => $this->openOrder($nr),
         ];
+    }
+
+    /**
+     * Voegt per huurregel `subgroup` + `subgroup_bron` toe (bestaande velden blijven ongewijzigd), alleen uit
+     * betrouwbare bronnen — de vuistregel "eerste 5 cijfers van een 9-cijferig nummer" klopt niet altijd (Wim
+     * 20-11-2026) en wordt dus niet gebruikt:
+     *  1) machinelijst: machines (via machine_id of machinenummer) → subgroep;
+     *  2) vlootvoorraad: laatste upload, item_number → GRPCODE;
+     *  3) bulk: het item_number zelf, als dat een bekende subgroep is (subgroeplijst of afkoopprijzen);
+     *  anders null.
+     */
+    private function zetSubgroepen(Collection $regels): void
+    {
+        $nrs = $regels->pluck('item_number')->map(fn ($x) => (string) $x)->unique()->values()->all();
+        $perId = \App\Models\Machine::with('subgroup')->whereIn('id', $regels->pluck('machine_id')->filter()->unique()->values()->all())->get()->keyBy('id');
+        $perNr = \App\Models\Machine::with('subgroup')->whereIn('machine_number', $nrs)->get()->keyBy('machine_number');
+        $vl = SapUpload::laatste('vloot');
+        $vloot = $vl ? \App\Models\FleetItem::where('upload_id', $vl->id)->whereIn('item_number', $nrs)->pluck('group_code', 'item_number') : collect();
+        $bekend = \App\Models\MachineSubgroup::whereIn('subgroup_number', $nrs)->pluck('subgroup_number')
+            ->merge(\App\Models\BuyoutPrice::whereIn('subgroup', $nrs)->pluck('subgroup'))->map(fn ($x) => (string) $x)->flip();
+        foreach ($regels as $r) {
+            $nr = (string) $r->item_number;
+            $m = ($r->machine_id ? ($perId[$r->machine_id] ?? null) : null) ?? ($perNr[$nr] ?? null);
+            [$sub, $bron] = match (true) {
+                $m && $m->subgroup?->subgroup_number => [(string) $m->subgroup->subgroup_number, 'machinelijst'],
+                isset($vloot[$nr]) => [(string) $vloot[$nr], 'vloot'],
+                isset($bekend[$nr]) => [$nr, 'bulk'],
+                default => [null, null],
+            };
+            $r->setAttribute('subgroup', $sub);
+            $r->setAttribute('subgroup_bron', $bron);
+        }
     }
 
     /** Nog te leveren op dit contract volgens 8.7 (bijhuur op een lopend contract) + eventuele 2.6-regels. */

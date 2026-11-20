@@ -229,6 +229,20 @@ GET /api/machines?q=&subgroup=84305&per_page=50
 GET /api/machines/{materieelnummer}     → incl. subgroep + specificaties
 GET /api/subgroups/{subgroepnummer}     → specs, highlights, accessoires
 GET /api/employees?q=&depot=&active=1   (beperkte velden)
+GET /api/afkoopprijzen?subgroups=74046,81548
+                                        → {"versie":"08-2026","data":[{"subgroup","type","omschrijving","prijs","op_aanvraag"}]}
+                                          ("op aanvraag" → prijs null, op_aanvraag true; zonder ?subgroups = hele lijst)
+GET /api/afkoopprijzen/{subgroep}       → één regel (+ versie), 404 als onbekend
+GET /api/hire/contracts?project=…       (WOW: contracten in huur, gepagineerd)
+GET /api/hire/contracts/{contractnr}    → kop + regels; elke regel heeft ook "subgroup" + "subgroup_bron"
+                                          (machinelijst | vloot | bulk | null — geen gok op basis van het nummer)
+```
+
+Apps op dezelfde server kunnen zonder gebruikerssessie (IP-guard, alleen vanaf de eigen server):
+
+```
+GET /api/internal/customers?q=…
+GET /api/internal/afkoopprijzen?subgroups=74046,81548   (zelfde antwoord als /api/afkoopprijzen)
 ```
 
 Schrijven in CORE-data gebeurt NIET via deze API — alleen via CORE zelf

@@ -43,6 +43,19 @@ if (! empty($_GET['status'])) {
     }
     exit;
 }
+if (! empty($_GET['afkoop'])) {
+    // Diagnose afkoopprijzen-API: zelfde antwoord als GET /api/afkoopprijzen?subgroups=…
+    $req = \Illuminate\Http\Request::create('/', 'GET', ['subgroups' => (string) $_GET['afkoop']]);
+    echo json_encode(app(\App\Http\Controllers\Api\AfkoopController::class)->index($req), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n";
+    exit;
+}
+if (! empty($_GET['access'])) {
+    // Diagnose: wat /api/access/{slug} een super-admin teruggeeft (roles + app_roles)
+    $app = \App\Models\Application::where('slug', (string) $_GET['access'])->first();
+    echo $app ? json_encode(['app' => $app->slug, 'active' => (bool) $app->active, 'color' => $app->color, 'url' => $app->url,
+        'app_roles' => \App\Models\Role::where('application_id', $app->id)->pluck('slug')], JSON_UNESCAPED_UNICODE)."\n" : "onbekende app\n";
+    exit;
+}
 if (! empty($_GET['planner'])) {
     // Stockplanner-diagnose: tijd, geheugen en de eerste tekorten voor een depot
     $t = microtime(true);
