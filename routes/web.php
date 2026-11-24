@@ -130,6 +130,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('infrastructuur/areas/{area}', [InfrastructureController::class, 'destroyArea'])->name('infrastructure.areas.destroy');
         Route::post('infrastructuur/depots', [InfrastructureController::class, 'storeDepot'])->name('infrastructure.depots.store');
         Route::put('infrastructuur/depots/{depot}', [InfrastructureController::class, 'updateDepot'])->name('infrastructure.depots.update');
+        Route::put('infrastructuur/depots/{depot}/details', [InfrastructureController::class, 'updateDepotDetails'])->name('infrastructure.depots.details');
         Route::delete('infrastructuur/depots/{depot}', [InfrastructureController::class, 'destroyDepot'])->name('infrastructure.depots.destroy');
 
         // Klanten (Industrial) — lijst + upload + detail

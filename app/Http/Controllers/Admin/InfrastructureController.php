@@ -25,7 +25,9 @@ class InfrastructureController extends Controller
             ->selectRaw('business_unit_id, count(*) as c')->groupBy('business_unit_id')->pluck('c', 'business_unit_id');
         $employeesZonderUnit = Employee::whereNull('deleted_at')->whereNull('business_unit_id')->count();
 
-        return view('admin.infrastructure.index', compact('units', 'employeesPerArea', 'employeesPerDepot', 'employeesPerUnit', 'employeesZonderUnit'));
+        $afdelingen = config('boels.afdelingen', []);
+
+        return view('admin.infrastructure.index', compact('units', 'employeesPerArea', 'employeesPerDepot', 'employeesPerUnit', 'employeesZonderUnit', 'afdelingen'));
     }
 
     /** Business unit hernoemen (de koppeling met medewerkers en import-jobs loopt via id, dus niets anders hoeft mee). */
@@ -68,7 +70,8 @@ class InfrastructureController extends Controller
         ], ['number.regex' => 'Depotnummer: alleen cijfers, meerdere nummers gescheiden door een komma (bijv. 384, 769).']);
         OrgDepot::firstOrCreate(
             ['area_id' => $data['area_id'], 'name' => $data['name']],
-            ['number' => self::netNummer($data['number'] ?? null), 'email' => $data['email'] ?? null, 'city' => $data['city'] ?? null],
+            ['number' => self::netNummer($data['number'] ?? null), 'email' => $data['email'] ?? null, 'city' => $data['city'] ?? null,
+             'departments' => ['binnendienst', 'expeditie', 'werkplaats']],
         );
         return back()->with('status', 'Depot toegevoegd.');
     }
@@ -91,6 +94,24 @@ class InfrastructureController extends Controller
             return back()->with('status', "Depot hernoemd van \"$oud\" naar \"{$data['name']}\" — automatisch doorgevoerd bij medewerkers, gebruikers en app-restricties.");
         }
         return back()->with('status', 'Depot bijgewerkt.');
+    }
+
+    /** Afdelingen + adres/contact van een vestiging (los van naam/nummer, zodat hernoemen apart blijft). */
+    public function updateDepotDetails(Request $request, OrgDepot $depot)
+    {
+        $data = $request->validate([
+            'departments' => ['nullable', 'array'],
+            'departments.*' => ['string', 'in:' . implode(',', array_keys(config('boels.afdelingen', [])))],
+            'street' => ['nullable', 'string', 'max:150'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'country' => ['nullable', 'string', 'in:NL,BE,DE'],
+        ]);
+        $data['departments'] = array_values(array_intersect(array_keys(config('boels.afdelingen', [])), $data['departments'] ?? []));
+        $depot->update($data);
+
+        return back()->with('status', "Afdelingen en contactgegevens van {$depot->name} opgeslagen.");
     }
 
     public function updateArea(Request $request, OrgArea $area)

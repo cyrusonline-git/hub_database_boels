@@ -94,6 +94,27 @@ Route::get('/internal/afkoopprijs', function (Request $request) {
     return \App\Models\BuyoutPrice::voorNummer($request->input('nummer'), $request->input('subgroep'));
 });
 
+// Organisatiestructuur (incl. afdelingen + adres per vestiging) voor child-apps op dezelfde server, zonder
+// gebruikerssessie — o.a. de schade-app synchroniseert hiermee haar vestigingen. Zelfde IP-guard.
+Route::get('/internal/infrastructure', function (Request $request) {
+    $eigen = [$request->server('SERVER_ADDR'), '127.0.0.1', '::1'];
+    abort_unless(in_array($request->ip(), array_filter($eigen), true), 403);
+
+    return [
+        'afdelingen' => config('boels.afdelingen', []),
+        'units' => \App\Models\BusinessUnit::with('areas.depots')->orderBy('sort_order')->orderBy('name')->get()
+            ->map(fn ($u) => [
+                'name' => $u->name,
+                'areas' => $u->areas->map(fn ($a) => [
+                    'id' => $a->id,
+                    'name' => $a->name,
+                    'country' => $a->country,
+                    'depots' => $a->depots->map(fn ($d) => $d->apiGegevens())->values(),
+                ])->values(),
+            ])->values(),
+    ];
+});
+
 // Notificatie-tellers voor de dashboard-tegels. Child-apps melden hier
 // (server-to-server, met hun eigen sync_key uit CORE Admin > Applicaties)
 // het absolute aantal openstaande items per medewerker. De app bepaalt
@@ -133,6 +154,8 @@ Route::middleware('auth:sanctum')->group(function () {
             'allowed_areas' => $areas,
             'allowed_depots' => $depots,
             'allowed_countries' => $u->allowed_countries ?? [],
+            // Afdelingen van het (eerste) thuisdepot, zodat apps weten welke flow er geldt
+            'depot_departments' => ($thuis = $depots ? \App\Models\OrgDepot::where('name', $depots[0])->first() : null)?->afdelingen() ?? [],
             'roles' => $u->roles->pluck('slug'),
             'permissions' => $u->permissions()->pluck('key'),
         ];
@@ -238,13 +261,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 'areas' => $u->areas->map(fn ($a) => [
                     'name' => $a->name,
                     'country' => $a->country,
-                    'depots' => $a->depots->map(fn ($d) => [
-                        'name' => $d->name,
-                        'number' => $d->number,          // "759" of "384, 769" (depotnummers uit het ERP)
-                        'numbers' => $d->numbers(),
-                        'email' => $d->email,
-                        'city' => $d->city,
-                    ])->values(),
+                    'depots' => $a->depots->map(fn ($d) => $d->apiGegevens())->values(),
                 ])->values(),
             ]);
     });

@@ -1,6 +1,17 @@
 <?php
 
 return [
+    // Afdelingen die een vestiging (org_depots.departments) kan hebben — vaste lijst, slug => label.
+    // Child-apps lezen ze via /api/infrastructure (o.a. schade-app: geen servicedesk → werkplaats neemt over).
+    'afdelingen' => [
+        'binnendienst' => 'Binnendienst',
+        'expeditie' => 'Expeditie',
+        'werkplaats' => 'Werkplaats',
+        'servicedesk' => 'Servicedesk (service)',
+        'fleet' => 'Fleet',
+        'projecten' => 'Projecten',
+    ],
+
     'brand' => [
         'name' => 'Boels',
         'product' => 'CORE',

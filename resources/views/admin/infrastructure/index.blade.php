@@ -87,6 +87,12 @@
                                                     <button class="btn btn-sm btn-boels text-nowrap" title="Naamswijziging werkt automatisch overal door">Opslaan</button>
                                                 </form>
                                             </td>
+                                            <td class="text-end text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-bs-toggle="collapse"
+                                                        data-bs-target="#depotDetails{{ $depot->id }}" title="Afdelingen en adres van deze vestiging">
+                                                    <i class="bi bi-sliders"></i>
+                                                </button>
+                                            </td>
                                             <td class="text-end text-muted small text-nowrap">{{ $employeesPerDepot[$depot->name] ?? 0 }} mdw.</td>
                                             <td class="text-end" style="width:1%;">
                                                 <form action="{{ route('admin.infrastructure.depots.destroy', $depot) }}" method="POST"
@@ -96,8 +102,52 @@
                                                 </form>
                                             </td>
                                         </tr>
+                                        <tr class="border-0">
+                                            <td colspan="5" class="pt-0 border-0">
+                                                <div class="small mb-1">
+                                                    @forelse($depot->afdelingen() as $afd)
+                                                        <span class="badge {{ $afd === 'servicedesk' ? 'text-bg-warning' : 'text-bg-light border' }}">{{ $afdelingen[$afd] ?? $afd }}</span>
+                                                    @empty
+                                                        <span class="text-muted">Afdelingen nog niet ingesteld</span>
+                                                    @endforelse
+                                                    @if (! $depot->heeftAfdeling('servicedesk') && $depot->afdelingen())
+                                                        <span class="text-muted ms-1">— geen servicedesk: werkplaats neemt over</span>
+                                                    @endif
+                                                </div>
+                                                <div class="collapse" id="depotDetails{{ $depot->id }}">
+                                                    <form action="{{ route('admin.infrastructure.depots.details', $depot) }}" method="POST" class="border rounded p-2 bg-light mb-2">
+                                                        @csrf @method('PUT')
+                                                        <div class="fw-semibold small mb-1">Afdelingen op {{ $depot->name }}</div>
+                                                        <div class="d-flex flex-wrap gap-3 mb-2">
+                                                            @foreach($afdelingen as $slug => $label)
+                                                                <label class="form-check-label small">
+                                                                    <input type="checkbox" class="form-check-input" name="departments[]" value="{{ $slug }}" {{ $depot->heeftAfdeling($slug) ? 'checked' : '' }}>
+                                                                    {{ $label }}
+                                                                </label>
+                                                            @endforeach
+                                                        </div>
+                                                        <div class="row g-1">
+                                                            <div class="col-md-5"><input type="text" name="street" value="{{ $depot->street }}" class="form-control form-control-sm" placeholder="Straat + huisnummer"></div>
+                                                            <div class="col-md-2"><input type="text" name="postal_code" value="{{ $depot->postal_code }}" class="form-control form-control-sm" placeholder="Postcode"></div>
+                                                            <div class="col-md-3"><input type="text" name="city" value="{{ $depot->city }}" class="form-control form-control-sm" placeholder="Plaats"></div>
+                                                            <div class="col-md-2">
+                                                                <select name="country" class="form-select form-select-sm" title="Land">
+                                                                    <option value="">Land</option>
+                                                                    @foreach(['NL', 'BE', 'DE'] as $land)
+                                                                        <option value="{{ $land }}" {{ $depot->country === $land ? 'selected' : '' }}>{{ $land }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4"><input type="text" name="phone" value="{{ $depot->phone }}" class="form-control form-control-sm" placeholder="Telefoon"></div>
+                                                            <div class="col-md-8 text-end"><button class="btn btn-sm btn-boels">Afdelingen en adres opslaan</button></div>
+                                                        </div>
+                                                        <div class="form-text">Het e-mailadres staat in de regel hierboven. Apps (o.a. de schade-app) gebruiken adres, telefoon en e-mail op documenten en in mails.</div>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     @empty
-                                        <tr><td colspan="4" class="text-muted small">Nog geen depots.</td></tr>
+                                        <tr><td colspan="5" class="text-muted small">Nog geen depots.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>
