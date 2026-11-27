@@ -395,7 +395,7 @@ class HireData
     }
 
     /** Projectnummer/-omschrijving bij een contract: uit de regel zelf, anders WOW-historie, anders 8.A. Plus een projectnaam. */
-    private function projectVoorContract(string $contract, ?string $nummer, ?string $omschrijving): array
+    public function projectVoorContract(string $contract, ?string $nummer, ?string $omschrijving): array
     {
         static $cache = [];
         if (! $nummer && $contract !== '') {
